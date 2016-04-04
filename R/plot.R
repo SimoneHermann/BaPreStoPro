@@ -52,8 +52,9 @@ setMethod(f = "plot", signature = "est.Merton", definition = function(x, newwind
     plot(x@phi, type = "l", ylab = expression(phi)); abline(h = x@model$phi, col = 2)
     plot(x@thetaT, type = "l", ylab = expression(tilde(theta))); abline(h = x@model$thetaT, col = 2)
     plot(x@gamma2, type = "l", ylab = expression(gamma^2)); abline(h = x@model$gamma2, col = 2)
-    for(i in 1:nrow(x@xi)) plot(x@xi[i,], type = "l", ylab = bquote(xi[.(i)])); abline(h = x@model$xi[i], col = 2)
-
+    for(i in 1:nrow(x@xi)){
+      plot(x@xi[i,], type = "l", ylab = bquote(xi[.(i)])); abline(h = x@model$xi[i], col = 2)
+    } 
   } else {
     op <- par(mfrow = c(3, 2), mar = c(2.8, 2.8, 2, 2), mgp = c(1.5, 0.5, 0), oma = c(0, 0, 0, 0), cex.main = 0.8, cex.lab = 0.7,
               cex.axis = 0.7)

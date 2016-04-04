@@ -82,7 +82,7 @@ setClass(Class = "est.Regression", representation = representation(phi = "matrix
                                                                    burnIn = "numeric", thinning = "numeric"))
 
 setClass(Class = "est.mixedRegression", representation = representation(phi = "list", mu = "matrix", Omega = "matrix", gamma2 = "numeric",
-                                                                        model = "list", t = "numeric", Y = "numeric",
+                                                                        model = "list", t = "numeric", Y = "matrix",
                                                                         burnIn = "numeric", thinning = "numeric"))
 
 

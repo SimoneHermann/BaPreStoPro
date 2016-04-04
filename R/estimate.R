@@ -423,7 +423,7 @@ setMethod(f = "estimate", signature = "Regression",
 
 
 ########
-#' Estimation for mixed regression process
+#' Estimation for mixed regression model
 #'
 #' @description Bayesian estimation of the parameter of the regression model
 #'   \eqn{y_i = f(\phi_j, t_i) + \epsilon_i, \phi_j~N(\mu, \Omega)}.
@@ -450,7 +450,7 @@ setMethod(f = "estimate", signature = "mixedRegression",
     burnIn <- max(he[, 1])
     thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
 
-    result <- new(Class = "est.mixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
+    result <- new(Class = "est.mixedRegression", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
                   model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
     return(result)
 

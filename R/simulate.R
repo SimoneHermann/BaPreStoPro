@@ -392,6 +392,8 @@ setMethod(f = "simulate", signature = "Merton",
             result <- list(N = N, Y = simY(t, object@phi, object@thetaT, object@gamma2, start = y0, N))
 
             if(plot.series){
+              old.settings <- par(no.readonly = TRUE)
+              
               if(nsim > 1){
                 par(mfrow = c(2,1))
                 plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
@@ -403,6 +405,8 @@ setMethod(f = "simulate", signature = "Merton",
                 plot(t, N, type = "l")
                 plot(t, result$Y, type = "l", ylab = "Y")
               }
+              par(old.settings)
+              
             }
             return(result)
           })
@@ -438,6 +442,8 @@ setMethod(f = "simulate", signature = "reg_hiddenNHPP",
             result <- list(N = N, Y = result)
 
             if(plot.series){
+              old.settings <- par(no.readonly = TRUE)
+              
               if(nsim > 1){
                 par(mfrow = c(2,1))
                 plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
@@ -449,128 +455,12 @@ setMethod(f = "simulate", signature = "reg_hiddenNHPP",
                 plot(t, N, type = "l")
                 plot(t, result$Y, ylab = "Y")
               }
+              par(old.settings)
+              
             }
             return(result)
           })
 
-##################################
-##################################
-
-
-#' Function for simulating the data
-#'
-#' @description Simulation of variables depend on the model.
-#' @param t time points
-#' @param cl class with informations of the parameters and the type of process
-#' @param start starting point of the process
-#' @param mw mesh width (in the case of SDE)
-#' @param plot.series if TRUE, data is plotted
-#' @return vector or matrix of simulated variables
-
-
-drawData <- function(t, cl, start, mw = 10, plot.series = FALSE){
-
-  class.name <- class(cl)[1]
-
-  if(class.name == "jumpDiffusion"){
-    N <- simN(t, cl@xi, len = 1, Lambda = cl@Lambda)$N
-    result <- list(N = N, Y = sim_JD_Euler(t, cl@phi, cl@theta, cl@gamma2, cl@b.fun, cl@s.fun, cl@h.fun, start, N))
-    if(plot.series){
-      par(mfrow = c(2,1))
-      plot(t, N, type="l")
-      plot(t, result$Y, type="l", ylab="Y")
-    }
-  }
-
-  if(class.name == "Merton"){
-    N <- simN(t, cl@xi, len = 1, Lambda = cl@Lambda)$N
-    result <- list(N = N, Y = simY(t, cl@phi, cl@thetaT, cl@gamma2, start, N))
-    if(plot.series){
-      par(mfrow = c(2,1))
-      plot(t, N, type="l")
-      plot(t, result$Y, type="l", ylab="Y")
-    }
-
-  }
-  if(class.name == "Diffusion"){
-    result <- drawSDE(cl@phi, cl@gamma2, t, cl@b.fun, fODE = function(phi, t) start,
-                      sigmaTilde = cl@sT.fun, mw = mw, strictly.positive = FALSE)
-    if(plot.series){
-      plot(t, result, type="l", ylab="Y")
-    }
-  }
-  if(class.name == "mixedDiffusion"){
-    result <- matrix(0, nrow(cl@phi), length(t))
-    for(i in 1:nrow(cl@phi)){
-      result[i,] <- drawSDE(cl@phi[i,], cl@gamma2, t, cl@b.fun, fODE = function(phi, t) start,
-                            sigmaTilde = cl@sT.fun, mw = mw, strictly.positive = FALSE)
-    }
-    if(plot.series){
-      plot(t, result[1,], ylim = range(result), type = "l", ylab="Y")
-      for(i in 2:nrow(cl@phi)) lines(t, result[i,])
-    }
-  }
-  if(class.name == "hiddenDiffusion"){
-    result <- drawSDE(cl@phi, cl@gamma2, t, cl@b.fun, fODE = cl@y0.fun,
-                      sigmaTilde = cl@sT.fun, mw = mw, strictly.positive = FALSE)
-    obs <- rnorm(length(t), result, sqrt(cl@sigma2))
-    if(plot.series){
-      plot(t, obs, ylab="simulations"); lines(t, result)
-      legend("topleft", "hidden process", col = 1, lty = 1, box.lty = 0, inset = 0.01)
-    }
-    result <- list(Z = obs, Y = result)
-  }
-  if(class.name == "hiddenmixedDiffusion"){
-    result <- matrix(0, nrow(cl@phi), length(t))
-    for(i in 1:nrow(cl@phi)){
-      result[i,] <- drawSDE(cl@phi[i,], cl@gamma2, t, cl@b.fun, fODE = cl@y0.fun,
-                            sigmaTilde = cl@sT.fun, mw = mw, strictly.positive = FALSE)
-    }
-    obs <- apply(result, 2, function(vec) rnorm(length(vec), vec, sqrt(cl@sigma2)))
-    if(plot.series){
-      par(mfrow=c(2,1))
-      plot(t, result[1,], ylim=range(obs), type = "l", ylab = "simulations process")
-      for(i in 2:nrow(cl@phi)) lines(t, result[i,])
-      plot(t, obs[1,], ylim = range(obs), type = "l", ylab = "simulations")
-      for(i in 2:nrow(cl@phi)) lines(t, obs[i,])
-    }
-    result <- list(Z = obs, Y = result)
-  }
-  if(class.name == "reg_hiddenNHPP"){
-    N <- simN(t, cl@xi, len = 1, Lambda = cl@Lambda)$N
-    result <- cl@fun(t, N, cl@theta) + rnorm(length(t), 0, sqrt(cl@gamma2))
-    result <- list(N = N, Y = result)
-    if(plot.series){
-      par(mfrow = c(2,1))
-      plot(t, N, type="l")
-      plot(t, result$Y, ylab="Y")
-    }
-  }
-  if(class.name == "NHPP"){
-    result <- simN(t, cl@xi, len = 1, Lambda = cl@Lambda)
-    if(plot.series){
-      plot(t, result$N, ylab="N", type="l")
-    }
-  }
-  if(class.name == "Regression"){
-    result <- drawReg(cl@phi, cl@gamma2, t, cl@fun, sVar = cl@sT.fun)
-    if(plot.series){
-      plot(t, result, ylab = "Y")
-    }
-  }
-  if(class.name == "mixedRegression"){
-    result <- matrix(0, nrow(cl@phi), length(t))
-    for(i in 1:nrow(cl@phi)){
-      result[i,] <- drawReg(cl@phi[i,], cl@gamma2, t, cl@fun, sVar = cl@sT.fun)
-    }
-    if(plot.series){
-      plot(t, result[1,], ylim = range(result), type = "l", ylab = "Y")
-      for(i in 2:nrow(cl@phi)) lines(t, result[i,])
-    }
-
-  }
-  return(result)
-}
 
 
 #' Function for simulating diffusion process

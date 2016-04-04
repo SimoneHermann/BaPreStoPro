@@ -2,7 +2,7 @@
 \docType{methods}
 \name{estimate,mixedRegression-method}
 \alias{estimate,mixedRegression-method}
-\title{Estimation for mixed regression process}
+\title{Estimation for mixed regression model}
 \usage{
 \S4method{estimate}{mixedRegression}(model.class, t, data, nMCMC)
 }
