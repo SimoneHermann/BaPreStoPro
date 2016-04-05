@@ -16,7 +16,7 @@ setClass(Class = "Diffusion", representation = representation(phi = "numeric", g
                                                               b.fun = "function", sT.fun = "function", prior = "list", start = "list"))
 
 setClass(Class = "mixedDiffusion", representation = representation(phi = "matrix", mu = "numeric", Omega = "numeric", gamma2 = "numeric",
-                                                              b.fun = "function", sT.fun = "function", prior = "list", start = "list"))
+                                                                   y0.fun = "function", b.fun = "function", sT.fun = "function", prior = "list", start = "list"))
 
 setClass(Class = "hiddenDiffusion", representation = representation(phi = "numeric", gamma2 = "numeric",
                                                                     sigma2 = "numeric",

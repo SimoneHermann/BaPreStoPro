@@ -7,6 +7,7 @@
 #' @param y matrix or list of the n trajectories
 #' @param prior list of prior parameters - list(m, v, alpha.omega, beta.omega, alpha.gamma, beta.gamma)
 #' @param start list of starting values
+#' @param y0.fun \eqn{y_0(\phi, t_1)} function
 #' @param bSDE b(phi, t, x) drift function
 #' @param sVar variance function s^2
 #' @param ipred which of the n trajectories is the one to be predicted
@@ -42,7 +43,7 @@
 #' @references Hermann et al. (2015)
 #' @export
 
-estSDE <- function(t, y, prior, start, bSDE, sVar, ipred = 1, cut, len = 1000, mod = c("Gompertz", "logistic", "Weibull", "Richards", "Paris", "Paris2"), propPar = 0.2){
+estSDE <- function(t, y, prior, start, y0.fun, bSDE, sVar, ipred = 1, cut, len = 1000, mod = c("Gompertz", "logistic", "Weibull", "Richards", "Paris", "Paris2"), propPar = 0.2){
   mod <- match.arg(mod)
   if(is.matrix(y)){
     if(nrow(y) == length(t)){
@@ -67,7 +68,8 @@ estSDE <- function(t, y, prior, start, bSDE, sVar, ipred = 1, cut, len = 1000, m
   }
   if(missing(bSDE)) bSDE <- getFun("SDE", mod)
   if(missing(sVar)) sVar <- function(t, x) 1
-
+  if(missing(y0.fun)) y0.fun <- function(phi, t) median(sapply(1:length(y), function(i) y[[i]][1]))
+    
 #  if(Omega=="diag"){
     postOm <- function(phi, mu){
       postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
@@ -78,7 +80,7 @@ estSDE <- function(t, y, prior, start, bSDE, sVar, ipred = 1, cut, len = 1000, m
 #     }
 #   }
   propSd <- abs(start$mu)*propPar
-  postPhii <- function(lastPhi, mu, Omega, gamma2, X, t, propSd){  # X, t vektoren
+  postPhii_old <- function(lastPhi, mu, Omega, gamma2, X, t, propSd){  # X, t vektoren
     lt <- length(t)
     dt <- diff(t)
     phi_old <- lastPhi
@@ -86,6 +88,33 @@ estSDE <- function(t, y, prior, start, bSDE, sVar, ipred = 1, cut, len = 1000, m
 #    ratio <- dmvnorm(phi_drawn, mu, as.matrix(Omega)) / dmvnorm(phi_old, mu, as.matrix(Omega))
     ratio <- prod(dnorm(phi_drawn, mu, sqrt(Omega)) / dnorm(phi_old, mu, sqrt(Omega)) )
     ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
+    if(is.na(ratio)) ratio <- 0
+    if(runif(1) <= ratio){
+      phi_old <- phi_drawn
+    }
+    phi_old
+  }
+  postPhii <- function(lastPhi, mu, Omega, gamma2, X, t, propSd){  # X, t vektoren
+    lt <- length(t)
+    dt <- diff(t)
+    phi_old <- lastPhi; lphi <- length(lastPhi)
+    phi_drawn <- phi_old + rnorm(length(mu), 0, propSd)
+    for(k in 1:lphi){
+
+      phitest <- phi_drawn; phitest[k] <- rnorm(1, phitest[k], 0.1)
+      if(y0.fun(phi_drawn, t[1]) != y0.fun(phitest, t[1])){
+        fun <- function(theta){
+          phi <- phi_drawn; phi[k] <- theta
+          abs(y0.fun(phi, t[1]) - X[1])
+        } 
+        phi_drawn[k] <- optimize(f = fun, phi_drawn[k] + c(-1,1)*start$mu[k], maximum = FALSE)$minimum
+      }
+      
+    }
+    #    ratio <- dmvnorm(phi_drawn, mu, as.matrix(Omega)) / dmvnorm(phi_old, mu, as.matrix(Omega))
+    ratio <- prod(dnorm(phi_drawn, mu, sqrt(Omega)) / dnorm(phi_old, mu, sqrt(Omega)) )
+    ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
+#    ratio <- ratio * (abs(X[1] - y0.fun(phi_drawn, t[1])) < abs(X[1])/1000)
     if(is.na(ratio)) ratio <- 0
     if(runif(1) <= ratio){
       phi_old <- phi_drawn

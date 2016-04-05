@@ -56,19 +56,19 @@ setMethod(f = "simulate", signature = "Diffusion",
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
-#' model <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
+#' model <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), y0.fun = function(phi, t) 0.5, b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
+#' data <- simulate(model, t = t, plot.series = TRUE)
 #' @export
 setMethod(f = "simulate", signature = "mixedDiffusion",
-          definition = function(object, nsim = 1, seed = NULL, t, y0, mw = 10, plot.series = TRUE) {
+          definition = function(object, nsim = 1, seed = NULL, t, mw = 10, plot.series = TRUE) {
       set.seed(seed)
       if(nsim > 1){
         result <- list()
         for(j in 1:nsim){
           Y <- matrix(0, nrow(object@phi), length(t))
           for(i in 1:nrow(object@phi)){
-            Y[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, fODE = function(phi, t) y0,
+            Y[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, fODE = object@y0.fun,
                                   sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
           }
           result[[j]] <- Y
@@ -80,7 +80,7 @@ setMethod(f = "simulate", signature = "mixedDiffusion",
       }else{
         result <- matrix(0, nrow(object@phi), length(t))
         for(i in 1:nrow(object@phi)){
-          result[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, fODE = function(phi, t) y0,
+          result[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, fODE = object@y0.fun,
                                 sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
         }
         if(plot.series){
@@ -263,11 +263,15 @@ setMethod(f = "simulate", signature = "hiddenmixedDiffusion",
               }
               result2 <- lapply(result1, function(Y) apply(Y, 2, function(vec) rnorm(length(vec), vec, sqrt(object@sigma2))))
               if(plot.series){
+                old.settings <- par(no.readonly = TRUE)
+                
                 par(mfrow = c(2,1))
                 plot(t, result1[[1]][1,], type = "l", ylab = "Y", ylim = range(result2[[1]]))
                 for(i in 2:nrow(object@phi)) lines(t, result1[[1]][i,])
                 plot(t, result2[[1]][1,], type = "l", ylab = "Z", ylim = range(result2[[1]]))
                 for(i in 2:nrow(object@phi)) lines(t, result2[[1]][i,])
+                par(old.settings)
+                
               }
             }else{
               result1 <- matrix(0, nrow(object@phi), length(t))
@@ -278,11 +282,15 @@ setMethod(f = "simulate", signature = "hiddenmixedDiffusion",
 
               result2 <- apply(result1, 2, function(vec) rnorm(length(vec), vec, sqrt(object@sigma2)))
               if(plot.series){
+                old.settings <- par(no.readonly = TRUE)
+                
                 par(mfrow = c(2,1))
                 plot(t, result1[1,], ylim = range(result2), type = "l", ylab = "Y")
                 for(i in 2:nrow(object@phi)) lines(t, result1[i,])
                 plot(t, result2[1,], ylim = range(result2), type = "l", ylab = "Z")
                 for(i in 2:nrow(object@phi)) lines(t, result2[i,])
+                par(old.settings)
+                
               }
               result <- list(Z = result2, Y = result1)
 
@@ -349,17 +357,25 @@ setMethod(f = "simulate", signature = "jumpDiffusion",
             N <- simN(t, object@xi, len = nsim, Lambda = object@Lambda)$N
             result <- list(N = N, Y = sim_JD_Euler(t, object@phi, object@theta, object@gamma2, object@b.fun, object@s.fun, object@h.fun, start = y0, N))
             if(plot.series){
+              old.settings <- par(no.readonly = TRUE)
+              
               if(nsim > 1){
+                
                 par(mfrow = c(2,1))
                 plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
                 for(i in 2:nsim) lines(t, N[i,])
                 plot(t, result$Y[1,], type = "l", ylab = "Y", ylim = range(result$Y))
                 for(i in 1:nsim) lines(t, result$Y[i,])
+                
               }else{
+                
                 par(mfrow = c(2,1))
                 plot(t, N, type = "l")
                 plot(t, result$Y, type = "l", ylab = "Y")
+                
               }
+              par(old.settings)
+              
             }
             return(result)
           })

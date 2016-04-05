@@ -195,29 +195,29 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
 #' model <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
+#' data <- simulate(model, t = t, plot.series = TRUE)
 #' est_mixdiff <- estimate(model, t, data[1:20,], 2000)
 #' plot(est_mixdiff)
 #' \dontrun{
 #' pred_mixdiff <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y); lines(t, data[21,], lwd = 2)
-#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, -1] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, -1])
+#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
 #' pred_mixdiff2 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y, which.series = "current")
 #' pred_mixdiff3 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y, which.series = "current", y.start = data[20, 51], t = t[51:101])
 #' }
 #' pred_mixdiff <- predict(est_mixdiff, Euler.interval = TRUE, b.fun.mat = function(phi, t, y) phi[,1]*y); lines(t, data[21,], lwd = 2)  # one step Euler approximation
 #' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleTrajectory", sample.length = 100)
-#' for(i in 1:100) lines(t[-1], pred_mixdiff$Y[i,], col = "grey")
+#' for(i in 1:100) lines(t, pred_mixdiff$Y[i,], col = "grey")
 #'
 #' # OU
-#' b.fun <- function(phi, t, y) phi[1]-phi[2]*y
-#' mu <- c(10, 5); Omega <- c(0.9, 0.01); phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
-#' cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), b.fun = b.fun, sT.fun = function(t, x) 1)
+#' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
+#' mu <- c(10, 1, 0.5); Omega <- c(0.9, 0.01, 0.01); phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
+#' cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
-#' est_mixdiff <- estimate(cl, t, data[1:20,], 2000)
-#'
-#' pred_mixdiff <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y); lines(t, data[21,], lwd = 2)
-#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, -1] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, -1])
+#' data <- simulate(cl, t = t, plot.series = TRUE)
+#' est <- estimate(cl, t, data[1:20,], 2000)
+#' plot(est)
+#' pred_mixdiff <- predict(est, b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y); lines(t, data[21,], lwd = 2)
+#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
 #'
 #' @export
 setMethod(f = "predict", signature = "est.mixedDiffusion",
@@ -236,10 +236,6 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
     n <- ncol(object@Y)  # equal to length(object@t)
 
     if(missing(ind.pred) & which.series == "current") ind.pred <- J
-    if(missing(y.start)){
-      if(which.series == "new") y.start <- object@Y[1, 1]
-      if(which.series == "current") y.start <- object@Y[ind.pred, n]
-    }
 
     if(missing(burnIn)) burnIn <- object@burnIn
     if(missing(thinning)) thinning <- object@thinning
@@ -252,17 +248,24 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
       }
     }
     ind <- seq(burnIn + 1, length(object@gamma2), by = thinning)
-
+    K <- length(ind)
     if(which.series == "new"){
       samples <- list(mu = as.matrix(object@mu[ind,]), Omega = as.matrix(object@Omega[ind,]) )
       phi.pred <- predPhi(samples)
 
       samples <- list(phi = phi.pred, gamma2 = object@gamma2[ind])
+      if(missing(y.start)){
+        y.start <- sapply(1:K, function(i) object@model$y0.fun(samples$phi[i, ], t[1]))
+      }
+      
     }
     if(which.series == "current"){
       samples <- list(phi = sapply(1:ncol(object@mu) , function(i) phi_ij(object@phi[ind], ind.pred, i) ), gamma2 = object@gamma2[ind])
+      if(missing(y.start)){
+         y.start <- object@Y[ind.pred, n]
+      }
     }
-    K <- length(samples$gamma2)
+
     if(missing(sample.length) | pred.alg == "Distribution") sample.length <- K
     b.fun <- object@model$b.fun
     sT.fun <- object@model$sT.fun
@@ -287,17 +290,16 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
         for(i in 1:sample.length){
           phi.pred[i, ] <- rnorm(length(mu.est), mu.est, sqrt(Omega.est))
           cl <- set.to.class("Diffusion", parameter = list(phi = phi.pred[i, ], gamma2 = gamma2.est), b.fun = b.fun, sT.fun = sT.fun)
-          result[i,] <- simulate(cl, t = t, y0 = y.start, plot.series = FALSE)
+          result[i,] <- simulate(cl, t = t, y0 = object@model$y0.fun(phi.pred[i,], t[1]), plot.series = FALSE)
         }
       }
-      result <- result[,-1]
     }else{
 
       if(Euler.interval){
         result <- matrix(0, 2, n-1)
         for(i in 1:(n-1)){
-          cand.Area <- c(y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])),
-                         y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])) )
+          cand.Area <- c(min(y.start) + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], mean(y.start)) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], mean(y.start))^2*(t[i+1]-t[1])),
+                         max(y.start) + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], mean(y.start)) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], mean(y.start))^2*(t[i+1]-t[1])) )
           if(!missing(b.fun.mat)){
             VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1]))))
           }else{
@@ -305,6 +307,8 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
           }
           result[,i] <- prediction.intervals(samples, VFun, x0 = y.start, level = level, candArea = cand.Area)
         }
+        result <- cbind(quantile(y.start, c(level/2, 1-level/2)), result)
+        
       }else{
 
 
@@ -323,8 +327,8 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
             dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
           }
         }
-        cand.Area <- c(y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]),
-                       y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]) )
+        cand.Area <- c(min(y.start) + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], mean(y.start)) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], mean(y.start))^2*dt[1]),
+                       max(y.start) + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], mean(y.start)) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], mean(y.start))^2*dt[1]) )
         if(missing(grid)) d <- diff(cand.Area)/cand.length
 
         result <- matrix(0, sample.length, n-1)
@@ -347,14 +351,15 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
             }
           }
 
-           cand.Area <- c(min(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]),
-                          max(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]) )
+           cand.Area <- range(result[,i-1]) + c(-1, 1)*(which.series == "new") + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) + 5*c(-1,1)*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i])
           if(missing(grid)) d <- diff(cand.Area)/cand.length
 
           result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
                                   pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
           if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
         }
+        result <- cbind(y.start, result)
+        
       }
 
     }
@@ -366,13 +371,13 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
       if(which.series == "new"){
         plot(object@t, object@Y[1,], type = "l", xlab = "t", ylim = range(c(object@Y, range(qu))), ylab = expression(Y[t]))
         for(j in 2:J) lines(object@t, object@Y[j,])
-        lines(t[-1], qu[1,], col = 2, lwd = 2)
-        lines(t[-1], qu[2,], col = 2, lwd = 2)
+        lines(t, qu[1,], col = 2, lwd = 2)
+        lines(t, qu[2,], col = 2, lwd = 2)
       }
       if(which.series == "current"){
         plot(object@t, object@Y[ind.pred, ], type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Y[ind.pred, ], range(qu))), xlab = "t", ylab = expression(Y[t]))
-        lines(t[-1], qu[1,], col = 2)
-        lines(t[-1], qu[2,], col = 2)
+        lines(t, qu[1,], col = 2)
+        lines(t, qu[2,], col = 2)
       }
     }
     if(which.series == "new") return(list(Y = result, phi = phi.pred))
@@ -648,8 +653,8 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 
         for(i in 1:sample.length){
           phi.pred[i, ] <- rnorm(length(mu.est), mu.est, sqrt(Omega.est))
-          cl <- set.to.class("Diffusion", parameter = list(phi = phi.pred[i, ], gamma2 = gamma2.est), y0.fun = object@model$y0.fun, b.fun = b.fun, sT.fun = sT.fun)
-          result[i,] <- simulate(cl, t = t, plot.series = FALSE)
+          cl <- set.to.class("Diffusion", parameter = list(phi = phi.pred[i, ], gamma2 = gamma2.est), b.fun = b.fun, sT.fun = sT.fun)
+          result[i,] <- simulate(cl, t = t, y0 = object@model$y0.fun(phi.pred[i,], t[1]), plot.series = FALSE)
         }
       }
       Ypred <- result

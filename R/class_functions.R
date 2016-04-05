@@ -70,7 +70,7 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
   }
   if(class.name == "mixedDiffusion"){
     return(new(Class = class.name, phi = parameter$phi, mu = parameter$mu, Omega = parameter$Omega, gamma2 = parameter$gamma2,
-                 b.fun = b.fun, sT.fun = sT.fun,
+                 y0.fun = y0.fun, b.fun = b.fun, sT.fun = sT.fun,
                  prior = prior, start = start))
   }
   if(class.name == "hiddenDiffusion"){
@@ -164,7 +164,7 @@ class.to.list <- function(cl){
   }
   if(class.name == "mixedDiffusion"){
     list.out <-  list(class.name = class.name, phi = cl@phi, mu = cl@mu, Omega = cl@Omega, gamma2 = cl@gamma2,
-               b.fun = cl@b.fun, sT.fun = cl@sT.fun, prior = cl@prior, start = cl@start)
+                      y0.fun = cl@y0.fun, b.fun = cl@b.fun, sT.fun = cl@sT.fun, prior = cl@prior, start = cl@start)
   }
   if(class.name == "hiddenDiffusion"){
     list.out <-  list(class.name = class.name, phi = cl@phi, gamma2 = cl@gamma2, sigma2 = cl@sigma2,

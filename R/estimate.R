@@ -57,15 +57,15 @@ setMethod(f = "estimate", signature = "Diffusion",
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
 #' cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
+#' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data[1:20,], 2000)
 #' plot(est)
 #' # OU
-#' b.fun <- function(phi, t, y) phi[1]-phi[2]*y
-#' mu <- c(10, 5); Omega <- c(0.9, 0.01); phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
-#' cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), b.fun = b.fun, sT.fun = function(t, x) 1)
+#' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
+#' mu <- c(10, 5, 0.5); Omega <- c(0.9, 0.01, 0.01); phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
+#' cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
+#' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data[1:20,], 2000)
 #' plot(est)
 #'
@@ -73,7 +73,7 @@ setMethod(f = "estimate", signature = "Diffusion",
 setMethod(f = "estimate", signature = "mixedDiffusion",
           definition = function(model.class, t, data, nMCMC) {
 
-    result <- estSDE(t, data, model.class@prior, model.class@start, bSDE = model.class@b.fun, sVar = model.class@sT.fun, len = nMCMC)
+    result <- estSDE(t, data, model.class@prior, model.class@start, y0.fun = model.class@y0.fun, bSDE = model.class@b.fun, sVar = model.class@sT.fun, len = nMCMC)
     he <- matrix(0, ncol(result$mu) + 1, 2)
     he[1, ] <- diagnostic(result$gamma2)
     for(i in 2:(ncol(result$mu)+1)) he[i, ] <- diagnostic(result$mu[,i-1])
