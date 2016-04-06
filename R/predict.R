@@ -201,6 +201,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' \dontrun{
 #' pred_mixdiff <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y); lines(t, data[21,], lwd = 2)
 #' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
+#' mean(sapply(1:20, function(i) mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ])))
 #' pred_mixdiff2 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y, which.series = "current")
 #' pred_mixdiff3 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y, which.series = "current", y.start = data[20, 51], t = t[51:101])
 #' }
@@ -218,6 +219,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' plot(est)
 #' pred_mixdiff <- predict(est, b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y); lines(t, data[21,], lwd = 2)
 #' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
+#' mean(sapply(1:20, function(i) mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ])))
 #'
 #' @export
 setMethod(f = "predict", signature = "est.mixedDiffusion",
