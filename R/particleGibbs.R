@@ -136,7 +136,7 @@ partFiltering <- function(t, y, prior, start, est = c("Bayes","MLE"), len = 1000
 #      print(propSd)
     }
 
-    if (count%%1000 == 0) print(paste(count, "iterations done"))
+    if (count%%1000 == 0) message(paste(count, "iterations done"))
 
   }
   list(phi = phi_out, sigma2 = sigma2_out, gamma2 = gamma2_out, X = X_out)
@@ -175,8 +175,7 @@ partFiltering_mixed <- function(t, y, prior, start, len = 1000, sigmaTilde, y0.f
       y <- t(y)
     }else{
       if(ncol(y)!=length(t)){
-        print("length of t has to be equal to the columns of y")
-        break
+        stop("length of t has to be equal to the columns of y")
       }
     }
     t1 <- t
@@ -267,8 +266,7 @@ partFiltering_mixed <- function(t, y, prior, start, len = 1000, sigmaTilde, y0.f
   for(i in 1:n){
 
     if(dnorm(y[[i]][1], y0.fun(phi[i,], t[[i]][1]), sqrt(sigma2)) == 0){
-      print("bad starting values")
-      return(NULL)
+      stop("bad starting values")
     }
 
     result <- SMC(phi[i,], gamma2, sigma2, Npart, t[[i]], y[[i]], b.fun, y0.fun, sigmaTilde, conditional = FALSE)
@@ -306,7 +304,7 @@ partFiltering_mixed <- function(t, y, prior, start, len = 1000, sigmaTilde, y0.f
 #      print(propSd)
     }
 
-    if (count%%100 == 0) print(paste(count, "iterations done"))
+    if (count%%100 == 0) message(paste(count, "iterations done"))
   }
   list(phi = phi_out, mu = mu_out, Omega = Omega_out, sigma2 = sigma2_out, gamma2 = gamma2_out, X = X_out)
 }

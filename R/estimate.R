@@ -55,15 +55,20 @@ setMethod(f = "estimate", signature = "Diffusion",
 #' @param nMCMC length of Markov chain
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
-#' cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
+#' cl <- set.to.class("mixedDiffusion", 
+#'              parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
+#'              b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data[1:20,], 2000)
 #' plot(est)
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
-#' mu <- c(10, 5, 0.5); Omega <- c(0.9, 0.01, 0.01); phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
-#' cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
+#' mu <- c(10, 5, 0.5); Omega <- c(0.9, 0.01, 0.01)
+#' phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
+#' cl <- set.to.class("mixedDiffusion", 
+#'                parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
+#'                y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data[1:20,], 2000)
@@ -99,14 +104,17 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' @param Npart number of particles in the particle Gibbs sampler
 #'
 #' @examples
-#' cl <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5, parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
+#' cl <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5, 
+#'              parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data$Z, 1000)
 #' plot(est)
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y
-#' cl <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5, parameter = list(phi = c(10, 5), gamma2 = 1, sigma2 = 0.1), b.fun = b.fun, sT.fun = function(t, x) 1)
+#' cl <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5, 
+#'                parameter = list(phi = c(10, 5), gamma2 = 1, sigma2 = 0.1), 
+#'                b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data$Z, 1000)
@@ -143,9 +151,12 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 #' @param Npart number of particles in the particle Gibbs sampler
 #'
 #' @examples
-#' mu <- c(5, 1); Omega <- c(0.9, 0.04); phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
+#' mu <- c(5, 1); Omega <- c(0.9, 0.04)
+#' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
 #' y0.fun <- function(phi, t) phi[2]
-#' cl <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun, b.fun = function(phi, t, y) phi[1], parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
+#' cl <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun, 
+#'                  b.fun = function(phi, t, y) phi[1], 
+#'                  parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' \dontrun{
@@ -185,7 +196,8 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 #' @param nMCMC length of Markov chain
 
 #' @examples
-#' cl <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' cl <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), 
+#'                    Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est_NHPP <- estimate(cl, t, data$Times, 10000)
@@ -240,7 +252,8 @@ setMethod(f = "estimate", signature = "NHPP",
 #' @param nMCMC length of Markov chain
 #'
 #' @examples
-#' cl <- set.to.class("jumpDiffusion", parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' cl <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
+#'                parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(cl, t, data, 10000)
@@ -342,9 +355,10 @@ setMethod(f = "estimate", signature = "Merton",
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
-#' cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, parameter = list(theta = c(1,2), gamma2 = 0.1, xi = 10))
+#' cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, 
+#'                    parameter = list(theta = c(1,2), gamma2 = 0.1, xi = 10))
 #' data <- simulate(cl, t = t, plot.series = TRUE)
-#' est <- estimate(cl, t, data, 1000)
+#' est <- estimate(cl, t, data, 1000) 
 #' plot(est)
 #' \dontrun{
 #' est_hid <- estimate(cl, t, data$Y, 1000)
@@ -400,7 +414,8 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
-#' cl <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2], parameter = list(phi = c(1,2), gamma2 = 0.1))
+#' cl <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2], 
+#'                    parameter = list(phi = c(1,2), gamma2 = 0.1))
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data, 1000)
 #' plot(est)
@@ -432,8 +447,11 @@ setMethod(f = "estimate", signature = "Regression",
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
 #' @examples
-#' mu <- c(10, 5); Omega <- c(0.9, 0.01); phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
-#' cl <- set.to.class("mixedRegression", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
+#' mu <- c(10, 5); Omega <- c(0.9, 0.01)
+#' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
+#' cl <- set.to.class("mixedRegression", 
+#'                  parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
+#'                  fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data[1:20,], 2000)

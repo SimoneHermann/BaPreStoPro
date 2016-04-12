@@ -27,15 +27,17 @@
 #' model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
-#' est_diff <- estimate(model, t, data, 1000)
+#' est_diff <- estimate(model, t, data, 1000) # better: 10000
 #' plot(est_diff)
 #' \dontrun{
 #' pred_diff <- predict(est_diff, t = seq(0, 1, by = 0.1))
-#' pred_diff <- predict(est_diff, t = seq(0, 1, by = 0.1), b.fun.mat = function(phi, t, y) phi[,1])  # much faster
+#' pred_diff <- predict(est_diff, b.fun.mat = function(phi, t, y) phi[,1])  # much faster
 #' pred_diff2 <- predict(est_diff, which.series = "current", b.fun.mat = function(phi, t, y) phi[,1])
-#' pred_diff3 <- predict(est_diff, which.series = "current", y.start = data[51], t = t[seq(51, 100, by = 5)], b.fun.mat = function(phi, t, y) phi[,1])
+#' pred_diff3 <- predict(est_diff, which.series = "current", y.start = data[51], 
+#'                t = t[seq(51, 100, by = 5)], b.fun.mat = function(phi, t, y) phi[,1])
 #' }
-#' pred_diff <- predict(est_diff, Euler.interval = TRUE, b.fun.mat = function(phi, t, y) phi[,1])  # one step Euler approximation
+#' pred_diff <- predict(est_diff, Euler.interval = TRUE, b.fun.mat = function(phi, t, y) phi[,1])  
+#' # one step Euler approximation
 #' pred_diff <- predict(est_diff, pred.alg = "simpleTrajectory", sample.length = 100)
 #' for(i in 1:100) lines(t[-1], pred_diff[i,], col = "grey")
 #' pred_diff <- predict(est_diff, pred.alg = "simpleBayesTrajectory")
@@ -87,23 +89,23 @@ setMethod(f = "predict", signature = "est.Diffusion",
       result[i,] <- simulate(cl, t = t, y0 = y.start, plot.series = FALSE)
     }
     result <- result[,-1]
-  }else{
-      if(pred.alg == "simpleBayesTrajectory"){
-        if(missing(sample.length)){
-          sample.length <- K
-        } else{
-          if(sample.length > K) sample.length <- K
-        }
-        result <- matrix(0, sample.length, n)
-        for(i in 1:sample.length){
-          cl <- set.to.class("Diffusion", parameter = list(phi = samples$phi[i,], gamma2 = samples$gamma2[i]), b.fun = b.fun, sT.fun = sT.fun)
-          result[i,] <- simulate(cl, t = t, y0 = y.start, plot.series = FALSE)
-        }
-        result <- result[,-1]
-        
-      }else{
-        
+  }
+  if(pred.alg == "simpleBayesTrajectory"){
+    if(missing(sample.length)){
+      sample.length <- K
+    } else{
+      if(sample.length > K) sample.length <- K
+    }
+    result <- matrix(0, sample.length, n)
+    for(i in 1:sample.length){
+      cl <- set.to.class("Diffusion", parameter = list(phi = samples$phi[i,], gamma2 = samples$gamma2[i]), b.fun = b.fun, sT.fun = sT.fun)
+      result[i,] <- simulate(cl, t = t, y0 = y.start, plot.series = FALSE)
+    }
+    result <- result[,-1]
       
+  }
+  if(pred.alg == "Distribution"){
+
       if(Euler.interval){
         result <- matrix(0, 2, n-1)
         for(i in 1:(n-1)){
@@ -138,7 +140,6 @@ setMethod(f = "predict", signature = "est.Diffusion",
         result <- matrix(0, sample.length, n-1)
         result[,1] <- pred.base(samples = samples, VFun, dens, x0 = y.start, len = sample.length, method = method,
                                 pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
-  
         for(i in 2:(n-1)){
   
           if(!missing(b.fun.mat)){
@@ -161,13 +162,144 @@ setMethod(f = "predict", signature = "est.Diffusion",
   
           result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
                                   pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
-          if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+
+          if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
         }
-  
       }
     }
+  
+  if(pred.alg == "Trajectory"){
+    
+    
+    if(Euler.interval){
+      result <- matrix(0, 2, n-1)
+      for(i in 1:(n-1)){
+        cand.Area <- c(y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])),
+                       y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])) )
+        if(!missing(b.fun.mat)){
+          VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1]))))
+        }else{
+          VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1])))))
+        }
+        result[,i] <- prediction.intervals(samples, VFun, x0 = y.start, level = level, candArea = cand.Area)
+      }
+    }else{
+      
+      if(!missing(b.fun.mat)){
+        VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[1]*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*dt[1])))
+        dens <- function(yn, yn_1, samples)  mean(dnorm(yn, yn_1+dt[1]*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*dt[1])))
+      }else{
+        if(pred.alg == "Distribution"){
+          VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1[k]+dt[1]*b.fun(samples$phi[k,], t[1], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1[k])^2*dt[1]))))
+          dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1[k]+dt[1]*b.fun(samples$phi[k,], t[1], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1[k])^2*dt[1]))))
+        }
+        if(pred.alg == "Trajectory"){
+          VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
+          dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
+        }
+      }
+      cand.Area <- c(y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]),
+                     y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]) )
+      if(missing(grid)) d <- diff(cand.Area)/cand.length
+      
+      result <- matrix(0, sample.length, n-1)
+      result[,1] <- pred.base(samples = samples, VFun, dens, x0 = y.start, len = sample.length, method = method,
+                              pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
+      
+      for(i in 2:(n-1)){
+        
+        if(!missing(b.fun.mat)){
+          VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[i]*b.fun.mat(samples$phi, t[i], yn_1), sqrt(samples$gamma2*sT.fun(t[i], yn_1)^2*dt[i])))
+          dens <- function(yn, yn_1, samples)  mean(dnorm(yn, yn_1+dt[i]*b.fun.mat(samples$phi, t[i], yn_1), sqrt(samples$gamma2*sT.fun(t[i], yn_1)^2*dt[i])))
+        }else{
+          if(pred.alg == "Distribution"){
+            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1[k]+dt[i]*b.fun(samples$phi[k,], t[i], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1[k])^2*dt[i]))))
+            dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1[k]+dt[i]*b.fun(samples$phi[k,], t[i], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1[k])^2*dt[i]))))
+          }
+          if(pred.alg == "Trajectory"){
+            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+dt[i]*b.fun(samples$phi[k,], t[i], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1)^2*dt[i]))))
+            dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[i]*b.fun(samples$phi[k,], t[i], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1)^2*dt[i]))))
+          }
+        }
+        
+        cand.Area <- c(min(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]),
+                       max(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]) )
+        if(missing(grid)) d <- diff(cand.Area)/cand.length
+        
+        result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
+                                pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
+        if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
+      }
+      
+    }
   }
-
+  
+#   if(pred.alg %in% c("Distribution", "Trajectory")){
+#     
+#     
+#     if(Euler.interval){
+#       result <- matrix(0, 2, n-1)
+#       for(i in 1:(n-1)){
+#         cand.Area <- c(y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])),
+#                        y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])) )
+#         if(!missing(b.fun.mat)){
+#           VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1]))))
+#         }else{
+#           VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1])))))
+#         }
+#         result[,i] <- prediction.intervals(samples, VFun, x0 = y.start, level = level, candArea = cand.Area)
+#       }
+#     }else{
+#       
+#       if(!missing(b.fun.mat)){
+#         VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[1]*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*dt[1])))
+#         dens <- function(yn, yn_1, samples)  mean(dnorm(yn, yn_1+dt[1]*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*dt[1])))
+#       }else{
+#         if(pred.alg == "Distribution"){
+#           VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1[k]+dt[1]*b.fun(samples$phi[k,], t[1], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1[k])^2*dt[1]))))
+#           dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1[k]+dt[1]*b.fun(samples$phi[k,], t[1], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1[k])^2*dt[1]))))
+#         }
+#         if(pred.alg == "Trajectory"){
+#           VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
+#           dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
+#         }
+#       }
+#       cand.Area <- c(y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]),
+#                      y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]) )
+#       if(missing(grid)) d <- diff(cand.Area)/cand.length
+#       
+#       result <- matrix(0, sample.length, n-1)
+#       result[,1] <- pred.base(samples = samples, VFun, dens, x0 = y.start, len = sample.length, method = method,
+#                               pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
+#       
+#       for(i in 2:(n-1)){
+#         
+#         if(!missing(b.fun.mat)){
+#           VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[i]*b.fun.mat(samples$phi, t[i], yn_1), sqrt(samples$gamma2*sT.fun(t[i], yn_1)^2*dt[i])))
+#           dens <- function(yn, yn_1, samples)  mean(dnorm(yn, yn_1+dt[i]*b.fun.mat(samples$phi, t[i], yn_1), sqrt(samples$gamma2*sT.fun(t[i], yn_1)^2*dt[i])))
+#         }else{
+#           if(pred.alg == "Distribution"){
+#             VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1[k]+dt[i]*b.fun(samples$phi[k,], t[i], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1[k])^2*dt[i]))))
+#             dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1[k]+dt[i]*b.fun(samples$phi[k,], t[i], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1[k])^2*dt[i]))))
+#           }
+#           if(pred.alg == "Trajectory"){
+#             VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+dt[i]*b.fun(samples$phi[k,], t[i], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1)^2*dt[i]))))
+#             dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[i]*b.fun(samples$phi[k,], t[i], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1)^2*dt[i]))))
+#           }
+#         }
+#         
+#         cand.Area <- c(min(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]),
+#                        max(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]) )
+#         if(missing(grid)) d <- diff(cand.Area)/cand.length
+#         
+#         result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
+#                                 pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
+#         if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
+#       }
+#       
+#     }
+#   }
+  
   if(plot.prediction){
     qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
     if(which.series == "new"){
@@ -210,34 +342,51 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #'
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
-#' model <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
+#' model <- set.to.class("mixedDiffusion", 
+#'          parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
+#'          b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' est_mixdiff <- estimate(model, t, data[1:20,], 2000)
 #' plot(est_mixdiff)
 #' \dontrun{
-#' pred_mixdiff <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y); lines(t, data[21,], lwd = 2)
-#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
-#' mean(sapply(1:20, function(i) mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ])))
-#' pred_mixdiff2 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y, which.series = "current")
-#' pred_mixdiff3 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y, which.series = "current", y.start = data[20, 51], t = t[51:101])
+#' pred_mixdiff <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y)
+#' lines(t, data[21,], lwd = 2)
+#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & 
+#' apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
+#' mean(sapply(1:20, function(i){ 
+#'    mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] & 
+#'    apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ]))})
+#' pred_mixdiff2 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y, 
+#'      which.series = "current")
+#' pred_mixdiff3 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y, 
+#'      which.series = "current", y.start = data[20, 51], t = t[51:101])
 #' }
-#' pred_mixdiff <- predict(est_mixdiff, Euler.interval = TRUE, b.fun.mat = function(phi, t, y) phi[,1]*y); lines(t, data[21,], lwd = 2)  # one step Euler approximation
+#' pred_mixdiff <- predict(est_mixdiff, Euler.interval = TRUE, 
+#'      b.fun.mat = function(phi, t, y) phi[,1]*y); lines(t, data[21,], lwd = 2)  
+#'      # one step Euler approximation
 #' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleTrajectory", sample.length = 100)
 #' for(i in 1:100) lines(t, pred_mixdiff$Y[i,], col = "grey")
 #' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleBayesTrajectory")
 #'
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
-#' mu <- c(10, 1, 0.5); Omega <- c(0.9, 0.01, 0.01); phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
-#' cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
+#' mu <- c(10, 1, 0.5); Omega <- c(0.9, 0.01, 0.01)
+#' phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
+#' cl <- set.to.class("mixedDiffusion", 
+#'            parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
+#'            y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data[1:20,], 2000)
 #' plot(est)
-#' pred_mixdiff <- predict(est, b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y); lines(t, data[21,], lwd = 2)
-#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
-#' mean(sapply(1:20, function(i) mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] & apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ])))
+#' pred_mixdiff <- predict(est, b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
+#' lines(t, data[21,], lwd = 2)
+#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & 
+#'      apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
+#' mean(sapply(1:20, function(i){
+#'     mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] & 
+#'     apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ]))})
 #'
 #' @export
 setMethod(f = "predict", signature = "est.mixedDiffusion",
@@ -401,7 +550,7 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
 
           result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
                                   pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
-          if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+          if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
         }
         result <- cbind(y.start, result)
         
@@ -584,7 +733,7 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
 
         result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
                                 pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
-        if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+        if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
       }
 
     Ypred <- cbind(y.start, result)
@@ -643,9 +792,12 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
 #' @param plot.prediction if TRUE, result are plotted
 #'
 #' @examples
-#' mu <- c(5, 1); Omega <- c(0.9, 0.04); phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
+#' mu <- c(5, 1); Omega <- c(0.9, 0.04)
+#' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
 #' y0.fun <- function(phi, t) phi[2]
-#' model <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun, b.fun = function(phi, t, y) phi[1], parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
+#' model <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun, 
+#'      b.fun = function(phi, t, y) phi[1], 
+#'      parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' \dontrun{
@@ -654,8 +806,10 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
 #' pred1 <- predict(est_hidmixdiff, b.fun.mat = function(phi, t, y) phi[,1])
 #' pred2 <- predict(est_hidmixdiff, pred.alg = "Trajectory", b.fun.mat = function(phi, t, y) phi[,1])
 #' pred3 <- predict(est_hidmixdiff, pred.alg = "simpleTrajectory", sample.length = nrow(pred1$Y))
-#' lines(t, apply(pred1$Z, 2, quantile, 0.025), col = 3); lines(t, apply(pred1$Z, 2, quantile, 0.975), col = 3)
-#' lines(t, apply(pred2$Z, 2, quantile, 0.025), col = 4); lines(t, apply(pred2$Z, 2, quantile, 0.975), col = 4)
+#' lines(t, apply(pred1$Z, 2, quantile, 0.025), col = 3)
+#' lines(t, apply(pred1$Z, 2, quantile, 0.975), col = 3)
+#' lines(t, apply(pred2$Z, 2, quantile, 0.025), col = 4)
+#' lines(t, apply(pred2$Z, 2, quantile, 0.975), col = 4)
 #' pred4 <- predict(est_hidmixdiff, pred.alg = "simpleBayesTrajectory")
 #' }
 #' @export
@@ -812,7 +966,7 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 
         result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
                                 pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
-        if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+        if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
       }
       Ypred <- cbind(y.start, result)
       N <- ncol(Ypred)
@@ -872,7 +1026,8 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #' @param plot.prediction if TRUE, result are plotted
 #'
 #' @examples
-#' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), 
+#'                Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' est_NHPP <- estimate(model, t, data$Times, 2000)
@@ -884,8 +1039,10 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #' pred_NHPP3 <- predict(est_NHPP, variable = "PoissonProcess", which.series = "current")
 #' }
 #' pred_NHPP <- predict(est_NHPP, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
-#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory", M2pred = length(data$Times))
-#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleBayesTrajectory", M2pred = length(data$Times), sample.length = 100)
+#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory", 
+#'                      M2pred = length(data$Times))
+#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleBayesTrajectory", 
+#'                      M2pred = length(data$Times), sample.length = 100)
 #'
 #' @export
 setMethod(f = "predict", signature = "est.NHPP",
@@ -1076,7 +1233,7 @@ setMethod(f = "predict", signature = "est.NHPP",
       n <- length(t)
 
       if(pred.alg == "Distribution"){
-        print("does not work")
+        message("does not work")
         return(NULL)
       }
       if(pred.alg == "simpleTrajectory"){
@@ -1235,7 +1392,9 @@ setMethod(f = "predict", signature = "est.NHPP",
 #' @param plot.prediction if TRUE, result are plotted
 #'
 #' @examples
-#' model <- set.to.class("jumpDiffusion", parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' model <- set.to.class("jumpDiffusion", 
+#'          parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), 
+#'          Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 #' est_jd <- estimate(model, t, data, 2000)
@@ -1243,9 +1402,11 @@ setMethod(f = "predict", signature = "est.NHPP",
 #' \dontrun{
 #' pred_jd <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 #' est_jd2 <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
-#' pred_jd2 <- predict(est_jd2, t = t[81:101], which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_jd2 <- predict(est_jd2, t = t[81:101], which.series = "current", 
+#'                      Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 #' lines(t, data$Y, type="l", lwd = 2)
-#' pred_jd3 <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], pred.alg = "Distribution")
+#' pred_jd3 <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], 
+#'                      pred.alg = "Distribution")
 #' }
 #' pred_jd4 <- predict(est_jd, pred.alg = "simpleTrajectory", sample.length = 100)
 #' for(i in 1:100) lines(t[-1], pred_jd4$Y[i,], col = "grey")
@@ -1347,6 +1508,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
           times <- c(times, drawTn(times[length(times)]))
         }
         result[i, ] <- result[i, 1] + TimestoN(times, t)
+        if(i %% 10 == 0) message(paste(i, "of", n-1, " Poisson process predictions are calculated"))
       }
       Npred <- result
 
@@ -1378,7 +1540,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 
         result[,i] <- pred.base(samples = samples, VFun, x0 = result[,i-1], len = sample.length, method = method,
                                 pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
-        if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+        if(i %% 10 == 0) message(paste(i, "of", n-1, "jump diffusion predictions are calculated"))
       }
 
     }
@@ -1506,7 +1668,9 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 #' @param plot.prediction if TRUE, result are plotted
 #'
 #' @examples
-#' cl <- set.to.class("Merton", parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' cl <- set.to.class("Merton", 
+#'                parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), 
+#'                Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(cl, t, data, 1000)
@@ -1644,7 +1808,7 @@ setMethod(f = "predict", signature = "est.Merton",
                     
                     result[,i] <- pred.base(samples = samples, VFun, x0 = y.start, len = sample.length, method = "vector",
                                             pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
-                    if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+                    if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
                   }
                   
                 }
@@ -1667,7 +1831,7 @@ setMethod(f = "predict", signature = "est.Merton",
                   
                   result[,i] <- pred.base(samples = samples, VFun, x0 = result[,i-1], len = sample.length, method = "free",
                                           pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
-                  if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+                  if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
                 }
                 
               }
@@ -1797,12 +1961,15 @@ setMethod(f = "predict", signature = "est.Merton",
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
-#' cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, parameter = list(theta = c(1,2), gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, 
+#'              parameter = list(theta = c(1,2), gamma2 = 0.1, xi = c(3, 1/4)), 
+#'              Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data, 1000)
 #' plot(est)
 #' \dontrun{
-#' pred <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], fun.mat = function(t, N, theta) theta[,1]*t + theta[,2]*N)
+#' pred <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], 
+#'                  fun.mat = function(t, N, theta) theta[,1]*t + theta[,2]*N)
 #' }
 #' pred <- predict(est, pred.alg = "simpleTrajectory", sample.length = 100)
 #' @export
@@ -2081,7 +2248,8 @@ setMethod(f = "predict", signature = "est.reg_hiddenNHPP",
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
-#' cl <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2], parameter = list(phi = c(1,2), gamma2 = 0.1))
+#' cl <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2], 
+#'                    parameter = list(phi = c(1,2), gamma2 = 0.1))
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data, 1000)
 #' plot(est)
@@ -2203,13 +2371,17 @@ setMethod(f = "predict", signature = "est.Regression",
 #' @param plot.prediction if TRUE, result are plotted
 #'
 #' @examples
-#' mu <- c(10, 5); Omega <- c(0.9, 0.01); phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
-#' cl <- set.to.class("mixedRegression", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
+#' mu <- c(10, 5); Omega <- c(0.9, 0.01)
+#' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
+#' cl <- set.to.class("mixedRegression", 
+#'          parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
+#'          fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data[1:20,], 2000)
 #' plot(est)
-#' pred <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2]); points(t, data[21,], pch = 20)
+#' pred <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2])
+#' points(t, data[21,], pch = 20)
 #'
 #' @export
 setMethod(f = "predict", signature = "est.mixedRegression",
@@ -2353,7 +2525,7 @@ pred.base <- function(samples, VFun, dens, len = 100, x0, method = c("vector", "
     if(method == "free" & length(candArea) > 2) candArea <- c(min(candArea), max(candArea))
   }
 
-  if(method == "vector" & pred.alg == "Trajectory") print("does not make much sense")
+  if(method == "vector" & pred.alg == "Trajectory") message("does not make much sense")
 
 
   if(pred.alg == "Distribution"){
@@ -2446,10 +2618,6 @@ prediction.intervals <- function(samples, Fun, x0, level = 0.05, candArea, grid 
 #' @param cand candidates for phi (matrix with p columns)
 #' @return matrix phi
 #'
-#'
-#' @keywords prediction
-#' @references
-#' follows...
 #'
 predPhi <- function(samples, cand){
 
