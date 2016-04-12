@@ -345,6 +345,7 @@ setMethod(f = "simulate", signature = "NHPP",
 #' @param seed optional: seed number for random number generator
 #' @param t vector of time points to make predictions for
 #' @param y0 starting point of process
+#' @param mw mesh width for finer Euler approximation
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' model <- set.to.class("jumpDiffusion", parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
@@ -352,10 +353,10 @@ setMethod(f = "simulate", signature = "NHPP",
 #' data <- simulate(model, t = t, y0 = 0.5)
 #' @export
 setMethod(f = "simulate", signature = "jumpDiffusion",
-          definition = function(object, nsim = 1, seed = NULL, t, y0, plot.series = TRUE) {
+          definition = function(object, nsim = 1, seed = NULL, t, y0, mw = 1, plot.series = TRUE) {
             set.seed(seed)
             N <- simN(t, object@xi, len = nsim, Lambda = object@Lambda)$N
-            result <- list(N = N, Y = sim_JD_Euler(t, object@phi, object@theta, object@gamma2, object@b.fun, object@s.fun, object@h.fun, start = y0, N))
+            result <- list(N = N, Y = sim_JD_Euler(t, object@phi, object@theta, object@gamma2, object@b.fun, object@s.fun, object@h.fun, start = y0, N, mw = mw))
             if(plot.series){
               old.settings <- par(no.readonly = TRUE)
               
@@ -632,30 +633,42 @@ simY <- function(t, phi, thetaT, gamma2, start, N){
 #' @param h.fun jump high function
 #' @param start starting point \eqn{y_0}
 #' @param N Poisson process variables in t
+#' @param mw mesh width for finer Euler approximation
 #'
 #'
 #' @return matrix or vector
 #'
 
-sim_JD_Euler <- function(t, phi, theta, gamma2, b.fun, s.fun, h.fun, start, N){
-  l <- length(t)
-  dt <- diff(t)
+sim_JD_Euler <- function(t, phi, theta, gamma2, b.fun, s.fun, h.fun, start, N, mw = 1){
+  
+  lt <- length(t)
+  lt2 <- (lt-1)*mw+1
+  t2 <- seq(min(t), max(t), length = lt2)
+  dt2 <- t2[2] - t2[1]
+
   if(is.matrix(N)){
+    dN <- t(apply(N, 1, diff))
     number <- nrow(N)
-    Y <- matrix(start, number, l)
-    for(i in 2:l){
-      W <- rnorm(number, 0, sqrt(dt[i-1]))
-      Y[,i] <- Y[,i-1] + b.fun(phi, t[i-1], Y[,i-1])*dt[i-1] + s.fun(gamma2, t[i-1], Y[,i-1])*W +
-                  h.fun(theta, t[i-1], Y[,i-1])*(N[,i]-N[,i-1])
+    dN2 <- matrix(0, number, lt2-1)
+    dN2[, seq(1, lt2-1, by = mw)] <- dN
+    Y <- matrix(start, number, lt2)
+    for(i in 2:lt2){
+      W <- rnorm(number, 0, sqrt(dt2))
+      Y[,i] <- Y[,i-1] + b.fun(phi, t2[i-1], Y[,i-1])*dt2 + s.fun(gamma2, t2[i-1], Y[,i-1])*W +
+                  h.fun(theta, t2[i-1], Y[,i-1])*dN2[,i-1]
     }
+    Y <- Y[, seq(1, lt2, by = mw)]
   }
   if(is.vector(N)){
-    Y <- rep(start, l)
-    for(i in 2:l){
-      W <- rnorm(1, 0, sqrt(dt[i-1]))
-      Y[i] <- Y[i-1] + b.fun(phi, t[i-1], Y[i-1])*dt[i-1] + s.fun(gamma2, t[i-1], Y[i-1])*W +
-        h.fun(theta, t[i-1], Y[i-1])*(N[i]-N[i-1])
+    Y <- rep(start, lt2)
+    dN2 <- numeric(lt2-1)
+    dN2[seq(1, lt2-1, by = mw)] <- diff(N)
+    for(i in 2:lt2){
+      W <- rnorm(1, 0, sqrt(dt2))
+      Y[i] <- Y[i-1] + b.fun(phi, t2[i-1], Y[i-1])*dt2 + s.fun(gamma2, t2[i-1], Y[i-1])*W +
+        h.fun(theta, t2[i-1], Y[i-1])*dN2[i-1]
     }
+    Y <- Y[seq(1, lt2, by = mw)]
   }
   return(Y)
 }

@@ -130,7 +130,7 @@ est_Merton <- function(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2){
     if(sample.N){
       dN <- drawN(phi, gamma2, thetaT, xi, dN)
       N <- cumsum(dN)
-
+      if(count %% 1000 == 0) message(paste(count, "iterations are calculated"))
     }
     xi <- est_NHPP(dNtoTimes(dN, t), t[l], xi, n = 1, Lambda = Lambda)
 
@@ -302,6 +302,8 @@ est_JD_Euler <- function(X, N, t, n = 1000, start, b, s, h, priorRatio, Lambda, 
 
     if(sample.N){
       N_out[, count] <- N
+      if(count %% 1000 == 0) message(paste(count, "iterations are calculated"))
+      
     }
 
     if (count%%50 == 0){

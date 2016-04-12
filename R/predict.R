@@ -16,7 +16,7 @@
 #' @param y.start optional, if missing, first (which.series = "new") or last observation variable ("current") is taken
 #' @param M2pred optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector")
-#' @param pred.alg prediction algorithm, "Distribution", "Trajectory" or "simpleTrajectory"
+#' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param method vectorial ("vector") or not ("free")
 #' @param sampling.alg sampling algorithm, inversion method ("BinSearch") or rejection sampling ("RejSamp")
 #' @param sample.length length of samples to be drawn
@@ -38,12 +38,13 @@
 #' pred_diff <- predict(est_diff, Euler.interval = TRUE, b.fun.mat = function(phi, t, y) phi[,1])  # one step Euler approximation
 #' pred_diff <- predict(est_diff, pred.alg = "simpleTrajectory", sample.length = 100)
 #' for(i in 1:100) lines(t[-1], pred_diff[i,], col = "grey")
+#' pred_diff <- predict(est_diff, pred.alg = "simpleBayesTrajectory")
 #' @export
 setMethod(f = "predict", signature = "est.Diffusion",
           definition = function(object,
                                 t, Euler.interval = FALSE, level = 0.05, burnIn, thinning,
                                 b.fun.mat, which.series = c("new", "current"), y.start, M2pred = 10,
-                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory"),
+                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory", "simpleBayesTrajectory"),
                                 method = c("vector", "free"),
                                 sampling.alg = c("BinSearch", "RejSamp"), sample.length, grid, plot.prediction = TRUE) {
 
@@ -87,69 +88,85 @@ setMethod(f = "predict", signature = "est.Diffusion",
     }
     result <- result[,-1]
   }else{
-    if(Euler.interval){
-      result <- matrix(0, 2, n-1)
-      for(i in 1:(n-1)){
-        cand.Area <- c(y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])),
-                       y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])) )
-        if(!missing(b.fun.mat)){
-          VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1]))))
-        }else{
-          VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1])))))
+      if(pred.alg == "simpleBayesTrajectory"){
+        if(missing(sample.length)){
+          sample.length <- K
+        } else{
+          if(sample.length > K) sample.length <- K
         }
-        result[,i] <- prediction.intervals(samples, VFun, x0 = y.start, level = level, candArea = cand.Area)
-      }
-    }else{
-
-      if(!missing(b.fun.mat)){
-        VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[1]*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*dt[1])))
-        dens <- function(yn, yn_1, samples)  mean(dnorm(yn, yn_1+dt[1]*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*dt[1])))
+        result <- matrix(0, sample.length, n)
+        for(i in 1:sample.length){
+          cl <- set.to.class("Diffusion", parameter = list(phi = samples$phi[i,], gamma2 = samples$gamma2[i]), b.fun = b.fun, sT.fun = sT.fun)
+          result[i,] <- simulate(cl, t = t, y0 = y.start, plot.series = FALSE)
+        }
+        result <- result[,-1]
+        
       }else{
-        if(pred.alg == "Distribution"){
-          VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1[k]+dt[1]*b.fun(samples$phi[k,], t[1], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1[k])^2*dt[1]))))
-          dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1[k]+dt[1]*b.fun(samples$phi[k,], t[1], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1[k])^2*dt[1]))))
+        
+      
+      if(Euler.interval){
+        result <- matrix(0, 2, n-1)
+        for(i in 1:(n-1)){
+          cand.Area <- c(y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])),
+                         y.start + (t[i+1]-t[1])*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*(t[i+1]-t[1])) )
+          if(!missing(b.fun.mat)){
+            VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1]))))
+          }else{
+            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+(t[i+1]-t[1])*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*(t[i+1]-t[1])))))
+          }
+          result[,i] <- prediction.intervals(samples, VFun, x0 = y.start, level = level, candArea = cand.Area)
         }
-        if(pred.alg == "Trajectory"){
-          VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
-          dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
-        }
-      }
-      cand.Area <- c(y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]),
-                     y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]) )
-      if(missing(grid)) d <- diff(cand.Area)/cand.length
-
-      result <- matrix(0, sample.length, n-1)
-      result[,1] <- pred.base(samples = samples, VFun, dens, x0 = y.start, len = sample.length, method = method,
-                              pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
-
-      for(i in 2:(n-1)){
-
+      }else{
+  
         if(!missing(b.fun.mat)){
-          VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[i]*b.fun.mat(samples$phi, t[i], yn_1), sqrt(samples$gamma2*sT.fun(t[i], yn_1)^2*dt[i])))
-          dens <- function(yn, yn_1, samples)  mean(dnorm(yn, yn_1+dt[i]*b.fun.mat(samples$phi, t[i], yn_1), sqrt(samples$gamma2*sT.fun(t[i], yn_1)^2*dt[i])))
+          VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[1]*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*dt[1])))
+          dens <- function(yn, yn_1, samples)  mean(dnorm(yn, yn_1+dt[1]*b.fun.mat(samples$phi, t[1], yn_1), sqrt(samples$gamma2*sT.fun(t[1], yn_1)^2*dt[1])))
         }else{
           if(pred.alg == "Distribution"){
-            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1[k]+dt[i]*b.fun(samples$phi[k,], t[i], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1[k])^2*dt[i]))))
-            dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1[k]+dt[i]*b.fun(samples$phi[k,], t[i], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1[k])^2*dt[i]))))
+            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1[k]+dt[1]*b.fun(samples$phi[k,], t[1], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1[k])^2*dt[1]))))
+            dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1[k]+dt[1]*b.fun(samples$phi[k,], t[1], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1[k])^2*dt[1]))))
           }
           if(pred.alg == "Trajectory"){
-            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+dt[i]*b.fun(samples$phi[k,], t[i], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1)^2*dt[i]))))
-            dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[i]*b.fun(samples$phi[k,], t[i], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1)^2*dt[i]))))
+            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
+            dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[1]*b.fun(samples$phi[k,], t[1], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[1], yn_1)^2*dt[1]))))
           }
         }
-
-        cand.Area <- c(min(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]),
-                       max(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]) )
+        cand.Area <- c(y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]),
+                       y.start + dt[1]*b.fun(apply(samples$phi, 2, mean), t[1], y.start) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[1], y.start)^2*dt[1]) )
         if(missing(grid)) d <- diff(cand.Area)/cand.length
-
-        result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
+  
+        result <- matrix(0, sample.length, n-1)
+        result[,1] <- pred.base(samples = samples, VFun, dens, x0 = y.start, len = sample.length, method = method,
                                 pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
-        if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+  
+        for(i in 2:(n-1)){
+  
+          if(!missing(b.fun.mat)){
+            VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[i]*b.fun.mat(samples$phi, t[i], yn_1), sqrt(samples$gamma2*sT.fun(t[i], yn_1)^2*dt[i])))
+            dens <- function(yn, yn_1, samples)  mean(dnorm(yn, yn_1+dt[i]*b.fun.mat(samples$phi, t[i], yn_1), sqrt(samples$gamma2*sT.fun(t[i], yn_1)^2*dt[i])))
+          }else{
+            if(pred.alg == "Distribution"){
+              VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1[k]+dt[i]*b.fun(samples$phi[k,], t[i], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1[k])^2*dt[i]))))
+              dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1[k]+dt[i]*b.fun(samples$phi[k,], t[i], yn_1[k]), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1[k])^2*dt[i]))))
+            }
+            if(pred.alg == "Trajectory"){
+              VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, yn_1+dt[i]*b.fun(samples$phi[k,], t[i], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1)^2*dt[i]))))
+              dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, yn_1+dt[i]*b.fun(samples$phi[k,], t[i], yn_1), sqrt(samples$gamma2[k]*sT.fun(t[i], yn_1)^2*dt[i]))))
+            }
+          }
+  
+          cand.Area <- c(min(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) - 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]),
+                         max(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) + 5*sqrt(mean(samples$gamma2)*sT.fun(t[i], mean(result[,i-1]))^2*dt[i]) )
+          if(missing(grid)) d <- diff(cand.Area)/cand.length
+  
+          result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
+                                  pred.alg = pred.alg, sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
+          if(i %% 10 == 0) print(paste(i, "of", n-1, "predictions are calculated"))
+        }
+  
       }
-
     }
   }
-
 
   if(plot.prediction){
     qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
@@ -186,7 +203,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' @param ind.pred index of series to be predicted, optional, if which.series = "current" and ind.pred missing, the last series is taken
 #' @param M2pred optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector")
-#' @param pred.alg prediction algorithm, "Distribution", "Trajectory" or "simpleTrajectory"
+#' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degree of approximation
 #' @param plot.prediction if TRUE, result are plotted
@@ -208,6 +225,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' pred_mixdiff <- predict(est_mixdiff, Euler.interval = TRUE, b.fun.mat = function(phi, t, y) phi[,1]*y); lines(t, data[21,], lwd = 2)  # one step Euler approximation
 #' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleTrajectory", sample.length = 100)
 #' for(i in 1:100) lines(t, pred_mixdiff$Y[i,], col = "grey")
+#' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleBayesTrajectory")
 #'
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
@@ -225,7 +243,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 setMethod(f = "predict", signature = "est.mixedDiffusion",
           definition = function(object, t, Euler.interval = FALSE, level = 0.05, burnIn, thinning,
                                 b.fun.mat, which.series = c("new", "current"), y.start, ind.pred, M2pred = 10,
-                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory"),
+                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory", "simpleBayesTrajectory"),
                                 sample.length, grid, plot.prediction = TRUE) {
 # Y as list ?
     pred.alg <- match.arg(pred.alg)
@@ -295,7 +313,32 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
           result[i,] <- simulate(cl, t = t, y0 = object@model$y0.fun(phi.pred[i,], t[1]), plot.series = FALSE)
         }
       }
-    }else{
+    }
+    if(pred.alg == "simpleBayesTrajectory"){
+      if(missing(sample.length)){
+        sample.length <- K
+      } else{
+        if(sample.length > K) sample.length <- K
+      }
+      result <- matrix(0, sample.length, n)
+      if(which.series == "current"){
+        for(i in 1:sample.length){
+          cl <- set.to.class("Diffusion", parameter = list(phi = samples$phi[i,], gamma2 = samples$gamma2[i]), b.fun = b.fun, sT.fun = sT.fun)
+          result[i,] <- simulate(cl, t = t, y0 = y.start, plot.series = FALSE)
+        }
+      }
+      if(which.series == "new"){
+        mu.est <- as.matrix(object@mu[ind,])
+        Omega.est <- as.matrix(object@Omega[ind,])
+        phi.pred <- matrix(0, sample.length, length(mu.est))
+        for(i in 1:sample.length){
+          phi.pred[i, ] <- rnorm(length(mu.est), mu.est[i,], sqrt(Omega.est[i,]))
+          cl <- set.to.class("Diffusion", parameter = list(phi = phi.pred[i, ], gamma2 = samples$gamma2[i]), b.fun = b.fun, sT.fun = sT.fun)
+          result[i,] <- simulate(cl, t = t, y0 = object@model$y0.fun(phi.pred[i,], t[1]), plot.series = FALSE)
+        }
+      }
+    }
+    if(pred.alg %in% c("Distribution", "Trajectory")){
 
       if(Euler.interval){
         result <- matrix(0, 2, n-1)
@@ -402,7 +445,7 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param M2pred optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector")
-#' @param pred.alg prediction algorithm, "Distribution", "Trajectory" or "simpleTrajectory"
+#' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degree of approximation
 #' @param plot.prediction if TRUE, result are plotted
@@ -418,11 +461,12 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
 #' pred_hiddiff2 <- predict(est_hiddiff, which.series = "current")
 #' }
 #' pred_hiddiff <- predict(est_hiddiff, pred.alg = "simpleTrajectory", sample.length = 100)
+#' pred_hiddiff <- predict(est_hiddiff, pred.alg = "simpleBayesTrajectory")
 #' @export
 setMethod(f = "predict", signature = "est.hiddenDiffusion",
           definition = function(object, t, burnIn, thinning,
                                 b.fun.mat, which.series = c("new", "current"), M2pred = 10,
-                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory"),
+                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory", "simpleBayesTrajectory"),
                                 sample.length, grid, plot.prediction = TRUE) {
 
     pred.alg <- match.arg(pred.alg)
@@ -469,7 +513,31 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
         Ypred[i,] <- he$Y
       }
 
-    }else{
+    }
+    if(pred.alg == "simpleBayesTrajectory"){
+      if(missing(sample.length)){
+        sample.length <- K
+      } else{
+        if(sample.length > K) sample.length <- K
+      }
+      result <- matrix(0, sample.length, n)
+      if(which.series == "new"){
+        y0.fun <- object@model$y0.fun
+      }else{
+        y0.fun <- function(phi, t) y.start[sample(K, 1)]
+      }
+      
+      Ypred <- matrix(0, sample.length, n)
+      for(i in 1:sample.length){
+        cl <- set.to.class("hiddenDiffusion", parameter = list(phi = samples$phi[i,], gamma2 = samples$gamma2[i], sigma2 = samples$sigma2[i]), y0.fun = y0.fun, b.fun = b.fun, sT.fun = sT.fun)
+        he <- simulate(cl, t = t, plot.series = FALSE)
+        result[i,] <- he$Z
+        Ypred[i,] <- he$Y
+      }
+      
+      
+    }  
+    if(pred.alg %in% c("Distribution", "Trajectory")){
 
       if(pred.alg == "Distribution") method <- "vector"
       if(pred.alg == "Trajectory") method <- "free"
@@ -569,7 +637,7 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
 #' @param ind.pred index of series to be predicted, optional, if which.series = "current" and ind.pred missing, the last series is taken
 #' @param M2pred optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector")
-#' @param pred.alg prediction algorithm, "Distribution", "Trajectory" or "simpleTrajectory"
+#' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degree of approximation
 #' @param plot.prediction if TRUE, result are plotted
@@ -588,12 +656,13 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
 #' pred3 <- predict(est_hidmixdiff, pred.alg = "simpleTrajectory", sample.length = nrow(pred1$Y))
 #' lines(t, apply(pred1$Z, 2, quantile, 0.025), col = 3); lines(t, apply(pred1$Z, 2, quantile, 0.975), col = 3)
 #' lines(t, apply(pred2$Z, 2, quantile, 0.025), col = 4); lines(t, apply(pred2$Z, 2, quantile, 0.975), col = 4)
+#' pred4 <- predict(est_hidmixdiff, pred.alg = "simpleBayesTrajectory")
 #' }
 #' @export
 setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
           definition = function(object, t, burnIn, thinning,
                                 b.fun.mat, which.series = c("new", "current"), ind.pred, M2pred = 10,
-                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory"),
+                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory", "simpleBayesTrajectory"),
                                 sample.length, grid, plot.prediction = TRUE) {
 
     pred.alg <- match.arg(pred.alg)
@@ -661,7 +730,41 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
       }
       Ypred <- result
       result <- apply(Ypred, 2, function(vec) rnorm(length(vec), vec, sqrt(mean(samples$sigma2))))
-    }else{
+    }
+    if(pred.alg == "simpleBayesTrajectory"){
+      if(missing(sample.length)){
+        sample.length <- K
+      } else{
+        if(sample.length > K) sample.length <- K
+      }
+      
+      result <- Ypred <- matrix(0, sample.length, n)
+      if(which.series == "current"){
+
+        for(i in 1:sample.length){
+          cl <- set.to.class("hiddenDiffusion", parameter = list(phi = samples$phi[i,], gamma2 = samples$gamma2[i], sigma2 = samples$sigma2[i]), y0.fun = function(phi, t) y.start[sample(K, 1)], b.fun = b.fun, sT.fun = sT.fun)
+          he <- simulate(cl, t = t, plot.series = FALSE)
+          Ypred[i,] <- he$Y
+          result[i,] <- he$Z
+        }
+      }
+      if(which.series == "new"){
+        mu.est <- as.matrix(object@mu[ind,])
+        Omega.est <- as.matrix(object@Omega[ind,])
+        phi.pred <- matrix(0, sample.length, length(mu.est))
+        
+        for(i in 1:sample.length){
+          phi.pred[i, ] <- rnorm(length(mu.est), mu.est[i,], sqrt(Omega.est[i,]))
+          cl <- set.to.class("hiddenDiffusion", parameter = list(phi = phi.pred[i, ], gamma2 = samples$gamma2[i], sigma2 = samples$sigma2[i]), 
+                             b.fun = b.fun, sT.fun = sT.fun, y0.fun = object@model$y0.fun)
+          he <- simulate(cl, t = t, plot.series = FALSE)
+          result[i,] <- he$Z
+          Ypred[i,] <- he$Y
+        }
+      }
+    }
+    
+    if(pred.alg %in% c("Distribution", "Trajectory")){
       if(missing(sample.length)) sample.length <- K
 
       if(pred.alg == "Distribution") method <- "vector"
@@ -763,7 +866,7 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #' @param Tstart optional, if missing, first (which.series = "new") or last observation variable ("current") is taken
 #' @param M2pred optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector")
-#' @param pred.alg prediction algorithm, "Distribution", "Trajectory" or "simpleTrajectory"
+#' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degress of approximation
 #' @param plot.prediction if TRUE, result are plotted
@@ -772,7 +875,7 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est_NHPP <- estimate(model, t, data$Times, 10000)
+#' est_NHPP <- estimate(model, t, data$Times, 2000)
 #' plot(est_NHPP)
 #' \dontrun{
 #' pred_NHPP <- predict(est_NHPP)
@@ -782,13 +885,14 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #' }
 #' pred_NHPP <- predict(est_NHPP, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
 #' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory", M2pred = length(data$Times))
+#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleBayesTrajectory", M2pred = length(data$Times), sample.length = 100)
 #'
 #' @export
 setMethod(f = "predict", signature = "est.NHPP",
           definition = function(object, variable = c("eventTimes", "PoissonProcess"),
                                 t, burnIn, thinning,
                                 Lambda.mat, which.series = c("new", "current"), Tstart, M2pred = 10,
-                                cand.length = 1000, pred.alg = c("Trajectory", "Distribution", "simpleTrajectory"),
+                                cand.length = 1000, pred.alg = c("Trajectory", "Distribution", "simpleTrajectory", "simpleBayesTrajectory"),
                                 sample.length, grid = 1e-05, plot.prediction = TRUE) {
 
     pred.alg <- match.arg(pred.alg)
@@ -874,6 +978,29 @@ setMethod(f = "predict", signature = "est.NHPP",
         }
         result <- result[, -1]
       }
+      
+      if(pred.alg == "simpleBayesTrajectory"){
+        if(missing(sample.length)){
+          sample.length <- K
+        } else{
+          if(sample.length > K) sample.length <- K
+        }
+        drawTn <- function(Tn_1, xi){
+          cand <- seq(Tn_1, Tn_1 + 1, by = 1e-04)
+          prob <- 1 - exp(-(Lambda(cand, xi)-Lambda(Tn_1, xi)))
+          u <- runif(1)
+          cand[which(abs(u-prob) == min(abs(u-prob)))]
+        }
+        result <- matrix(0, sample.length, M2pred + 1)
+        result[, 1] <- Tstart
+        for(i in 1:sample.length){
+          for(j in 2:(M2pred + 1)){
+            result[i,j] <- drawTn(result[i, j-1], samples[i,])
+          }
+        }
+        result <- result[, -1]
+      }
+      
       if(pred.alg == "Trajectory"){
 
         if(missing(sample.length)) sample.length <- 100
@@ -984,6 +1111,42 @@ setMethod(f = "predict", signature = "est.NHPP",
         }
 
       }
+      
+      if(pred.alg == "simpleBayesTrajectory"){
+        if(missing(sample.length)){
+          sample.length <- K
+        } else{
+          if(sample.length > K) sample.length <- K
+        }
+
+        if(which.series == "new"){
+          result <- matrix(0, sample.length, n)  # here: N_t
+          for(i in 1:sample.length){
+            cl <- set.to.class("NHPP", parameter = list(xi = samples[i,]), Lambda = Lambda)
+            result[i, ] <- simulate(cl, t = t, plot.series = FALSE)$N
+          }
+          
+        }else{
+          result <- matrix(0, sample.length, n)
+          drawTn <- function(Tn_1, xi){
+            cand <- seq(Tn_1, Tn_1 + 1, by = 1e-04)
+            prob <- 1 - exp(-(Lambda(cand, xi)-Lambda(Tn_1, xi)))
+            u <- runif(1)
+            cand[which(abs(u-prob) == min(abs(u-prob)))]
+          }
+          
+          result[, 1] <- max(object@N)
+          for(i in 1:sample.length){
+            times <- drawTn(Tstart)
+            while(times[length(times)] < t[n]){
+              times <- c(times, drawTn(times[length(times)], samples[i,]))
+            }
+            result[i, ] <- result[i, 1] + TimestoN(times, t)
+          }
+          
+        }
+        
+      }
       if(pred.alg == "Trajectory"){
 
         if(missing(sample.length)) sample.length <- 100
@@ -1067,20 +1230,19 @@ setMethod(f = "predict", signature = "est.NHPP",
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param M2pred default 10, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
-#' @param pred.alg prediction algorithm, "Distribution", "Trajectory" or "simpleTrajectory"
+#' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param sample.length length of samples to be drawn
-#' @param grid fineness degress of approximation, for Poisson process
 #' @param plot.prediction if TRUE, result are plotted
 #'
 #' @examples
 #' model <- set.to.class("jumpDiffusion", parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
-#' est_jd <- estimate(model, t, data, 10000)
+#' est_jd <- estimate(model, t, data, 2000)
 #' plot(est_jd)
 #' \dontrun{
 #' pred_jd <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-#' est_jd2 <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 10000)
+#' est_jd2 <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
 #' pred_jd2 <- predict(est_jd2, t = t[81:101], which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 #' lines(t, data$Y, type="l", lwd = 2)
 #' pred_jd3 <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], pred.alg = "Distribution")
@@ -1091,8 +1253,8 @@ setMethod(f = "predict", signature = "est.NHPP",
 setMethod(f = "predict", signature = "est.jumpDiffusion",
           definition = function(object, t, burnIn, thinning, Lambda.mat,
                                 which.series = c("new", "current"), M2pred = 10,
-                                cand.length = 1000, pred.alg = c("Trajectory", "Distribution", "simpleTrajectory"),
-                                sample.length, grid = 1e-05, plot.prediction = TRUE) {
+                                cand.length = 1000, pred.alg = c("Trajectory", "Distribution", "simpleTrajectory", "simpleBayesTrajectory"),
+                                sample.length, plot.prediction = TRUE) {
 
     pred.alg <- match.arg(pred.alg)
     which.series <- match.arg(which.series)
@@ -1131,6 +1293,8 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 
     if(pred.alg == "Trajectory" | pred.alg == "Distribution"){
 
+      gridN <- median(diff(t))/10
+      
       samples <- t(object@xi[, ind])
 
       if(missing(Lambda.mat)){
@@ -1162,7 +1326,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
         lower <- min(memory[length(memory)-1], memory[length(memory)])
         upper <- max(memory[length(memory)-1], memory[length(memory)])
         diff <- upper - lower
-        while(diff >= grid){
+        while(diff >= gridN){
           if(Fun(lower+diff/2, Tn_1) < u){
             lower <- lower+diff/2
           }else{
@@ -1196,7 +1360,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
       if(pred.alg == "Distribution") method <- "vector"
       if(pred.alg == "Trajectory") method <- "free"
 
-      VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[1]*b.fun(samples$phi, t[1], yn_1) + h.fun(samples$theta)*dN[,1], sqrt(s.fun(samples$gamma2, t[1], yn_1)^2*dt[1])))
+      VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[1]*b.fun(samples$phi, t[1], yn_1) + h.fun(samples$theta, t[1], yn_1)*dN[,1], sqrt(s.fun(samples$gamma2, t[1], yn_1)^2*dt[1])))
       cand.Area <- y.start + dt[1]*b.fun(mean(samples$phi), t[1], y.start) + h.fun(mean(samples$theta), t[1], y.start)*range(dN[,1]) + 5* c(-1,1) *sqrt(s.fun(mean(samples$gamma2), t[1], y.start)^2*dt[1])
       d <- diff(cand.Area)/cand.length
 
@@ -1208,7 +1372,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 
         VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1+dt[i]*b.fun(samples$phi, t[i], yn_1) + h.fun(samples$theta, t[i], yn_1)*dN[,i], sqrt(s.fun(samples$gamma2, t[i], yn_1)^2*dt[i])))
 
-        cand.Area <- range(result[,i-1]) + dt[i]*b.fun(apply(samples$phi, 2, mean), t[i], mean(result[,i-1])) +
+        cand.Area <- range(result[,i-1]) + dt[i]*b.fun(mean(samples$phi), t[i], mean(result[,i-1])) +
                       h.fun(mean(samples$theta), t[i], mean(result[,i-1]))*range(dN[,i]) + c(-1, 1)*5*sqrt(s.fun(mean(samples$gamma2), t[i], mean(result[,i-1]))^2*dt[i])
         d <- diff(cand.Area)/cand.length
 
@@ -1258,6 +1422,49 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
       }
 
     }
+    
+    if(pred.alg == "simpleBayesTrajectory"){
+      if(missing(sample.length)){
+        sample.length <- K
+      } else{
+        if(sample.length > K) sample.length <- K
+      }
+      
+      xi <- object@xi[,ind]
+      phi <- object@phi[ind]
+      gamma2 <- object@gamma2[ind]
+      theta <- object@theta[ind]
+      
+      if(which.series == "new"){
+        result <- matrix(0, sample.length, n-1)
+        Npred <- matrix(0, sample.length, n)  # here: N_t
+        
+        for(i in 1:sample.length){
+          cl <- set.to.class("jumpDiffusion", parameter = list(phi = phi[i], theta = theta[i], gamma2 = gamma2[i], xi = xi[,i]),
+                             Lambda = Lambda, b.fun = b.fun, s.fun = s.fun, h.fun = h.fun)
+          help <- simulate(cl, t = t, y0 = object@Y[1], plot.series = FALSE)
+          result[i, ] <- help$Y[-1]
+          Npred[i, ] <- help$N
+        }
+        
+      }else{
+        result <- matrix(0, sample.length, n-1)
+        Npred <- matrix(0, sample.length, n)  # here: N_t
+        
+        for(i in 1:sample.length){
+          if(length(startN) > 1){
+            ind.i <- sample(K, 1)
+            Npred[i, ] <- simN(t, xi[,i], len = 1, start = c(max(object@t), startN[ind.i]), Lambda = Lambda)$N
+          }else{
+            ind.i <- 1
+            Npred[i, ] <- simN(t, xi[,i], len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+          }
+          
+          result[i, ] <- sim_JD_Euler(t-max(object@t), phi[i], theta[i], gamma2[i], b.fun, s.fun, h.fun, start = y.start, Npred[i,] - startN[ind.i])[-1]
+        }
+      }
+      
+    }
 
     if(plot.prediction){
       qu <- apply(result, 2, quantile, c(0.05 / 2, 1 - 0.05 / 2))
@@ -1293,7 +1500,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 #' @param only.interval if TRUE: only calculation of prediction intervals (only for pred.alg = "Distribution")
 #' @param level level of the prediction intervals
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
-#' @param pred.alg prediction algorithm, "Distribution", "Trajectory" or "simpleTrajectory"
+#' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degress of approximation, for Poisson process
 #' @param plot.prediction if TRUE, result are plotted
@@ -1308,12 +1515,13 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 #' pred1 <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 #' pred2 <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], pred.alg = "Trajectory")
 #' pred3 <- predict(est, pred.alg = "simpleTrajectory")
+#' pred4 <- predict(est, pred.alg = "simpleBayesTrajectory")
 #' }
 #' @export
 setMethod(f = "predict", signature = "est.Merton",
           definition = function(object, t, burnIn, thinning, Lambda.mat,
                                 which.series = c("new", "current"), M2pred = 10, only.interval = TRUE, level = 0.05,
-                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory"),
+                                cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory", "simpleBayesTrajectory"),
                                 sample.length, grid = 1e-05, plot.prediction = TRUE) {
             
             pred.alg <- match.arg(pred.alg)
@@ -1504,6 +1712,49 @@ setMethod(f = "predict", signature = "est.Merton",
               }
             }
             
+            if(pred.alg == "simpleBayesTrajectory"){
+              if(missing(sample.length)){
+                sample.length <- K
+              } else{
+                if(sample.length > K) sample.length <- K
+              }
+              
+              xi <- object@xi[,ind]
+              phi <- object@phi[ind]
+              gamma2 <- object@gamma2[ind]
+              thetaT <- object@thetaT[ind]
+              
+              if(which.series == "new"){
+                result <- matrix(0, sample.length, n-1)
+                Npred <- matrix(0, sample.length, n)  # here: N_t
+                
+                for(i in 1:sample.length){
+                  cl <- set.to.class("Merton", parameter = list(phi = phi[i], thetaT = thetaT[i], gamma2 = gamma2[i], xi = xi[,i]),
+                                     Lambda = Lambda)
+                  help <- simulate(cl, t = t, y0 = y.start, plot.series = FALSE)
+                  result[i, ] <- help$Y[-1]
+                  Npred[i, ] <- help$N
+                }
+                
+              }else{
+                result <- matrix(0, sample.length, n-1)
+                Npred <- matrix(0, sample.length, n)  # here: N_t
+                
+                for(i in 1:sample.length){
+                  if(length(startN) > 1){
+                    ind.i <- sample(K, 1)
+                    Npred[i, ] <- simN(t, xi[,i], len = 1, start = c(max(object@t), startN[ind.i]), Lambda = Lambda)$N
+                  }else{
+                    ind.i <- 1
+                    Npred[i, ] <- simN(t, xi[,i], len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+                  }
+                  
+                  result[i, ] <- simY(t-max(object@t), phi[i], thetaT[i], gamma2[i], start = y.start, Npred[i,] - startN[ind.i])[-1]
+                }
+                
+              }
+            }
+            
             if(plot.prediction){
               qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
               if(which.series == "new"){
@@ -1524,10 +1775,10 @@ setMethod(f = "predict", signature = "est.Merton",
 
 
 ########
-#' Prediction for jump diffusion process
+#' Prediction for regression model dependent on Poisson process
 #'
-#' @description Bayesian prediction of a stochastic process
-#'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\eta,t,Y_t)dN_t}.
+#' @description Bayesian prediction of a regression model
+#'   \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
 #' @param object class object of MCMC samples: "est.reg_hiddenNHPP"
 #' @param t vector of time points to make predictions for
 #' @param only.interval if TRUE: only calculation of prediction intervals
@@ -1539,7 +1790,7 @@ setMethod(f = "predict", signature = "est.Merton",
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param M2pred default 10, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
-#' @param pred.alg prediction algorithm, "Distribution", "Trajectory" or "simpleTrajectory"
+#' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleTrajectory"
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degress of approximation, for Poisson process
 #' @param plot.prediction if TRUE, result are plotted
@@ -1558,7 +1809,7 @@ setMethod(f = "predict", signature = "est.Merton",
 setMethod(f = "predict", signature = "est.reg_hiddenNHPP",
           definition = function(object, t, only.interval = TRUE, level = 0.05, burnIn, thinning, Lambda.mat, fun.mat, 
                                 which.series = c("new", "current"), M2pred = 10,
-                                cand.length = 1000, pred.alg = c("Distribution", "simpleTrajectory"),
+                                cand.length = 1000, pred.alg = c("Distribution", "simpleTrajectory", "simpleBayesTrajectory"),
                                 sample.length, grid = 1e-05, plot.prediction = TRUE) {
             
             pred.alg <- match.arg(pred.alg)
@@ -1710,42 +1961,82 @@ setMethod(f = "predict", signature = "est.reg_hiddenNHPP",
               }
               
               
-            }
-            
-            
-            
-            if(pred.alg == "simpleTrajectory"){
-              if(missing(sample.length)) sample.length <- 100
-              xi <- apply(object@xi[ind, ], 2, mean)
-              gamma2 <- mean(object@gamma2[ind])
-              theta <- apply(object@theta[ind,], 2, mean)
+            }else{
               
-              if(which.series == "new"){
-                cl <- set.to.class("reg_hiddenNHPP", parameter = list(theta = theta, gamma2 = gamma2, xi = xi), Lambda = Lambda, fun = fun)
-                result <- matrix(0, sample.length, n)
-                Npred <- matrix(0, sample.length, n)  # here: N_t
+              if(pred.alg == "simpleTrajectory"){
+                if(missing(sample.length)) sample.length <- 100
+                xi <- apply(object@xi[ind, ], 2, mean)
+                gamma2 <- mean(object@gamma2[ind])
+                theta <- apply(object@theta[ind,], 2, mean)
                 
-                for(i in 1:sample.length){
-                  help <- simulate(cl, t = t, plot.series = FALSE)
-                  result[i, ] <- help$Y
-                  Npred[i, ] <- help$N
-                }
-                
-              }else{
-                result <- matrix(0, sample.length, n)
-                Npred <- matrix(0, sample.length, n)  # here: N_t
-                
-                for(i in 1:sample.length){
-                  if(length(startN) > 1){
-                    Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN[sample(K, 1)]), Lambda = Lambda)$N
-                  }else{
-                    ind.i <- 1
-                    Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+                if(which.series == "new"){
+                  cl <- set.to.class("reg_hiddenNHPP", parameter = list(theta = theta, gamma2 = gamma2, xi = xi), Lambda = Lambda, fun = fun)
+                  result <- matrix(0, sample.length, n)
+                  Npred <- matrix(0, sample.length, n)  # here: N_t
+                  
+                  for(i in 1:sample.length){
+                    help <- simulate(cl, t = t, plot.series = FALSE)
+                    result[i, ] <- help$Y
+                    Npred[i, ] <- help$N
                   }
                   
-                  result[i, ] <- fun(t, Npred[i,], theta) + rnorm(length(t), 0, sqrt(gamma2))
+                }else{
+                  result <- matrix(0, sample.length, n)
+                  Npred <- matrix(0, sample.length, n)  # here: N_t
+                  
+                  for(i in 1:sample.length){
+                    if(length(startN) > 1){
+                      Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN[sample(K, 1)]), Lambda = Lambda)$N
+                    }else{
+                      ind.i <- 1
+                      Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+                    }
+                    
+                    result[i, ] <- fun(t, Npred[i,], theta) + rnorm(length(t), 0, sqrt(gamma2))
+                  }
                 }
+
               }
+              
+              if(pred.alg == "simpleBayesTrajectory"){
+                if(missing(sample.length)){
+                  sample.length <- K
+                } else{
+                  if(sample.length > K) sample.length <- K
+                }
+                xi <- object@xi[ind, ]
+                gamma2 <- object@gamma2[ind]
+                theta <- object@theta[ind,]
+                
+                if(which.series == "new"){
+                  result <- matrix(0, sample.length, n)
+                  Npred <- matrix(0, sample.length, n)  # here: N_t
+                  
+                  for(i in 1:sample.length){
+                    cl <- set.to.class("reg_hiddenNHPP", parameter = list(theta = theta[i,], gamma2 = gamma2[i], xi = xi[i,]), Lambda = Lambda, fun = fun)
+                    help <- simulate(cl, t = t, plot.series = FALSE)
+                    result[i, ] <- help$Y
+                    Npred[i, ] <- help$N
+                  }
+                  
+                }else{
+                  result <- matrix(0, sample.length, n)
+                  Npred <- matrix(0, sample.length, n)  # here: N_t
+                  
+                  for(i in 1:sample.length){
+                    if(length(startN) > 1){
+                      Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN[sample(K, 1)]), Lambda = Lambda)$N
+                    }else{
+                      ind.i <- 1
+                      Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+                    }
+                    
+                    result[i, ] <- fun(t, Npred[i,], theta[i,]) + rnorm(length(t), 0, sqrt(gamma2[i]))
+                  }
+                }
+                
+              }
+              
               if(plot.prediction){
                 qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
                 if(which.series == "new"){
@@ -1759,10 +2050,10 @@ setMethod(f = "predict", signature = "est.reg_hiddenNHPP",
                   lines(t, qu[2,], col = 2)
                 }
               }
+              
             }
             
-
-            return(list(N = Npred, Y = result))
+           return(list(N = Npred, Y = result))
             
           })
 
