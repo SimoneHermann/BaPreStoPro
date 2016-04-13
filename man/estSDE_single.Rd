@@ -31,16 +31,4 @@ Bayesian estimation of the parameters in the SDE
 \details{
 Simulation from the posterior distribution of the random effect from n independent trajectories of the SDE (the Brownian motions \eqn{W1,...,Wn} are independent).
 }
-\examples{
-cl <- set.to.class("Diffusion", parameter = list(phi = 1, gamma2 = 0.1))
-t <- seq(0, 1, by = 0.01)
-Y <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
-
-prior <- list(mu = 1, Omega = 1, alpha = 3, beta = 2*0.1)
-start <- list(phi = 1, gamma2 = 0.1)
-est <- estSDE_single(t, Y, bSDE = cl@b.fun, prior = prior, start = start, sVar = cl@sT.fun, len = 1100)
-par(mfrow = c(1,2))
-plot(est$phi, type = "l", ylab = expression(phi))
-plot(est$gamma2, type = "l", ylab = expression(gamma^2))
-}
 

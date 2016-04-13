@@ -8,7 +8,7 @@
   which.series = c("new", "current"), M2pred = 10, only.interval = TRUE,
   level = 0.05, cand.length = 1000, pred.alg = c("Distribution",
   "Trajectory", "simpleTrajectory", "simpleBayesTrajectory"), sample.length,
-  grid = 1e-05, plot.prediction = TRUE)
+  plot.prediction = TRUE)
 }
 \arguments{
 \item{object}{class object of MCMC samples: "est.Merton"}
@@ -34,8 +34,6 @@
 \item{pred.alg}{prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"}
 
 \item{sample.length}{length of samples to be drawn}
-
-\item{grid}{fineness degress of approximation, for Poisson process}
 
 \item{plot.prediction}{if TRUE, result are plotted}
 }

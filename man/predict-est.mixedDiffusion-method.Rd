@@ -63,7 +63,7 @@ mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] &
 apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
 mean(sapply(1:20, function(i){
    mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] &
-   apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ]))})
+   apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ])}))
 pred_mixdiff2 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y,
      which.series = "current")
 pred_mixdiff3 <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y,
@@ -93,6 +93,6 @@ mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] &
      apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
 mean(sapply(1:20, function(i){
     mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] &
-    apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ]))})
+    apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ])}))
 }
 

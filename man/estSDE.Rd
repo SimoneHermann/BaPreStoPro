@@ -46,19 +46,6 @@ Bayesian estimation of the random effects \eqn{\phi_i} in the mixed SDE
 \details{
 Simulation from the posterior distribution of the random effect from n independent trajectories of the SDE (the Brownian motions \eqn{W1,...,Wn} are independent).
 }
-\examples{
-mu <- 0.5; Omega <- 0.1; phi <- matrix(rnorm(100, mu, sqrt(Omega)))
-cl <- set.to.class("mixedDiffusion", parameter=list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.01))
-t <- seq(0, 1, by = 0.1)
-Y <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
-
-prior <- list(m = 1, v = 1, alpha.omega = 3, beta.omega = 2*Omega, alpha.gamma = 3, beta.gamma = 2*0.01)
-start <- list(phi = phi, mu = mu, gamma2 = 0.01)
-est <- estSDE(t, Y, bSDE = cl@b.fun, prior = prior, start = start, sVar = cl@sT.fun, len = 1000)
-par(mfrow = c(1,2))
-plot(est$mu, type = "l", ylab = expression(mu))
-plot(est$gamma2, type = "l", ylab = expression(gamma^2))
-}
 \references{
 Hermann et al. (2015)
 }

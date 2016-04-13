@@ -3,7 +3,8 @@
 \alias{est_Merton}
 \title{Gibbs sampler}
 \usage{
-est_Merton(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2)
+est_Merton(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2,
+  it.xi = 10)
 }
 \arguments{
 \item{X}{vector of observed variables}
