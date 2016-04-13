@@ -1664,7 +1664,6 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param sample.length length of samples to be drawn
-#' @param grid fineness degress of approximation, for Poisson process
 #' @param plot.prediction if TRUE, result are plotted
 #'
 #' @examples
@@ -1686,7 +1685,7 @@ setMethod(f = "predict", signature = "est.Merton",
           definition = function(object, t, burnIn, thinning, Lambda.mat,
                                 which.series = c("new", "current"), M2pred = 10, only.interval = TRUE, level = 0.05,
                                 cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory", "simpleBayesTrajectory"),
-                                sample.length, grid = 1e-05, plot.prediction = TRUE) {
+                                sample.length, plot.prediction = TRUE) {
             
             pred.alg <- match.arg(pred.alg)
             which.series <- match.arg(which.series)
@@ -1735,6 +1734,7 @@ setMethod(f = "predict", signature = "est.Merton",
                 }
               }
               sample.lengthN <- K
+              gridN <- median(diff(t))/10
               
               drawTn <- function(Tn_1){
                 u <- runif(1)
@@ -1753,7 +1753,7 @@ setMethod(f = "predict", signature = "est.Merton",
                 lower <- min(memory[length(memory)-1], memory[length(memory)])
                 upper <- max(memory[length(memory)-1], memory[length(memory)])
                 diff <- upper - lower
-                while(diff >= grid){
+                while(diff >= gridN){
                   if(Fun(lower+diff/2, Tn_1) < u){
                     lower <- lower+diff/2
                   }else{

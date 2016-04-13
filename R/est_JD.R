@@ -20,7 +20,7 @@
 #' \item{xi}{estimator of \eqn{\xi}}
 #' \item{N}{estimator of latent variable \eqn{N}, if not observed}
 
-est_Merton <- function(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2){
+est_Merton <- function(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2, it.xi = 10){
 
   Delta <- diff(t)
   t.l <- t
@@ -132,7 +132,7 @@ est_Merton <- function(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2){
       N <- cumsum(dN)
       if(count %% 1000 == 0) message(paste(count, "iterations are calculated"))
     }
-    xi <- est_NHPP(dNtoTimes(dN, t), t[l], xi, n = 1, Lambda = Lambda)
+    xi <- est_NHPP(dNtoTimes(dN, t), t[l], xi, n = it.xi, Lambda = Lambda)[, it.xi]
 
     phi <- postPhi(gamma2, thetaT, N)
 
