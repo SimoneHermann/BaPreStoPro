@@ -44,7 +44,8 @@
 Bayesian prediction of a nonhomogeneous Poisson process.
 }
 \examples{
-model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)),
+               Lambda = function(t, xi) (t/xi[2])^xi[1])
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
 est_NHPP <- estimate(model, t, data$Times, 2000)
@@ -56,7 +57,9 @@ pred_NHPP2 <- predict(est_NHPP, which.series = "current")
 pred_NHPP3 <- predict(est_NHPP, variable = "PoissonProcess", which.series = "current")
 }
 pred_NHPP <- predict(est_NHPP, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
-pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory", M2pred = length(data$Times))
-pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleBayesTrajectory", M2pred = length(data$Times), sample.length = 100)
+pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory",
+                     M2pred = length(data$Times))
+pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleBayesTrajectory",
+                     M2pred = length(data$Times), sample.length = 100)
 }
 

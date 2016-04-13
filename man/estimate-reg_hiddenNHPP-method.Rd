@@ -21,7 +21,8 @@ Bayesian estimation of the parameter of the regression model
 }
 \examples{
 t <- seq(0,1, by = 0.01)
-cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, parameter = list(theta = c(1,2), gamma2 = 0.1, xi = 10))
+cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N,
+                   parameter = list(theta = c(1,2), gamma2 = 0.1, xi = 10))
 data <- simulate(cl, t = t, plot.series = TRUE)
 est <- estimate(cl, t, data, 1000)
 plot(est)

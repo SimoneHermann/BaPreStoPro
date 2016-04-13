@@ -44,7 +44,9 @@ Bayesian prediction of a stochastic process
   \eqn{Y_t = y_0 \exp( \phi t - \gamma2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
 }
 \examples{
-cl <- set.to.class("Merton", parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+cl <- set.to.class("Merton",
+               parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)),
+               Lambda = function(t, xi) (t/xi[2])^xi[1])
 t <- seq(0, 1, by = 0.01)
 data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
 est <- estimate(cl, t, data, 1000)

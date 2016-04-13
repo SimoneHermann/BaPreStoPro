@@ -21,15 +21,20 @@ Bayesian estimation of a stochastic process
 }
 \examples{
 mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
-cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
+cl <- set.to.class("mixedDiffusion",
+             parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1),
+             b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 t <- seq(0, 1, by = 0.01)
 data <- simulate(cl, t = t, plot.series = TRUE)
 est <- estimate(cl, t, data[1:20,], 2000)
 plot(est)
 # OU
 b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
-mu <- c(10, 5, 0.5); Omega <- c(0.9, 0.01, 0.01); phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
-cl <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
+mu <- c(10, 5, 0.5); Omega <- c(0.9, 0.01, 0.01)
+phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
+cl <- set.to.class("mixedDiffusion",
+               parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1),
+               y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 t <- seq(0, 1, by = 0.01)
 data <- simulate(cl, t = t, plot.series = TRUE)
 est <- estimate(cl, t, data[1:20,], 2000)

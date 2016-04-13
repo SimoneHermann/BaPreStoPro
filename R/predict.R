@@ -1508,7 +1508,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
           times <- c(times, drawTn(times[length(times)]))
         }
         result[i, ] <- result[i, 1] + TimestoN(times, t)
-        if(i %% 10 == 0) message(paste(i, "of", n-1, " Poisson process predictions are calculated"))
+        if(i %% 100 == 0) message(paste(i, "of", sample.lengthN, " Poisson process predictions are calculated"))
       }
       Npred <- result
 

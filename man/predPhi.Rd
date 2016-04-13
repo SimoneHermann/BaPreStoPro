@@ -16,8 +16,4 @@ matrix phi
 \description{
 Prediction of the random effects \eqn{\phi ~ N(\mu, \Omega)}
 }
-\references{
-follows...
-}
-\keyword{prediction}
 

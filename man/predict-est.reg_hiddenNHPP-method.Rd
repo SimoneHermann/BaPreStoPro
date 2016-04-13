@@ -47,12 +47,15 @@ Bayesian prediction of a regression model
 }
 \examples{
 t <- seq(0,1, by = 0.01)
-cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, parameter = list(theta = c(1,2), gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N,
+             parameter = list(theta = c(1,2), gamma2 = 0.1, xi = c(3, 1/4)),
+             Lambda = function(t, xi) (t/xi[2])^xi[1])
 data <- simulate(cl, t = t, plot.series = TRUE)
 est <- estimate(cl, t, data, 1000)
 plot(est)
 \dontrun{
-pred <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], fun.mat = function(t, N, theta) theta[,1]*t + theta[,2]*N)
+pred <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1],
+                 fun.mat = function(t, N, theta) theta[,1]*t + theta[,2]*N)
 }
 pred <- predict(est, pred.alg = "simpleTrajectory", sample.length = 100)
 }

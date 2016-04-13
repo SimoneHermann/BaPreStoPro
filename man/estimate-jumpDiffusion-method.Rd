@@ -20,7 +20,8 @@ Bayesian estimation of a stochastic process
   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\eta,t,Y_t)dN_t}.
 }
 \examples{
-cl <- set.to.class("jumpDiffusion", parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+cl <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
+               parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)))
 t <- seq(0, 1, by = 0.01)
 data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
 est <- estimate(cl, t, data, 10000)

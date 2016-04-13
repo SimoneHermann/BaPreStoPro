@@ -42,9 +42,12 @@ Bayesian prediction of a stochastic process
   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
 }
 \examples{
-mu <- c(5, 1); Omega <- c(0.9, 0.04); phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
+mu <- c(5, 1); Omega <- c(0.9, 0.04)
+phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
 y0.fun <- function(phi, t) phi[2]
-model <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun, b.fun = function(phi, t, y) phi[1], parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
+model <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun,
+     b.fun = function(phi, t, y) phi[1],
+     parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
 \dontrun{
@@ -53,8 +56,10 @@ plot(est_hidmixdiff)
 pred1 <- predict(est_hidmixdiff, b.fun.mat = function(phi, t, y) phi[,1])
 pred2 <- predict(est_hidmixdiff, pred.alg = "Trajectory", b.fun.mat = function(phi, t, y) phi[,1])
 pred3 <- predict(est_hidmixdiff, pred.alg = "simpleTrajectory", sample.length = nrow(pred1$Y))
-lines(t, apply(pred1$Z, 2, quantile, 0.025), col = 3); lines(t, apply(pred1$Z, 2, quantile, 0.975), col = 3)
-lines(t, apply(pred2$Z, 2, quantile, 0.025), col = 4); lines(t, apply(pred2$Z, 2, quantile, 0.975), col = 4)
+lines(t, apply(pred1$Z, 2, quantile, 0.025), col = 3)
+lines(t, apply(pred1$Z, 2, quantile, 0.975), col = 3)
+lines(t, apply(pred2$Z, 2, quantile, 0.025), col = 4)
+lines(t, apply(pred2$Z, 2, quantile, 0.975), col = 4)
 pred4 <- predict(est_hidmixdiff, pred.alg = "simpleBayesTrajectory")
 }
 }

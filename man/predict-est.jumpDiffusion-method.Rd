@@ -37,7 +37,9 @@ Bayesian prediction of a stochastic process
   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\eta,t,Y_t)dN_t}.
 }
 \examples{
-model <- set.to.class("jumpDiffusion", parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+model <- set.to.class("jumpDiffusion",
+         parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)),
+         Lambda = function(t, xi) (t/xi[2])^xi[1])
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 est_jd <- estimate(model, t, data, 2000)
@@ -45,9 +47,11 @@ plot(est_jd)
 \dontrun{
 pred_jd <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 est_jd2 <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
-pred_jd2 <- predict(est_jd2, t = t[81:101], which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+pred_jd2 <- predict(est_jd2, t = t[81:101], which.series = "current",
+                     Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 lines(t, data$Y, type="l", lwd = 2)
-pred_jd3 <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], pred.alg = "Distribution")
+pred_jd3 <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1],
+                     pred.alg = "Distribution")
 }
 pred_jd4 <- predict(est_jd, pred.alg = "simpleTrajectory", sample.length = 100)
 for(i in 1:100) lines(t[-1], pred_jd4$Y[i,], col = "grey")

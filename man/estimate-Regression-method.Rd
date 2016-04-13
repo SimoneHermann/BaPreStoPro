@@ -21,7 +21,8 @@ Bayesian estimation of the parameter of the regression model
 }
 \examples{
 t <- seq(0,1, by = 0.01)
-cl <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2], parameter = list(phi = c(1,2), gamma2 = 0.1))
+cl <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2],
+                   parameter = list(phi = c(1,2), gamma2 = 0.1))
 data <- simulate(cl, t = t, plot.series = TRUE)
 est <- estimate(cl, t, data, 1000)
 plot(est)
