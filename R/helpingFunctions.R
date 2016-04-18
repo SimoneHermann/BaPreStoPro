@@ -58,7 +58,7 @@ dNtoTimes <- function(dN, t){
 #'
 #' @return candidate for MH ratio
 #' @examples
-#' proposal(1, 0.01)
+#' plot(replicate(100, proposal(1, 0.1)), type = "l")
 #' @export
 proposal <- function(parOld, propSd){
   if(any(parOld < 1e-150)) parOld[parOld < 1e-150] <- 1e-150  # 1e-320 equal to zero ...
@@ -85,7 +85,7 @@ proposalRatio <- function(parOld, parNew, propSd){
   muNew <- log(parNew) - log( propSd^2/exp(2*log(parNew)) + 1)/2
   sigma2New <- log( propSd^2/exp(2*log(parNew))+1)
 
-  prod(dlnorm(parOld, muNew, sigma2New)/dlnorm(parNew, muOld, sigma2Old))
+  prod(dlnorm(parOld, muNew, sqrt(sigma2New))/dlnorm(parNew, muOld, sqrt(sigma2Old)))
 }
 
 #' Plot function for credibility or prediction intervals

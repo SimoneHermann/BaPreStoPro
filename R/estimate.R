@@ -355,9 +355,10 @@ setMethod(f = "estimate", signature = "Merton",
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
-#' cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, 
-#'                    parameter = list(theta = c(1,2), gamma2 = 0.1, xi = 10))
-#' data <- simulate(cl, t = t, plot.series = TRUE)
+#' cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) exp(theta[1]*t) + theta[2]*N, 
+#'                    parameter = list(theta = c(2, 2), gamma2 = 0.25, xi = c(3, 0.5)),
+#'                    Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' data <- simulate(cl, t = t)
 #' est <- estimate(cl, t, data, 1000) 
 #' plot(est)
 #' \dontrun{

@@ -165,11 +165,14 @@ setMethod(f = "plot", signature = "est.reg_hiddenNHPP", definition = function(x,
     op <- par(mfrow = mfr, mar = c(2.8, 2.8, 2, 2), mgp = c(1.5, 0.5, 0), oma = c(0, 0, 0, 0), cex.main = 0.8, cex.lab = 0.7,
               cex.axis = 0.7)
     for(i in 1:p) {
-      plot(x@theta[,i], type = "l", ylab = bquote(theta[.(i)])); abline(h = x@model$theta[i], col = 2)
+      plot(x@theta[,i], type = "l", ylab = bquote(theta[.(i)]))
+      abline(h = x@model$theta[i], col = 2)
     }
     plot(x@gamma2, type = "l", ylab = expression(gamma^2)); abline(h = x@model$gamma2, col = 2)
-    for(i in 1:q) plot(x@xi[,i], type = "l", ylab = bquote(xi[.(i)])); abline(h = x@model$xi[i], col = 2)
-
+    for(i in 1:q){
+      plot(x@xi[,i], type = "l", ylab = bquote(xi[.(i)]))
+      abline(h = x@model$xi[i], col = 2)
+    } 
   } else {
     p <- ncol(x@theta); q <- ncol(x@xi); mfr <- c(ceiling(p+q)/2 + 2, 2)
     op <- par(mfrow = mfr, mar = c(2.8, 2.8, 2, 2), mgp = c(1.5, 0.5, 0), oma = c(0, 0, 0, 0), cex.main = 0.8, cex.lab = 0.7,
@@ -179,8 +182,10 @@ setMethod(f = "plot", signature = "est.reg_hiddenNHPP", definition = function(x,
       plot(x@theta[,i], type = "l", ylab = bquote(theta[.(i)])); abline(h = x@model$theta[i], col = 2)
     }
     plot(x@gamma2, type = "l", ylab = expression(gamma^2)); abline(h = x@model$gamma2, col = 2)
-    for(i in 1:q) plot(x@xi[,i], type = "l", ylab = bquote(xi[.(i)])); abline(h = x@model$xi[i], col = 2)
-
+    for(i in 1:q){
+      plot(x@xi[,i], type = "l", ylab = bquote(xi[.(i)]))
+      abline(h = x@model$xi[i], col = 2)
+    } 
     plot(x@t, x@N.est[,length(x@gamma2)], type = "l", xlab = "t", ylab = "N"); for(i in 1:length(x@gamma2)) lines(x@t, x@N.est[,i])
   }
 
@@ -198,7 +203,8 @@ setMethod(f = "plot", signature = "est.NHPP", definition = function(x, newwindow
             cex.axis = 0.7)
 
   for(i in 1:q){
-    plot(x@xi[,i], type = "l", ylab = bquote(xi[.(i)])); abline(h = x@model$xi[i], col = 2)
+    plot(x@xi[,i], type = "l", ylab = bquote(xi[.(i)]))
+    abline(h = x@model$xi[i], col = 2)
   }
   par(old.settings)
 })

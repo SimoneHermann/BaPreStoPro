@@ -37,66 +37,12 @@ est_reg_hiddenNHPP <- function(Y, N, t, fun, n = 1000, start, prior, Lambda, int
       }
     }else{
       Lambda <- function(t, xi){
-        exp(xi[1]*t+xi[2])-exp(xi[2])
+        xi[2]*exp(xi[1]*t)-xi[2]
       }
     }
   }
 
   if(missing(N)){
-    post_N <- function(N, i, gamma2, theta, xi){
-      Di <- Y[i]-fun(t[i], N, theta)
-      Lambdai <- Lambda(t[i], xi)
-      exp(-Lambdai)/prod(1:max(N,1))*exp(-Di^2/(2*gamma2)+N*log(Lambdai))/sqrt(2*pi*gamma2)
-    }
-    drawN_wrongbutworking <- function(gamma2, theta, xi, N_old){   # wrong but working...
-      N_new <- N_old
-      cands <- lapply(N_old, function(n) 0:(n*rangeN+5))
-      prob <- lapply(1:lt, function(i) sapply(cands[[i]], post_N, i, gamma2, theta, xi))
-      diFu <- lapply(prob, cumsum)
-      ind <- sapply(diFu, function(vec) any(is.na(vec)) | any(is.infinite(vec)) )
-      u <- numeric(length(diFu))
-      if(sum(ind) < length(diFu)){
-        u[!ind] <- runif(length(diFu[!ind]), 0, sapply(diFu[!ind], max))
-        for(j in (1:lt)[!ind]){
-                  N_new[j] <- cands[[j]][which(diFu[[j]]>=u[j])[1]]
-        }
-      }
-        N_new
-    }
-    drawN2 <- function(gamma2, theta, xi, N_old){
-      N_new <- N_old
-      dN_old <- diff(N_old)
-      for(i in 2:lt){
-        cands <- 0:(dN_old[i-1]*rangeN+5) + N_new[i-1]
-        prob <- post_N(cands, i, gamma2, theta, xi)
-        diFu <- cumsum(prob)
-        if(!(any(is.na(diFu)) | any(is.infinite(diFu)))){
-          u <- runif(1, 0, max(diFu))
-          N_new[i] <- cands[which(diFu>=u)[1]]
-        }else{
-          N_new[i] <- N_new[i-1] + dN_old[i]
-        }
-      }
-      N_new
-    }
-    dY <- diff(Y)
-    drawN <- function(gamma2, theta, xi, N_old){
-      N_new <- N_old
-      dN_old <- diff(N_old)
-      for(i in 2:lt){
-        cands <- 0:(dN_old[i-1]*rangeN+5)
-        prob <- dnorm(dY[i-1], fun(t[i],N_new[i-1]+cands,theta)-fun(t[i-1],N_new[i-1],theta), sqrt(2*gamma2))*
-          dpois(cands, Lambda(t[i],xi)-Lambda(t[i-1],xi))
-        diFu <- cumsum(prob)
-        if(!(any(is.na(diFu)) | any(is.infinite(diFu)))){
-          u <- runif(1, 0, max(diFu))
-          N_new[i] <- N_new[i-1] + cands[which(diFu>=u)[1]]
-        }else{
-          N_new[i] <- N_new[i-1] + dN_old[i]
-        }
-      }
-      N_new
-    }
 
     Npart <- 10
     B_fixed <- rep(1, lt)
@@ -205,7 +151,6 @@ est_reg_hiddenNHPP <- function(Y, N, t, fun, n = 1000, start, prior, Lambda, int
 
   for(count in 1:n){
     if(sample.N){
-#      N <- drawN_wrongbutworking(gamma2, theta, xi, N)
       he <- conditional_SMC(theta, gamma2, xi, N, B_fixed)
       N <- he$N
       B_fixed <- he$B_fixed
