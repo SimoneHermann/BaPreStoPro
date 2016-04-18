@@ -174,7 +174,7 @@ setMethod(f = "plot", signature = "est.reg_hiddenNHPP", definition = function(x,
       abline(h = x@model$xi[i], col = 2)
     } 
   } else {
-    p <- ncol(x@theta); q <- ncol(x@xi); mfr <- c(ceiling(p+q)/2 + 2, 2)
+    p <- ncol(x@theta); q <- ncol(x@xi); mfr <- c(ceiling((p+q)/2) + 1, 2)
     op <- par(mfrow = mfr, mar = c(2.8, 2.8, 2, 2), mgp = c(1.5, 0.5, 0), oma = c(0, 0, 0, 0), cex.main = 0.8, cex.lab = 0.7,
               cex.axis = 0.7)
 

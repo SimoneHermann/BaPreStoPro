@@ -45,7 +45,6 @@ est_reg_hiddenNHPP <- function(Y, N, t, fun, n = 1000, start, prior, Lambda, int
   if(missing(N)){
 
     Npart <- 10
-    B_fixed <- rep(1, lt)
     A.to.B = function(A){
       B <- matrix(0, Npart, lt)
       B[,lt] <- 1:Npart;
@@ -54,7 +53,7 @@ est_reg_hiddenNHPP <- function(Y, N, t, fun, n = 1000, start, prior, Lambda, int
       return(B)
     }
 
-    conditional_SMC = function(theta, gamma2, xi, N.cond, B_fixed){# conditional SMC
+    CSMC = function(theta, gamma2, xi, N.cond, B_fixed, conditional = TRUE){# conditional SMC
       # N.cond = the old samples
 
       x <- matrix(0, Npart, lt)
@@ -64,55 +63,69 @@ est_reg_hiddenNHPP <- function(Y, N, t, fun, n = 1000, start, prior, Lambda, int
 
       # initialisation
       x[,1] <- 0  # poisson always starts in 0
-      x[B_fixed[1],1] <- N.cond[1]
+      if(conditional){
+        x[B_fixed[1], 1] <- N.cond[1]
+      }else{
+        N.cond <- numeric(lt)
+      }
       w[,1] <- dnorm(Y[1], mean = fun(t[1], x[,1], theta), sd = sqrt(gamma2))
       W[,1] <- w[,1]/sum(w[,1])
 
-      for (indtime in 2:lt){
-        v  <- 1:Npart; v <- v[v != B_fixed[indtime]]
-        parents[B_fixed[indtime], indtime-1] <- B_fixed[indtime-1]
-        O <- sample(1:Npart, 1, prob = dbinom(1:Npart, Npart, prob = W[B_fixed[indtime], indtime-1]));
-        r <- NULL
-        if (O > 1){
-          r <- sample(v, O-1, replace = FALSE);
-          parents[r, indtime-1] <- B_fixed[indtime-1];
-        }
-        if(O != Npart){
-          u <- 1:Npart; u <- u[-c(r, B_fixed[indtime])]
-          parents[u, indtime-1] <-  sample(v, Npart-O, replace = TRUE, prob = W[-B_fixed[indtime], indtime-1])
+      for (n in 2:lt){
+        if(conditional){
+          set.parents  <- (1:Npart)[-B_fixed[n]]
+          
+          On_1 <- rmultinom(1, Npart-1, W[,n-1])
+          O <- On_1[B_fixed[n-1]] + 1
+          he <- sample(set.parents, O-1)
+          
+          parents[B_fixed[n], n-1] <- B_fixed[n-1]
+          parents[he, n-1] <- B_fixed[n-1]
+          parents[-c(B_fixed[n],he), n-1] <- sample(set.parents, Npart-O, replace = TRUE, prob =  W[-B_fixed[n], n-1])
+          
+        }else{
+          set.parents <- 1:Npart
+          parents[, n-1] <- sample(1:Npart, Npart, replace = TRUE, prob = W[,n-1])
+          
         }
 
-        x[, 1:(indtime-1)] <- x[parents[,indtime-1], 1:(indtime-1)]
-        x.past <- x[, indtime-1]
+        
+        x[,1:(n-1)] <- x[parents[,n-1], 1:(n-1)]
+        x.past <- x[,n-1]
+        
 
         dr <- function(Ni, dNi_old){
-          cands <- 0:(dNi_old*rangeN+5)
-          prob <- dnorm(Y[indtime], fun(t[indtime], Ni+cands,theta), sqrt(2*gamma2))*
-            dpois(Ni+cands, Lambda(t[indtime],xi))
+          cands <- 0:(dNi_old*rangeN + 5)
+          prob <- dnorm(Y[n], fun(t[n], Ni+cands, theta), sqrt(2*gamma2))*
+            dpois(Ni+cands, Lambda(t[n], xi))
           diFu <- cumsum(prob)
           u <- runif(1, 0, max(diFu))
           Ni + cands[which(diFu >= u)[1]]
         }
-        x.new <- sapply(x.past, dr, diff(N.cond)[indtime-1])
+        x.new <- sapply(x.past, dr, diff(N.cond)[n-1])
 
-        x[v,indtime] <- x.new[v]
-        x[-v,indtime] <- N.cond[indtime]
-        wn <- dpois(x[,indtime],Lambda(t[indtime],xi))*
-          dnorm(Y[indtime], fun(t[indtime], x[,indtime], theta),sqrt(gamma2))/(dnorm(Y[indtime], fun(t[indtime], x[,indtime], theta), sqrt(2*gamma2))*
-                                                                              dpois(x[,indtime], Lambda(t[indtime],xi)))
-
-        w[,indtime] <- wn
-        W[,indtime] <- w[,indtime]/sum(w[,indtime])
+        x[set.parents, n] <- x.new[set.parents]
+        x[-set.parents, n] <- N.cond[n]
+        wn <- dpois(x[, n], Lambda(t[n], xi))*
+          dnorm(Y[n], fun(t[n], x[, n], theta), sqrt(gamma2))/
+          (dnorm(Y[n], fun(t[n], x[, n], theta), sqrt(2*gamma2))*
+           dpois(x[, n], Lambda(t[n], xi)))
+        if(sum(wn) == 0) wn <- rep(1, length(wn))
+        w[, n] <- wn
+        W[, n] <- w[, n]/sum(w[, n])
       }
       lign.B <- A.to.B(parents)
-      indice <- sample(1:Npart, 1, prob = W[,lt])
-      X <- x[indice,]
+      indice <- sample(1:Npart, 1, prob = W[, lt])
+      X <- x[indice, ]
       B_fixed <- lign.B[indice,]
       return(list(N = X, B_fixed = B_fixed) )
     }
 
     if(is.null(start$N)){
-      N <- simN(t, xi, 1, start = c(t[1], 0), Lambda = Lambda)$N
+#      N <- simN(t, xi, 1, start = c(t[1], 0), Lambda = Lambda)$N
+      he <- CSMC(theta, gamma2, xi, conditional = FALSE)
+      N <- he$N
+      B_fixed <- he$B_fixed
     }else{
       N <- start$N
     }
@@ -151,7 +164,7 @@ est_reg_hiddenNHPP <- function(Y, N, t, fun, n = 1000, start, prior, Lambda, int
 
   for(count in 1:n){
     if(sample.N){
-      he <- conditional_SMC(theta, gamma2, xi, N, B_fixed)
+      he <- CSMC(theta, gamma2, xi, N, B_fixed)
       N <- he$N
       B_fixed <- he$B_fixed
     }

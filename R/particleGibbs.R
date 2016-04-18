@@ -355,7 +355,7 @@ SMC <- function(phi, gamma2, sigma2, Npart, times, y, b.fun, y0.fun, sigmaTilde,
       parents[-c(B_fixed[n],he), n-1] <- sample(set.parents, Npart-O, replace = TRUE, prob =  Weights[-B_fixed[n],n-1])
     }else{
       set.parents <- 1:Npart
-      parents[, n-1] <- sample(1:Npart, Npart, replace = T, prob = Weights[,n-1])
+      parents[, n-1] <- sample(1:Npart, Npart, replace = TRUE, prob = Weights[,n-1])
     }
 
     x[,1:(n-1)] <- x[parents[,n-1], 1:(n-1)]

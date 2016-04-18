@@ -5,7 +5,7 @@
 \title{Metropolis-Hastings sampler}
 \usage{
 est_NHPP(jumpTimes, Tend, start, n = 5000, int = c("Weibull", "Exp"),
-  priorRatio, proposals, Lambda)
+  priorRatio, proposal = c("lognormal", "normal"), Lambda)
 }
 \arguments{
 \item{jumpTimes}{vector of jump (or event) times}
@@ -20,7 +20,7 @@ est_NHPP(jumpTimes, Tend, start, n = 5000, int = c("Weibull", "Exp"),
 
 \item{priorRatio}{function for prior ratio, if missing: non-informative}
 
-\item{proposals}{list of functions "ratio" and "draw"}
+\item{proposal}{"lognormal" (for positive parameters, default) or "normal"}
 
 \item{Lambda}{intensity rate function}
 }
@@ -36,8 +36,8 @@ Lambda <- function(t, xi){
 xi[2]*exp(xi[1]*t)-xi[2]
 }
 jumpTimes <- simN(seq(0, 1, by = 0.001), c(4, 0.5), len = 1, Lambda = Lambda)$Times
-chain <- est_NHPP(jumpTimes, 1, c(4, 0.5), Lambda = Lambda) # normal proposal
-# chain <- est_NHPP(jumpTimes, 1, c(4, 0.5), int = "Exp")   # lognormal proposal
+chain <- est_NHPP(jumpTimes, 1, c(4, 0.5), Lambda = Lambda)
+# chain <- est_NHPP(jumpTimes, 1, c(4, 0.5), int = "Exp")
 plot(chain[1,], type="l"); abline(h = 4)
 plot(chain[2,], type="l"); abline(h = 0.5)
 
@@ -46,8 +46,8 @@ Lambda <- function(t, xi){
 (t/xi[2])^xi[1]
 }
 jumpTimes <- simN(seq(0, 1, by = 0.001), c(3, 0.5), len = 1, Lambda = Lambda)$Times
-chain <- est_NHPP(jumpTimes, 1, c(3, 0.5), Lambda = Lambda)    # normal proposal
-# chain <- est_NHPP(jumpTimes, 1, c(3, 0.5), int = "Weibull")  # lognormal proposal
+chain <- est_NHPP(jumpTimes, 1, c(3, 0.5), Lambda = Lambda)
+# chain <- est_NHPP(jumpTimes, 1, c(3, 0.5), int = "Weibull")
 plot(chain[1,], type="l"); abline(h = 3)
 plot(chain[2,], type="l"); abline(h = 0.5)
 }

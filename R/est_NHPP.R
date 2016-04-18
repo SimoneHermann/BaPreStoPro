@@ -65,7 +65,6 @@ est_NHPP <- function(jumpTimes, Tend, start, n = 5000, int = c("Weibull","Exp"),
         prod(lambda_vec)*exp(-Lambda(Tend, xi))
       }
     }
-    propSd <- (abs(start)+0.1)/2
     proposal <- "lognormal"
     
   } else{
@@ -92,6 +91,7 @@ est_NHPP <- function(jumpTimes, Tend, start, n = 5000, int = c("Weibull","Exp"),
     }
     proposals$ratio <- function(xi_drawn, xi_old, propSd) 1
   }
+  propSd <- (abs(start)+0.1)/2
   xi_old <- start
   xi_out <- matrix(0, length(start), n)
   LikOld <- Lik(xi_old)
