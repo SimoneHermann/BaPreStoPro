@@ -378,15 +378,15 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #'            y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
-#' est <- estimate(cl, t, data[1:20,], 2000)
+#' est <- estimate(cl, t, data[1:20,], 2000) # nMCMC should be much larger!
 #' plot(est)
-#' pred_mixdiff <- predict(est, b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
+#' pred_mixdiff <- predict(est, t = seq(0, 1, length = 21), b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
 #' lines(t, data[21,], lwd = 2)
-#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, ] & 
-#'      apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, ])
+#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, seq(1, length(t), length = 21)] & 
+#'      apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, seq(1, length(t), length = 21)])
 #' mean(sapply(1:20, function(i){
-#'     mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, ] & 
-#'     apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, ])}))
+#'     mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, seq(1, length(t), length = 21)] & 
+#'     apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, seq(1, length(t), length = 21)])}))
 #'
 #' @export
 setMethod(f = "predict", signature = "est.mixedDiffusion",
