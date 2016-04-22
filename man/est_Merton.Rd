@@ -22,6 +22,8 @@ est_Merton(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2,
 \item{Lambda}{intensity rate function}
 
 \item{rangeN}{range of candidates for filtering N}
+
+\item{it.xi}{number of iterations of MH inside the Gibbs sampler}
 }
 \value{
 \item{phi}{estimator of \eqn{\phi}}

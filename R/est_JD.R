@@ -12,6 +12,7 @@
 #' @param prior list of prior values, list(mu_phi, s_phi, mu_th, s_th, alpha, beta)
 #' @param Lambda intensity rate function
 #' @param rangeN range of candidates for filtering N
+#' @param it.xi number of iterations of MH inside the Gibbs sampler
 #'
 #' @return
 #' \item{phi}{estimator of \eqn{\phi}}
@@ -177,6 +178,7 @@ est_Merton <- function(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2, it.x
 #' @param int if Lambda is missing, one of "Weibull" or "Exp"
 #' @param rangeN range for candidates for filtering N
 #' @param propSd starting value for proposal standard deviation
+#' @param it.xi number of iterations of MH inside the Gibbs sampler
 #'
 #'
 #' @return
@@ -187,7 +189,7 @@ est_Merton <- function(X, N, t, n = 1000, start, prior, Lambda, rangeN = 2, it.x
 #' \item{N}{estimator of latent variable \eqn{N}, if not observed}
 #' \item{prop}{storage of adapted proposal variances}
 
-est_JD_Euler <- function(X, N, t, n = 1000, start, b, s, h, priorRatio, Lambda, int = c("Weibull","Exp"), rangeN = 2, propSd = 0.5){
+est_JD_Euler <- function(X, N, t, n = 1000, start, b, s, h, priorRatio, Lambda, int = c("Weibull","Exp"), rangeN = 2, propSd = 0.5, it.xi = 5){
   if(missing(b)) b <- function(phi, t, x) phi*x
   if(missing(s)) s <- function(gamma2, t, x) sqrt(gamma2)*x
   if(missing(h)) h <- function(theta, t, x) theta*x
@@ -276,7 +278,7 @@ est_JD_Euler <- function(X, N, t, n = 1000, start, b, s, h, priorRatio, Lambda, 
       N <- cumsum(c(0, dN))
 
     }
-    xi <- est_NHPP(dNtoTimes(dN, t), t[lt], xi, n = 1, Lambda = Lambda)
+    xi <- est_NHPP(dNtoTimes(dN, t), t[lt], xi, n = it.xi, Lambda = Lambda)[, it.xi]
 
     phi_drawn <- rnorm(1, phi, propSd_phi)
     ratio <- prod(likeli(phi_drawn, gamma2, theta, dN)/likeli(phi, gamma2, theta, dN))

@@ -4,7 +4,7 @@
 \title{Metropolis within Gibbs sampler}
 \usage{
 est_JD_Euler(X, N, t, n = 1000, start, b, s, h, priorRatio, Lambda,
-  int = c("Weibull", "Exp"), rangeN = 2, propSd = 0.5)
+  int = c("Weibull", "Exp"), rangeN = 2, propSd = 0.5, it.xi = 5)
 }
 \arguments{
 \item{X}{vector of observed variables}
@@ -32,6 +32,8 @@ est_JD_Euler(X, N, t, n = 1000, start, b, s, h, priorRatio, Lambda,
 \item{rangeN}{range for candidates for filtering N}
 
 \item{propSd}{starting value for proposal standard deviation}
+
+\item{it.xi}{number of iterations of MH inside the Gibbs sampler}
 }
 \value{
 \item{phi}{estimator of \eqn{\phi}}

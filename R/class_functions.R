@@ -35,7 +35,7 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
   if(missing(start)) start <- parameter
 
   if(missing(b.fun)) b.fun <- function(phi, t, y) phi
-  if(missing(s.fun)) s.fun <- function(gamma2, t, y) gamma2
+  if(missing(s.fun)) s.fun <- function(gamma2, t, y) sqrt(gamma2)
   if(missing(h.fun)) h.fun <- function(theta, t, y) theta
 
   if(missing(sT.fun)) sT.fun <- function(t, y) 1
