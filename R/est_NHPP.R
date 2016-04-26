@@ -68,7 +68,8 @@ est_NHPP <- function(jumpTimes, Tend, start, n = 5000, int = c("Weibull","Exp"),
     proposal <- "lognormal"
     
   } else{
-    lambda <- function(t, xi, h = 1e-05){
+    lambda <- function(t, xi){
+      h <- 1e-05
       (Lambda(t+h,xi)-Lambda(t,xi))/h
     }
     Lik <- function(xi){

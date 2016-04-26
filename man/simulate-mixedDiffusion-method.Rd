@@ -5,7 +5,7 @@
 \title{Simulation of diffusion process}
 \usage{
 \S4method{simulate}{mixedDiffusion}(object, nsim = 1, seed = NULL, t,
-  mw = 10, plot.series = TRUE)
+  mw = 1, plot.series = TRUE)
 }
 \arguments{
 \item{object}{class object of parameters: "mixedDiffusion"}
@@ -15,8 +15,6 @@
 \item{seed}{optional: seed number for random number generator}
 
 \item{t}{vector of time points to make predictions for}
-
-\item{y0}{starting point of the process}
 
 \item{mw}{mesh width for finer Euler approximation}
 

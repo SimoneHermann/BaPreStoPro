@@ -54,7 +54,7 @@ model <- set.to.class("mixedDiffusion",
          b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
-est_mixdiff <- estimate(model, t, data[1:20,], 2000)
+est_mixdiff <- estimate(model, t, data[1:20,], 100) # nMCMC should be much larger
 plot(est_mixdiff)
 \dontrun{
 pred_mixdiff <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y)
@@ -77,6 +77,7 @@ for(i in 1:100) lines(t, pred_mixdiff$Y[i,], col = "grey")
 pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleBayesTrajectory")
 
 # OU
+\dontrun{
 b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
 mu <- c(10, 1, 0.5); Omega <- c(0.9, 0.01, 0.01)
 phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
@@ -85,7 +86,7 @@ cl <- set.to.class("mixedDiffusion",
            y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 t <- seq(0, 1, by = 0.01)
 data <- simulate(cl, t = t, plot.series = TRUE)
-est <- estimate(cl, t, data[1:20,], 2000) # nMCMC should be much larger!
+est <- estimate(cl, t, data[1:20,], 2000)
 plot(est)
 pred_mixdiff <- predict(est, t = seq(0, 1, length = 21), b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
 lines(t, data[21,], lwd = 2)
@@ -94,5 +95,6 @@ mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, seq(1, length(t), len
 mean(sapply(1:20, function(i){
     mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, seq(1, length(t), length = 21)] &
     apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, seq(1, length(t), length = 21)])}))
+}
 }
 

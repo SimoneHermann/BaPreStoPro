@@ -42,7 +42,7 @@ Bayesian prediction of the model,
 model <- set.to.class("hiddenDiffusion", parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
-est_hiddiff <- estimate(model, t, data$Z, 1000)
+est_hiddiff <- estimate(model, t, data$Z, 100)  # nMCMC should be much larger!
 plot(est_hiddiff)
 \dontrun{
 pred_hiddiff <- predict(est_hiddiff, t = seq(0, 1, by = 0.1))

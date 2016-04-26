@@ -60,7 +60,7 @@ setMethod(f = "estimate", signature = "Diffusion",
 #'              b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
-#' est <- estimate(cl, t, data[1:20,], 2000)
+#' est <- estimate(cl, t, data[1:20,], 100)  # nMCMC should be much larger
 #' plot(est)
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
@@ -71,7 +71,7 @@ setMethod(f = "estimate", signature = "Diffusion",
 #'                y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
-#' est <- estimate(cl, t, data[1:20,], 2000)
+#' est <- estimate(cl, t, data[1:20,], 100)  # nMCMC should be much larger
 #' plot(est)
 #'
 #' @export
@@ -108,8 +108,9 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #'              parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
-#' est <- estimate(cl, t, data$Z, 1000)
+#' est <- estimate(cl, t, data$Z, 100)  # nMCMC should be much larger!
 #' plot(est)
+#' \dontrun{
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y
 #' cl <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5, 
@@ -119,6 +120,7 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' data <- simulate(cl, t = t, plot.series = TRUE)
 #' est <- estimate(cl, t, data$Z, 1000)
 #' plot(est)
+#' }
 #' @export
 setMethod(f = "estimate", signature = "hiddenDiffusion",
           definition = function(model.class, t, data, nMCMC, Npart = 100) {
@@ -256,7 +258,7 @@ setMethod(f = "estimate", signature = "NHPP",
 #'                parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
-#' est <- estimate(cl, t, data, 10000)
+#' est <- estimate(cl, t, data, 1000)
 #' plot(est)
 #' @export
 setMethod(f = "estimate", signature = "jumpDiffusion",

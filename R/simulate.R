@@ -18,7 +18,7 @@
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 #' @export
 setMethod(f = "simulate", signature = "Diffusion",
-          definition = function(object, nsim = 1, seed = NULL, t, y0, mw = 10, plot.series = TRUE) {
+          definition = function(object, nsim = 1, seed = NULL, t, y0, mw = 1, plot.series = TRUE) {
             set.seed(seed)
             if(nsim > 1){
               result <- matrix(0, nsim, length(t))
@@ -51,7 +51,6 @@ setMethod(f = "simulate", signature = "Diffusion",
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
 #' @param t vector of time points to make predictions for
-#' @param y0 starting point of the process
 #' @param mw mesh width for finer Euler approximation
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
@@ -61,7 +60,7 @@ setMethod(f = "simulate", signature = "Diffusion",
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' @export
 setMethod(f = "simulate", signature = "mixedDiffusion",
-          definition = function(object, nsim = 1, seed = NULL, t, mw = 10, plot.series = TRUE) {
+          definition = function(object, nsim = 1, seed = NULL, t, mw = 1, plot.series = TRUE) {
       set.seed(seed)
       if(nsim > 1){
         result <- list()

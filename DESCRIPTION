@@ -1,12 +1,15 @@
 Package: BaPreStoPro
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Bayesian Prediction of Stochastic Processes
 Version: 0.1
-Date: 2015-12-03
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: GPL2
+Date: 2016-04-25
+Author: Simone Hermann
+Maintainer: <hermann@statistik.tu-dortmund.de>
+Description: Bayesian inference and prediction for several kinds of stochastic
+    processes, e.g. jump diffusion, (mixed) diffusion models.
+License: GPL (>= 2)
 Depends:
-    mvtnorm
+    mvtnorm,
+    stats,
+    methods
 LazyData: TRUE

@@ -24,7 +24,7 @@ cl <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
                parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)))
 t <- seq(0, 1, by = 0.01)
 data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
-est <- estimate(cl, t, data, 10000)
+est <- estimate(cl, t, data, 1000)
 plot(est)
 }
 

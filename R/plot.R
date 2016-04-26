@@ -1,4 +1,9 @@
-
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.jumpDiffusion class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.jumpDiffusion", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -34,6 +39,13 @@ setMethod(f = "plot", signature = "est.jumpDiffusion", definition = function(x, 
   par(old.settings)
 })
 
+
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.Merton class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.Merton", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -69,6 +81,12 @@ setMethod(f = "plot", signature = "est.Merton", definition = function(x, newwind
   par(old.settings)
 })
 
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.Diffusion class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.Diffusion", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -87,6 +105,12 @@ setMethod(f = "plot", signature = "est.Diffusion", definition = function(x, neww
   par(old.settings)
 })
 
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.mixedDiffusion class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.mixedDiffusion", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -106,6 +130,12 @@ setMethod(f = "plot", signature = "est.mixedDiffusion", definition = function(x,
   par(old.settings)
 })
 
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.hiddenDiffusion class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.hiddenDiffusion", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -129,6 +159,12 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion", definition = function(x
   par(old.settings)
 })
 
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.hiddenmixedDiffusion class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.hiddenmixedDiffusion", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -153,6 +189,12 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion", definition = funct
   par(old.settings)
 })
 
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.reg_hiddenNHPP class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.reg_hiddenNHPP", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -192,6 +234,12 @@ setMethod(f = "plot", signature = "est.reg_hiddenNHPP", definition = function(x,
   par(old.settings)
 })
 
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.NHPP class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.NHPP", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -209,6 +257,12 @@ setMethod(f = "plot", signature = "est.NHPP", definition = function(x, newwindow
   par(old.settings)
 })
 
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.Regression class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.Regression", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {
@@ -227,6 +281,12 @@ setMethod(f = "plot", signature = "est.Regression", definition = function(x, new
   par(old.settings)
 })
 
+#' Plot method for the Bayesian estimation class object
+#' 
+#' @description Plot method for the S4 class Bayes.fit
+#' @param x est.mixedRegression class
+#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
+#' @param ... optional plot parameters
 #' @export
 setMethod(f = "plot", signature = "est.mixedRegression", definition = function(x, newwindow = FALSE, ...) {
   if (newwindow) {

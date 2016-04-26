@@ -5,7 +5,7 @@
 \title{Simulation of diffusion process}
 \usage{
 \S4method{simulate}{Diffusion}(object, nsim = 1, seed = NULL, t, y0,
-  mw = 10, plot.series = TRUE)
+  mw = 1, plot.series = TRUE)
 }
 \arguments{
 \item{object}{class object of parameters: "Diffusion"}

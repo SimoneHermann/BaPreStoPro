@@ -53,7 +53,9 @@ data <- simulate(cl, t = t, plot.series = TRUE)
 est <- estimate(cl, t, data, 1000)
 plot(est)
 pred <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2])
+\dontrun{
 pred2 <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2], only.interval = FALSE)
 plot(density(pred2[,10]))
+}
 }
 

@@ -7,7 +7,8 @@
 \S4method{predict}{est.jumpDiffusion}(object, t, burnIn, thinning, Lambda.mat,
   which.series = c("new", "current"), M2pred = 10, cand.length = 1000,
   pred.alg = c("Trajectory", "Distribution", "simpleTrajectory",
-  "simpleBayesTrajectory"), sample.length, plot.prediction = TRUE)
+  "simpleBayesTrajectory"), pred.alg.N = c("Trajectory", "Distribution"),
+  sample.length, plot.prediction = TRUE)
 }
 \arguments{
 \item{object}{class object of MCMC samples: "est.jumpDiffusion"}
@@ -46,12 +47,11 @@ est_jd <- estimate(model, t, data, 2000)
 plot(est_jd)
 \dontrun{
 pred_jd <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-est_jd2 <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
-pred_jd2 <- predict(est_jd2, t = t[81:101], which.series = "current",
+pred_jd2 <- predict(est_jd, pred.alg = "Distribution", pred.alg.N = "Distribution", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+est <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
+pred <- predict(est, t = t[81:101], which.series = "current",
                      Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 lines(t, data$Y, type="l", lwd = 2)
-pred_jd3 <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1],
-                     pred.alg = "Distribution")
 }
 pred_jd4 <- predict(est_jd, pred.alg = "simpleTrajectory", sample.length = 100)
 for(i in 1:100) lines(t[-1], pred_jd4$Y[i,], col = "grey")

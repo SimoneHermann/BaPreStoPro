@@ -347,7 +347,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #'          b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est_mixdiff <- estimate(model, t, data[1:20,], 2000)
+#' est_mixdiff <- estimate(model, t, data[1:20,], 100) # nMCMC should be much larger
 #' plot(est_mixdiff)
 #' \dontrun{
 #' pred_mixdiff <- predict(est_mixdiff, b.fun.mat = function(phi, t, y) phi[,1]*y)
@@ -370,6 +370,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleBayesTrajectory")
 #'
 #' # OU
+#' \dontrun{
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
 #' mu <- c(10, 1, 0.5); Omega <- c(0.9, 0.01, 0.01)
 #' phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
@@ -378,7 +379,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #'            y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(cl, t = t, plot.series = TRUE)
-#' est <- estimate(cl, t, data[1:20,], 2000) # nMCMC should be much larger!
+#' est <- estimate(cl, t, data[1:20,], 2000) 
 #' plot(est)
 #' pred_mixdiff <- predict(est, t = seq(0, 1, length = 21), b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
 #' lines(t, data[21,], lwd = 2)
@@ -387,7 +388,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' mean(sapply(1:20, function(i){
 #'     mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, seq(1, length(t), length = 21)] & 
 #'     apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, seq(1, length(t), length = 21)])}))
-#'
+#' }
 #' @export
 setMethod(f = "predict", signature = "est.mixedDiffusion",
           definition = function(object, t, Euler.interval = FALSE, level = 0.05, burnIn, thinning,
@@ -479,9 +480,9 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
       if(which.series == "new"){
         mu.est <- as.matrix(object@mu[ind,])
         Omega.est <- as.matrix(object@Omega[ind,])
-        phi.pred <- matrix(0, sample.length, length(mu.est))
+        phi.pred <- matrix(0, sample.length, ncol(mu.est))
         for(i in 1:sample.length){
-          phi.pred[i, ] <- rnorm(length(mu.est), mu.est[i,], sqrt(Omega.est[i,]))
+          phi.pred[i, ] <- rnorm(ncol(mu.est), mu.est[i,], sqrt(Omega.est[i,]))
           cl <- set.to.class("Diffusion", parameter = list(phi = phi.pred[i, ], gamma2 = samples$gamma2[i]), b.fun = b.fun, sT.fun = sT.fun)
           result[i,] <- simulate(cl, t = t, y0 = object@model$y0.fun(phi.pred[i,], t[1]), plot.series = FALSE)
         }
@@ -603,7 +604,7 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
 #' model <- set.to.class("hiddenDiffusion", parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est_hiddiff <- estimate(model, t, data$Z, 1000)
+#' est_hiddiff <- estimate(model, t, data$Z, 100)  # nMCMC should be much larger!
 #' plot(est_hiddiff)
 #' \dontrun{
 #' pred_hiddiff <- predict(est_hiddiff, t = seq(0, 1, by = 0.1))
@@ -1030,15 +1031,15 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #'                Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est_NHPP <- estimate(model, t, data$Times, 2000)
+#' est_NHPP <- estimate(model, t, data$Times, 1000)  # nMCMC should be much larger!
 #' plot(est_NHPP)
 #' \dontrun{
 #' pred_NHPP <- predict(est_NHPP)
 #' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess")
 #' pred_NHPP2 <- predict(est_NHPP, which.series = "current")
 #' pred_NHPP3 <- predict(est_NHPP, variable = "PoissonProcess", which.series = "current")
+#' pred_NHPP4 <- predict(est_NHPP, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
 #' }
-#' pred_NHPP <- predict(est_NHPP, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
 #' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory", 
 #'                      M2pred = length(data$Times))
 #' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleBayesTrajectory", 
@@ -1401,23 +1402,22 @@ setMethod(f = "predict", signature = "est.NHPP",
 #' plot(est_jd)
 #' \dontrun{
 #' pred_jd <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-#' est_jd2 <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
-#' pred_jd2 <- predict(est_jd2, t = t[81:101], which.series = "current", 
+#' pred_jd2 <- predict(est_jd, pred.alg = "Distribution", pred.alg.N = "Distribution", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' est <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
+#' pred <- predict(est, t = t[81:101], which.series = "current", 
 #'                      Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 #' lines(t, data$Y, type="l", lwd = 2)
-#' pred_jd3 <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], 
-#'                      pred.alg = "Distribution")
 #' }
 #' pred_jd4 <- predict(est_jd, pred.alg = "simpleTrajectory", sample.length = 100)
 #' for(i in 1:100) lines(t[-1], pred_jd4$Y[i,], col = "grey")
 #' @export
 setMethod(f = "predict", signature = "est.jumpDiffusion",
-          definition = function(object, t, burnIn, thinning, Lambda.mat,
-                                which.series = c("new", "current"), M2pred = 10,
+          definition = function(object, t, burnIn, thinning, Lambda.mat, which.series = c("new", "current"), M2pred = 10,
                                 cand.length = 1000, pred.alg = c("Trajectory", "Distribution", "simpleTrajectory", "simpleBayesTrajectory"),
-                                sample.length, plot.prediction = TRUE) {
+                                pred.alg.N = c("Trajectory", "Distribution"), sample.length, plot.prediction = TRUE) {
 
     pred.alg <- match.arg(pred.alg)
+    pred.alg.N <- match.arg(pred.alg)
     which.series <- match.arg(which.series)
 
     if(missing(burnIn)) burnIn <- object@burnIn
@@ -1454,65 +1454,92 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 
     if(pred.alg == "Trajectory" | pred.alg == "Distribution"){
 
-      gridN <- median(diff(t))/10
-      
-      samples <- t(object@xi[, ind])
-
-      if(missing(Lambda.mat)){
-        Lambda.diff <- function(cand, Tn_1, samples){
-          sapply(1:K, function(i) Lambda(cand + Tn_1, samples[i,]) - Lambda(Tn_1, samples[i,]) )
-        }
-        Fun <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
-      }else{
-        Fun <- function(cand, Tn_1){
-          1-mean(exp(-(Lambda.mat(cand + Tn_1, samples)-Lambda.mat(Tn_1, samples))))
-        }
-      }
-      sample.lengthN <- K
-
-      drawTn <- function(Tn_1){
-        u <- runif(1)
-        cand <- Tn_1 + 0.1
-        memory <- cand
-
-        while(length(unique(memory)) == length(memory)){
-          if(Fun(cand, Tn_1) < u){
-            cand <- cand*2
-            memory <- c(memory, cand)
-          }else{
-            cand <- cand/2
-            memory <- c(memory, cand)
+      if(pred.alg.N == "Trajectory"){
+        gridN <- median(diff(t))/10
+        
+        samples <- t(object@xi[, ind])
+        
+        if(missing(Lambda.mat)){
+          Lambda.diff <- function(cand, Tn_1, samples){
+            sapply(1:K, function(i) Lambda(cand + Tn_1, samples[i,]) - Lambda(Tn_1, samples[i,]) )
+          }
+          Fun <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
+        }else{
+          Fun <- function(cand, Tn_1){
+            1-mean(exp(-(Lambda.mat(cand + Tn_1, samples)-Lambda.mat(Tn_1, samples))))
           }
         }
-        lower <- min(memory[length(memory)-1], memory[length(memory)])
-        upper <- max(memory[length(memory)-1], memory[length(memory)])
-        diff <- upper - lower
-        while(diff >= gridN){
-          if(Fun(lower+diff/2, Tn_1) < u){
-            lower <- lower+diff/2
-          }else{
-            upper <- lower+diff/2
+        sample.lengthN <- K
+        
+        drawTn <- function(Tn_1){
+          u <- runif(1)
+          cand <- Tn_1 + 0.1
+          memory <- cand
+          
+          while(length(unique(memory)) == length(memory)){
+            if(Fun(cand, Tn_1) < u){
+              cand <- cand*2
+              memory <- c(memory, cand)
+            }else{
+              cand <- cand/2
+              memory <- c(memory, cand)
+            }
           }
+          lower <- min(memory[length(memory)-1], memory[length(memory)])
+          upper <- max(memory[length(memory)-1], memory[length(memory)])
           diff <- upper - lower
+          while(diff >= gridN){
+            if(Fun(lower+diff/2, Tn_1) < u){
+              lower <- lower+diff/2
+            }else{
+              upper <- lower+diff/2
+            }
+            diff <- upper - lower
+          }
+          Tn_1 + (lower+upper)/2
         }
-        Tn_1 + (lower+upper)/2
+        
+        result <- matrix(0, sample.lengthN, n)  # here: N_t
+        if(which.series == "new") result[, 1] <- 0
+        if(which.series == "current") result[, 1] <- startN
+        for(i in 1:sample.lengthN){
+          
+          times <- drawTn(Tstart)
+          while(times[length(times)] < t[n]){
+            times <- c(times, drawTn(times[length(times)]))
+          }
+          result[i, ] <- result[i, 1] + TimestoN(times, t)
+          if(i %% 100 == 0) message(paste(i, "of", sample.lengthN, " Poisson process predictions are calculated"))
+        }
+        Npred <- result
+        
+        dN <- t(apply(Npred, 1, diff))
+      }
+      if(pred.alg.N == "Distribution"){
+        samples <- t(object@xi[, ind])
+        result <- matrix(0, K, n-1)  # here: dN_t
+        candN <- 0:5
+        if(missing(Lambda.mat)){
+          Lambda.diff <- function(cand, j, samples){
+            sapply(1:K, function(i) Lambda(t[j+1], samples[i,]) - Lambda(t[j], samples[i,]) )
+          }
+          Fun.N <- function(j) vapply(candN, function(c) mean(ppois(Lambda.diff(c, j, samples))), FUN.VALUE = numeric(1))
+        }else{
+          Fun.N <- function(j){
+            vapply(candN, function(c) mean(ppois(c, Lambda.mat(t[j+1], samples) - Lambda.mat(t[j], samples))), FUN.VALUE = numeric(1))
+          }
+        }
+        
+        for(a in 1:(n-1)){
+          prob <- Fun.N(a)
+          result[, a] <- vapply(runif(K, 0, max(prob)), function(u) candN[which(prob >= u)[1]], FUN.VALUE = numeric(1))
+          if(a %% 10 == 0) message(paste(a, "of", n-1, " Poisson process predictions are calculated"))
+          
+        }
+        Npred <- t(apply(cbind(0, result), 1, cumsum))
+        dN <- result
       }
 
-      result <- matrix(0, sample.lengthN, n)  # here: N_t
-      if(which.series == "new") result[, 1] <- 0
-      if(which.series == "current") result[, 1] <- startN
-      for(i in 1:sample.lengthN){
-
-        times <- drawTn(Tstart)
-        while(times[length(times)] < t[n]){
-          times <- c(times, drawTn(times[length(times)]))
-        }
-        result[i, ] <- result[i, 1] + TimestoN(times, t)
-        if(i %% 100 == 0) message(paste(i, "of", sample.lengthN, " Poisson process predictions are calculated"))
-      }
-      Npred <- result
-
-      dN <- t(apply(Npred, 1, diff))
 ## jump diffusion:
 
       dt <- diff(t)
@@ -2254,8 +2281,10 @@ setMethod(f = "predict", signature = "est.reg_hiddenNHPP",
 #' est <- estimate(cl, t, data, 1000)
 #' plot(est)
 #' pred <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2])
+#' \dontrun{
 #' pred2 <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2], only.interval = FALSE)
 #' plot(density(pred2[,10]))
+#' }
 #' @export
 setMethod(f = "predict", signature = "est.Regression",
           definition = function(object,
