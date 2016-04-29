@@ -8,7 +8,7 @@
   which.series = c("new", "current"), M2pred = 10, cand.length = 1000,
   pred.alg = c("Trajectory", "Distribution", "simpleTrajectory",
   "simpleBayesTrajectory"), pred.alg.N = c("Trajectory", "Distribution"),
-  sample.length, plot.prediction = TRUE)
+  candN = 0:5, sample.length, plot.prediction = TRUE)
 }
 \arguments{
 \item{object}{class object of MCMC samples: "est.jumpDiffusion"}
@@ -28,6 +28,10 @@
 \item{cand.length}{length of candidate samples (if method = "vector"), for jump diffusion}
 
 \item{pred.alg}{prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"}
+
+\item{pred.alg.N}{prediction algorithm, "Distribution", "Trajectory"}
+
+\item{candN}{vector of candidate area for N, only if pred.alg.N = "Distribution"}
 
 \item{sample.length}{length of samples to be drawn}
 

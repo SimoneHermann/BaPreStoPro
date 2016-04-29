@@ -1389,6 +1389,8 @@ setMethod(f = "predict", signature = "est.NHPP",
 #' @param M2pred default 10, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
+#' @param pred.alg.N prediction algorithm, "Distribution", "Trajectory"
+#' @param candN vector of candidate area for N, only if pred.alg.N = "Distribution"
 #' @param sample.length length of samples to be drawn
 #' @param plot.prediction if TRUE, result are plotted
 #'
@@ -1414,7 +1416,7 @@ setMethod(f = "predict", signature = "est.NHPP",
 setMethod(f = "predict", signature = "est.jumpDiffusion",
           definition = function(object, t, burnIn, thinning, Lambda.mat, which.series = c("new", "current"), M2pred = 10,
                                 cand.length = 1000, pred.alg = c("Trajectory", "Distribution", "simpleTrajectory", "simpleBayesTrajectory"),
-                                pred.alg.N = c("Trajectory", "Distribution"), sample.length, plot.prediction = TRUE) {
+                                pred.alg.N = c("Trajectory", "Distribution"), candN = 0:5, sample.length, plot.prediction = TRUE) {
 
     pred.alg <- match.arg(pred.alg)
     pred.alg.N <- match.arg(pred.alg)
@@ -1518,7 +1520,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
       if(pred.alg.N == "Distribution"){
         samples <- t(object@xi[, ind])
         result <- matrix(0, K, n-1)  # here: dN_t
-        candN <- 0:5
+#         candN <- 0:5
         if(missing(Lambda.mat)){
           Lambda.diff <- function(cand, j, samples){
             sapply(1:K, function(i) Lambda(t[j+1], samples[i,]) - Lambda(t[j], samples[i,]) )
