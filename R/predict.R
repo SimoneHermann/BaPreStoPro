@@ -1020,6 +1020,7 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param Tstart optional, if missing, first (which.series = "new") or last observation variable ("current") is taken
 #' @param M2pred optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param rangeN vector of candidate area for differences of N, only if pred.alg = "Distribution" and variable = "PoissonProcess"
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param sample.length length of samples to be drawn
@@ -1033,11 +1034,12 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' est_NHPP <- estimate(model, t, data$Times, 1000)  # nMCMC should be much larger!
 #' plot(est_NHPP)
+#' pred <- predict(est_NHPP, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], variable = "PoissonProcess", pred.alg = "Distribution")
 #' \dontrun{
-#' pred_NHPP <- predict(est_NHPP)
-#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess")
-#' pred_NHPP2 <- predict(est_NHPP, which.series = "current")
-#' pred_NHPP3 <- predict(est_NHPP, variable = "PoissonProcess", which.series = "current")
+#' pred_NHPP <- predict(est_NHPP, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_NHPP2 <- predict(est_NHPP, which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_NHPP3 <- predict(est_NHPP, variable = "PoissonProcess", which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 #' pred_NHPP4 <- predict(est_NHPP, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
 #' }
 #' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory", 
@@ -1049,7 +1051,7 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 setMethod(f = "predict", signature = "est.NHPP",
           definition = function(object, variable = c("eventTimes", "PoissonProcess"),
                                 t, burnIn, thinning,
-                                Lambda.mat, which.series = c("new", "current"), Tstart, M2pred = 10,
+                                Lambda.mat, which.series = c("new", "current"), Tstart, M2pred = 10, rangeN = c(0,5), 
                                 cand.length = 1000, pred.alg = c("Trajectory", "Distribution", "simpleTrajectory", "simpleBayesTrajectory"),
                                 sample.length, grid = 1e-05, plot.prediction = TRUE) {
 
@@ -1234,8 +1236,37 @@ setMethod(f = "predict", signature = "est.NHPP",
       n <- length(t)
 
       if(pred.alg == "Distribution"){
-        message("does not work")
-        return(NULL)
+        
+        result <- matrix(0, K, n)  
+        if(missing(Lambda.mat)){
+          he <- function(j, Nj_1, c){
+            h <- sapply(1:K, function(i) Lambda(t[j], samples[i,]) - Lambda(t[j-1], samples[i,]) )
+            ind <- which(c-Nj_1 < 0)
+            res <- 1/factorial(pmax(c-Nj_1, 1)) * h^pmax(c-Nj_1, 0) * exp(-h)  
+            res[ind] <- 0
+            res
+          }
+          Fun.N <- function(candNj, j, Nj_1) vapply(candNj, function(c) mean(he(j, Nj_1, c)), FUN.VALUE = numeric(1))
+        }else{
+          Fun.N <- function(candNj, j, Nj_1){
+            vapply(candNj, function(c){
+              h <- Lambda.mat(t[j], samples) - Lambda.mat(t[j-1], samples)
+              ind <- which(c-Nj_1 < 0)
+              res <- 1/factorial(pmax(c-Nj_1, 1)) * h^pmax(c-Nj_1, 0) * exp(-h)
+              res[ind] <- 0
+              mean(res)
+            }, FUN.VALUE = numeric(1)) 
+          }
+        }
+        
+        for(a in 2:n){
+          candNj <- (min(result[,a-1]) + rangeN[1]):(max(result[,a-1]) + rangeN[2])
+          prob <- cumsum( Fun.N(candNj, a, result[,a-1]) )
+          result[, a] <- vapply(runif(K, 0, max(prob)), function(u) candNj[which(prob >= u)[1]], FUN.VALUE = numeric(1))
+          if(a %% 10 == 0) message(paste(a, "of", n-1, " Poisson process predictions are calculated"))
+        }
+
+
       }
       if(pred.alg == "simpleTrajectory"){
         if(missing(sample.length)) sample.length <- 100
@@ -1390,7 +1421,7 @@ setMethod(f = "predict", signature = "est.NHPP",
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param pred.alg.N prediction algorithm, "Distribution", "Trajectory"
-#' @param candN vector of candidate area for N, only if pred.alg.N = "Distribution"
+#' @param candN vector of candidate area for differences of N, only if pred.alg.N = "Distribution"
 #' @param sample.length length of samples to be drawn
 #' @param plot.prediction if TRUE, result are plotted
 #'
@@ -1519,6 +1550,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
       }
       if(pred.alg.N == "Distribution"){
         samples <- t(object@xi[, ind])
+
         result <- matrix(0, K, n-1)  # here: dN_t
 #         candN <- 0:5
         if(missing(Lambda.mat)){

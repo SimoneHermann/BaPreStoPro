@@ -31,7 +31,7 @@
 
 \item{pred.alg.N}{prediction algorithm, "Distribution", "Trajectory"}
 
-\item{candN}{vector of candidate area for N, only if pred.alg.N = "Distribution"}
+\item{candN}{vector of candidate area for differences of N, only if pred.alg.N = "Distribution"}
 
 \item{sample.length}{length of samples to be drawn}
 

@@ -6,7 +6,7 @@
 \usage{
 \S4method{predict}{est.NHPP}(object, variable = c("eventTimes",
   "PoissonProcess"), t, burnIn, thinning, Lambda.mat, which.series = c("new",
-  "current"), Tstart, M2pred = 10, cand.length = 1000,
+  "current"), Tstart, M2pred = 10, rangeN = c(0, 5), cand.length = 1000,
   pred.alg = c("Trajectory", "Distribution", "simpleTrajectory",
   "simpleBayesTrajectory"), sample.length, grid = 1e-05,
   plot.prediction = TRUE)
@@ -30,6 +30,8 @@
 
 \item{M2pred}{optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points}
 
+\item{rangeN}{vector of candidate area for differences of N, only if pred.alg = "Distribution" and variable = "PoissonProcess"}
+
 \item{cand.length}{length of candidate samples (if method = "vector")}
 
 \item{pred.alg}{prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"}
@@ -50,11 +52,12 @@ t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
 est_NHPP <- estimate(model, t, data$Times, 1000)  # nMCMC should be much larger!
 plot(est_NHPP)
+pred <- predict(est_NHPP, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], variable = "PoissonProcess", pred.alg = "Distribution")
 \dontrun{
-pred_NHPP <- predict(est_NHPP)
-pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess")
-pred_NHPP2 <- predict(est_NHPP, which.series = "current")
-pred_NHPP3 <- predict(est_NHPP, variable = "PoissonProcess", which.series = "current")
+pred_NHPP <- predict(est_NHPP, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+pred_NHPP2 <- predict(est_NHPP, which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+pred_NHPP3 <- predict(est_NHPP, variable = "PoissonProcess", which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 pred_NHPP4 <- predict(est_NHPP, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
 }
 pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory",
