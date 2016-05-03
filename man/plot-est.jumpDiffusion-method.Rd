@@ -4,16 +4,51 @@
 \alias{plot,est.jumpDiffusion-method}
 \title{Plot method for the Bayesian estimation class object}
 \usage{
-\S4method{plot}{est.jumpDiffusion}(x, newwindow = FALSE, ...)
+\S4method{plot}{est.jumpDiffusion}(x, par.options, style = c("chains", "acf",
+  "density"), par2plot, reduced = TRUE, thinning, burnIn, priorMeans = TRUE,
+  col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...)
 }
 \arguments{
 \item{x}{est.jumpDiffusion class}
+
+\item{par.options}{list of options for function par()}
+
+\item{style}{one out of "chains", "acf", "density"}
+
+\item{par2plot}{logical vector, which parameters to be plotted, order: \eqn{(\phi, \theta, \gamma^2, \xi, N)}}
+
+\item{reduced}{logical (1), if TRUE, the chains are thinned and burn-in phase is dropped}
+
+\item{thinning}{thinning rate, if missing, the proposed one by the estimation procedure is taken}
+
+\item{burnIn}{burn-in phase, if missing, the proposed one by the estimation procedure is taken}
+
+\item{priorMeans}{logical(1), if TRUE (default), prior means are marked with a line}
+
+\item{col.priorMean}{color of the prior mean line, default 2}
+
+\item{lty.priorMean}{linetype of the prior mean line, default 1}
 
 \item{newwindow}{logical(1), if TRUE, a new window is opened for the plot}
 
 \item{...}{optional plot parameters}
 }
 \description{
-Plot method for the S4 class Bayes.fit
+Plot method for the S4 class est.jumpDiffusion
+}
+\examples{
+model <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
+parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)))
+data <- simulate(model, t = seq(0, 1, by = 0.01), y0 = 0.5, plot.series = TRUE)
+est <- estimate(model, t = seq(0, 1, by = 0.01), data, 1000)  # nMCMC small for example
+plot(est)
+plot(est, burnIn = 100, thinning = 2)
+plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
+# plot only for phi and xi ...
+plot(est, style = "acf", main = "", par2plot = c(T, F, F, T, T))
+plot(est, style = "density", lwd = 2, priorMean = FALSE)
+plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
+plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
+plot(est, priorMeans = FALSE, newwindow = TRUE)
 }
 

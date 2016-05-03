@@ -4,16 +4,51 @@
 \alias{plot,est.reg_hiddenNHPP-method}
 \title{Plot method for the Bayesian estimation class object}
 \usage{
-\S4method{plot}{est.reg_hiddenNHPP}(x, newwindow = FALSE, ...)
+\S4method{plot}{est.reg_hiddenNHPP}(x, par.options, style = c("chains", "acf",
+  "density"), par2plot, reduced = TRUE, thinning, burnIn, priorMeans = TRUE,
+  col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...)
 }
 \arguments{
 \item{x}{est.reg_hiddenNHPP class}
+
+\item{par.options}{list of options for function par()}
+
+\item{style}{one out of "chains", "acf", "density"}
+
+\item{par2plot}{logical vector, which parameters to be plotted, order: \eqn{(\phi, \theta, \gamma^2, \xi, N)}}
+
+\item{reduced}{logical (1), if TRUE, the chains are thinned and burn-in phase is dropped}
+
+\item{thinning}{thinning rate, if missing, the proposed one by the estimation procedure is taken}
+
+\item{burnIn}{burn-in phase, if missing, the proposed one by the estimation procedure is taken}
+
+\item{priorMeans}{logical(1), if TRUE (default), prior means are marked with a line}
+
+\item{col.priorMean}{color of the prior mean line, default 2}
+
+\item{lty.priorMean}{linetype of the prior mean line, default 1}
 
 \item{newwindow}{logical(1), if TRUE, a new window is opened for the plot}
 
 \item{...}{optional plot parameters}
 }
 \description{
-Plot method for the S4 class Bayes.fit
+Plot method for the S4 class est.reg_hiddenNHPP
+}
+\examples{
+model <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) exp(theta[1]*t) + theta[2]*N,
+  parameter = list(theta = c(2, 2), gamma2 = 0.25, xi = c(3, 0.5)),
+  Lambda = function(t, xi) (t/xi[2])^xi[1])
+data <- simulate(model, t = seq(0, 1, by = 0.01), plot.series = TRUE)
+est <- estimate(model, t = seq(0, 1, by = 0.01), data, 1000)  # nMCMC small for example
+plot(est)
+plot(est, burnIn = 100, thinning = 2)
+plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
+plot(est, style = "acf", main = "", par2plot = c(T, F, F, T, T))
+plot(est, style = "density", lwd = 2, priorMean = FALSE)
+plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
+plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
+plot(est, priorMeans = FALSE, newwindow = TRUE)
 }
 
