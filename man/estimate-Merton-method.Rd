@@ -20,13 +20,13 @@ Bayesian estimation of a stochastic process
   \eqn{Y_t = y_0 \exp( \phi t - \gamma2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
 }
 \examples{
-cl <- set.to.class("Merton", parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = 10))
+model <- set.to.class("Merton", parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = 10))
 t <- seq(0, 1, by = 0.01)
-data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
-est <- estimate(cl, t, data, 1000)
+data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
+est <- estimate(model, t, data, 1000)
 plot(est)
 \dontrun{
-est_hidden <- estimate(cl, t, data$Y, 1000)
+est_hidden <- estimate(model, t, data$Y, 1000)
 plot(est_hidden)
 }
 }

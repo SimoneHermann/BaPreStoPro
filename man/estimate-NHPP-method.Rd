@@ -19,11 +19,11 @@
 Bayesian estimation of a nonhomogeneous Poisson process.
 }
 \examples{
-cl <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)),
+model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)),
                    Lambda = function(t, xi) (t/xi[2])^xi[1])
 t <- seq(0, 1, by = 0.01)
-data <- simulate(cl, t = t, plot.series = TRUE)
-est_NHPP <- estimate(cl, t, data$Times, 10000)
+data <- simulate(model, t = t, plot.series = TRUE)
+est_NHPP <- estimate(model, t, data$Times, 10000)
 plot(est_NHPP)
 }
 

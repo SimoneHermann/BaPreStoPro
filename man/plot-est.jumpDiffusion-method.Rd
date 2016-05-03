@@ -45,7 +45,7 @@ plot(est)
 plot(est, burnIn = 100, thinning = 2)
 plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
 # plot only for phi and xi ...
-plot(est, style = "acf", main = "", par2plot = c(T, F, F, T, T))
+plot(est, style = "acf", main = "", par2plot = c(TRUE, FALSE, FALSE, TRUE, TRUE))
 plot(est, style = "density", lwd = 2, priorMean = FALSE)
 plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")

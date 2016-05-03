@@ -20,10 +20,10 @@ Bayesian estimation of the parameters of the stochastic process
   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
 }
 \examples{
-cl_diff <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))
+model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))
 t <- seq(0, 1, by = 0.01)
-data <- simulate(cl_diff, t = t, y0 = 0.5, plot.series = TRUE)
-est_diff <- estimate(cl_diff, t, data, 1000)
+data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
+est_diff <- estimate(model, t, data, 1000)
 plot(est_diff)
 }
 

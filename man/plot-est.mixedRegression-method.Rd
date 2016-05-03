@@ -39,7 +39,7 @@
 \item{...}{optional plot parameters}
 }
 \description{
-Plot method for the S4 class Bayes.fit
+Plot method for the S4 class est.mixedRegression
 }
 \examples{
 mu <- c(1, 3); Omega = c(0.4, 0.01)

@@ -22,21 +22,21 @@ Bayesian estimation of the model,
   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
 }
 \examples{
-cl <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5,
+model <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5,
              parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
 t <- seq(0, 1, by = 0.01)
-data <- simulate(cl, t = t, plot.series = TRUE)
-est <- estimate(cl, t, data$Z, 100)  # nMCMC should be much larger!
+data <- simulate(model, t = t, plot.series = TRUE)
+est <- estimate(model, t, data$Z, 100)  # nMCMC should be much larger!
 plot(est)
 \dontrun{
 # OU
 b.fun <- function(phi, t, y) phi[1]-phi[2]*y
-cl <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5,
+model <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5,
                parameter = list(phi = c(10, 5), gamma2 = 1, sigma2 = 0.1),
                b.fun = b.fun, sT.fun = function(t, x) 1)
 t <- seq(0, 1, by = 0.01)
-data <- simulate(cl, t = t, plot.series = TRUE)
-est <- estimate(cl, t, data$Z, 1000)
+data <- simulate(model, t = t, plot.series = TRUE)
+est <- estimate(model, t, data$Z, 1000)
 plot(est)
 }
 }

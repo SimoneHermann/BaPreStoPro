@@ -22,7 +22,7 @@
 #' plot(est, burnIn = 100, thinning = 2)
 #' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
 #' # plot only for phi and xi ...
-#' plot(est, style = "acf", main = "", par2plot = c(T, F, F, T, T))
+#' plot(est, style = "acf", main = "", par2plot = c(TRUE, FALSE, FALSE, TRUE, TRUE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
@@ -146,7 +146,7 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
 #' plot(est, burnIn = 100, thinning = 2)
 #' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
 #' # plot only for phi and xi ...
-#' plot(est, style = "acf", main = "", par2plot = c(T, F, F, T, T))
+#' plot(est, style = "acf", main = "", par2plot = c(TRUE, FALSE, FALSE, TRUE, TRUE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
@@ -489,7 +489,7 @@ setMethod(f = "plot", signature = "est.mixedDiffusion",
 #' est <- estimate(model, t = seq(0, 1, by = 0.01), data$Y, 100)  # nMCMC small for example
 #' plot(est)
 #' plot(est, par2plot = c(rep(FALSE, 3), TRUE, FALSE), ylim = c(0.001, 0.1), par.options = list())
-#' plot(est, burnIn = 100, thinning = 2)
+#' plot(est, burnIn = 10, thinning = 2)
 #' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(3,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, TRUE, FALSE, FALSE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
@@ -602,7 +602,7 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
 #'     parameter = list(mu = mu, Omega = Omega, phi = phi, gamma2 = 1, sigma2 = 0.1),
 #'     y0 = function(phi, t) phi[3])
 #' data <- simulate(model, t = seq(0, 1, by = 0.02), plot.series = TRUE)
-#' est <- estimate(model, t = seq(0, 1, by = 0.02), data$Z, 100)  # nMCMC small for example
+#' est <- estimate(model, t = seq(0, 1, by = 0.02), data$Z, 1000) 
 #' plot(est, newwindow = TRUE)
 #' plot(est, burnIn = 10, thinning = 2)
 #' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
@@ -750,7 +750,7 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
 #' plot(est)
 #' plot(est, burnIn = 100, thinning = 2)
 #' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
-#' plot(est, style = "acf", main = "", par2plot = c(T, F, F, T, T))
+#' plot(est, style = "acf", main = "", par2plot = c(TRUE, FALSE, FALSE, TRUE, TRUE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
@@ -1029,7 +1029,7 @@ setMethod(f = "plot", signature = "est.Regression",
 
 #' Plot method for the Bayesian estimation class object
 #' 
-#' @description Plot method for the S4 class Bayes.fit
+#' @description Plot method for the S4 class est.mixedRegression
 #' @param x est.mixedRegression class
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density", "int.phi"

@@ -45,7 +45,7 @@ data <- simulate(model, t = seq(0, 1, by = 0.01), plot.series = TRUE)
 est <- estimate(model, t = seq(0, 1, by = 0.01), data$Y, 100)  # nMCMC small for example
 plot(est)
 plot(est, par2plot = c(rep(FALSE, 3), TRUE, FALSE), ylim = c(0.001, 0.1), par.options = list())
-plot(est, burnIn = 100, thinning = 2)
+plot(est, burnIn = 10, thinning = 2)
 plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(3,1)), xlab = "iteration")
 plot(est, style = "acf", main = "", par2plot = c(TRUE, TRUE, FALSE, FALSE))
 plot(est, style = "density", lwd = 2, priorMean = FALSE)

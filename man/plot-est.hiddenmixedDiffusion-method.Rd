@@ -49,7 +49,7 @@ model <- set.to.class("hiddenmixedDiffusion", b.fun = function(phi, t, y) phi[1]
     parameter = list(mu = mu, Omega = Omega, phi = phi, gamma2 = 1, sigma2 = 0.1),
     y0 = function(phi, t) phi[3])
 data <- simulate(model, t = seq(0, 1, by = 0.02), plot.series = TRUE)
-est <- estimate(model, t = seq(0, 1, by = 0.02), data$Z, 100)  # nMCMC small for example
+est <- estimate(model, t = seq(0, 1, by = 0.02), data$Z, 1000)
 plot(est, newwindow = TRUE)
 plot(est, burnIn = 10, thinning = 2)
 plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
