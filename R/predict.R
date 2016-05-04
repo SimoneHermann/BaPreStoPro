@@ -1616,10 +1616,10 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
       phi <- mean(object@phi[ind])
       gamma2 <- mean(object@gamma2[ind])
       theta <- mean(object@theta[ind])
-
+      cl <- set.to.class("jumpDiffusion", parameter = list(phi = phi, theta = theta, gamma2 = gamma2, xi = xi),
+                         Lambda = Lambda, b.fun = b.fun, s.fun = s.fun, h.fun = h.fun)
+      
       if(which.series == "new"){
-        cl <- set.to.class("jumpDiffusion", parameter = list(phi = phi, theta = theta, gamma2 = gamma2, xi = xi),
-                           Lambda = Lambda, b.fun = b.fun, s.fun = s.fun, h.fun = h.fun)
         result <- matrix(0, sample.length, n-1)
         Npred <- matrix(0, sample.length, n)  # here: N_t
 
@@ -1632,17 +1632,16 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
       }else{
         result <- matrix(0, sample.length, n-1)
         Npred <- matrix(0, sample.length, n)  # here: N_t
-        
+
         for(i in 1:sample.length){
           if(length(startN) > 1){
             ind.i <- sample(K, 1)
-            Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN[ind.i]), Lambda = Lambda)$N
+            he <- simulate(cl, t = t, y0 = y.start, start = c(max(object@t), startN[ind.i]), plot.series = FALSE)
           }else{
-            ind.i <- 1
-            Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+            he <- simulate(cl, t = t, y0 = y.start, start = c(max(object@t), startN), plot.series = FALSE)
           }
-          
-          result[i, ] <- sim_JD_Euler(t-max(object@t), phi, theta, gamma2, b.fun, s.fun, h.fun, start = y.start, Npred[i,] - startN[ind.i])[-1]
+          Npred[i, ] <- he$N
+          result[i, ] <- he$Y[-1]
         }
       }
 
@@ -1677,15 +1676,16 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
         Npred <- matrix(0, sample.length, n)  # here: N_t
         
         for(i in 1:sample.length){
+          cl <- set.to.class("jumpDiffusion", parameter = list(phi = phi[i], theta = theta[i], gamma2 = gamma2[i], xi = xi[i,]),
+                             Lambda = Lambda, b.fun = b.fun, s.fun = s.fun, h.fun = h.fun)
           if(length(startN) > 1){
             ind.i <- sample(K, 1)
-            Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN[ind.i]), Lambda = Lambda)$N
+            help <- simulate(cl, t = t, y0 = y.start, start = c(max(object@t), startN[ind.i]), plot.series = FALSE)
           }else{
-            ind.i <- 1
-            Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+            help <- simulate(cl, t = t, y0 = y.start, start = c(max(object@t), startN), plot.series = FALSE)
           }
-          
-          result[i, ] <- sim_JD_Euler(t-max(object@t), phi[i], theta[i], gamma2[i], b.fun, s.fun, h.fun, start = y.start, Npred[i,] - startN[ind.i])[-1]
+          Npred[i, ] <- help$N
+          result[i, ] <- help$Y[-1]
         }
       }
       
@@ -1907,10 +1907,9 @@ setMethod(f = "predict", signature = "est.Merton",
         phi <- mean(object@phi[ind])
         gamma2 <- mean(object@gamma2[ind])
         thetaT <- mean(object@thetaT[ind])
-        
+        cl <- set.to.class("Merton", parameter = list(phi = phi, thetaT = thetaT, gamma2 = gamma2, xi = xi),
+                           Lambda = Lambda)
         if(which.series == "new"){
-          cl <- set.to.class("Merton", parameter = list(phi = phi, thetaT = thetaT, gamma2 = gamma2, xi = xi),
-                             Lambda = Lambda)
           result <- matrix(0, sample.length, n-1)
           Npred <- matrix(0, sample.length, n)  # here: N_t
           
@@ -1927,13 +1926,13 @@ setMethod(f = "predict", signature = "est.Merton",
           for(i in 1:sample.length){
             if(length(startN) > 1){
               ind.i <- sample(K, 1)
-              Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN[ind.i]), Lambda = Lambda)$N
+              help <- simulate(cl, t = t, y0 = y.start, start = c(max(object@t), startN[ind.i]), plot.series = FALSE)
+              
             }else{
-              ind.i <- 1
-              Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+              help <- simulate(cl, t = t, y0 = y.start, start = c(max(object@t), startN), plot.series = FALSE)
             }
-            
-            result[i, ] <- simY(t-max(object@t), phi, thetaT, gamma2, start = y.start, Npred[i,] - startN[ind.i])[-1]
+            Npred[i, ] <- help$N
+            result[i, ] <- help$Y[-1]
           }
           
         }
@@ -1968,15 +1967,16 @@ setMethod(f = "predict", signature = "est.Merton",
           Npred <- matrix(0, sample.length, n)  # here: N_t
           
           for(i in 1:sample.length){
+            cl <- set.to.class("Merton", parameter = list(phi = phi[i], thetaT = thetaT[i], gamma2 = gamma2[i], xi = xi[i,]),
+                               Lambda = Lambda)
             if(length(startN) > 1){
               ind.i <- sample(K, 1)
-              Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN[ind.i]), Lambda = Lambda)$N
+              help <- simulate(cl, t = t, y0 = y.start, start = c(max(object@t), startN[ind.i]), plot.series = FALSE)
             }else{
-              ind.i <- 1
-              Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+              help <- simulate(cl, t = t, y0 = y.start, start = c(max(object@t), startN), plot.series = FALSE)
             }
-            
-            result[i, ] <- simY(t-max(object@t), phi[i], thetaT[i], gamma2[i], start = y.start, Npred[i,] - startN[ind.i])[-1]
+            Npred[i, ] <- help$N
+            result[i, ] <- help$Y[-1]
           }
           
         }

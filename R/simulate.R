@@ -344,6 +344,7 @@ setMethod(f = "simulate", signature = "NHPP",
 #' @param seed optional: seed number for random number generator
 #' @param t vector of time points to make predictions for
 #' @param y0 starting point of process
+#' @param start vector: start[1] starting point time, start[2] starting point for Poisson process
 #' @param mw mesh width for finer Euler approximation
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
@@ -352,33 +353,72 @@ setMethod(f = "simulate", signature = "NHPP",
 #' data <- simulate(model, t = t, y0 = 0.5)
 #' @export
 setMethod(f = "simulate", signature = "jumpDiffusion",
-          definition = function(object, nsim = 1, seed = NULL, t, y0, mw = 1, plot.series = TRUE) {
-            set.seed(seed)
-            N <- simN(t, object@xi, len = nsim, Lambda = object@Lambda)$N
-            result <- list(N = N, Y = sim_JD_Euler(t, object@phi, object@theta, object@gamma2, object@b.fun, object@s.fun, object@h.fun, start = y0, N, mw = mw))
-            if(plot.series){
-              old.settings <- par(no.readonly = TRUE)
-              
-              if(nsim > 1){
-                
-                par(mfrow = c(2,1))
-                plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
-                for(i in 2:nsim) lines(t, N[i,])
-                plot(t, result$Y[1,], type = "l", ylab = "Y", ylim = range(result$Y))
-                for(i in 1:nsim) lines(t, result$Y[i,])
-                
-              }else{
-                
-                par(mfrow = c(2,1))
-                plot(t, N, type = "l")
-                plot(t, result$Y, type = "l", ylab = "Y")
-                
-              }
-              par(old.settings)
-              
-            }
-            return(result)
-          })
+          definition = function(object, nsim = 1, seed = NULL, t, y0, start = c(0,0), mw = 1, plot.series = TRUE) {
+    set.seed(seed)
+    N <- simN(t, object@xi, len = nsim, start = start, Lambda = object@Lambda)$N
+    
+    phi <- object@phi
+    theta <- object@theta
+    gamma2 <- object@gamma2
+    b.fun <- object@b.fun
+    s.fun <- object@s.fun
+    h.fun <- object@h.fun
+    start <- y0
+    
+    lt <- length(t)
+    lt2 <- (lt-1)*mw+1
+    t2 <- seq(min(t), max(t), length = lt2)
+    dt2 <- t2[2] - t2[1]
+    
+    if(nsim > 1){
+      dN <- t(apply(N, 1, diff))
+      number <- nrow(N)
+      dN2 <- matrix(0, number, lt2-1)
+      dN2[, seq(1, lt2-1, by = mw)] <- dN
+      Y <- matrix(y0, number, lt2)
+      for(i in 2:lt2){
+        W <- rnorm(number, 0, sqrt(dt2))
+        Y[,i] <- Y[,i-1] + b.fun(phi, t2[i-1], Y[,i-1])*dt2 + s.fun(gamma2, t2[i-1], Y[,i-1])*W +
+          h.fun(theta, t2[i-1], Y[,i-1])*dN2[,i-1]
+      }
+      Y <- Y[, seq(1, lt2, by = mw)]
+    }
+    if(nsim == 1){
+      Y <- rep(y0, lt2)
+      dN2 <- numeric(lt2-1)
+      dN2[seq(1, lt2-1, by = mw)] <- diff(N)
+      for(i in 2:lt2){
+        W <- rnorm(1, 0, sqrt(dt2))
+        Y[i] <- Y[i-1] + b.fun(phi, t2[i-1], Y[i-1])*dt2 + s.fun(gamma2, t2[i-1], Y[i-1])*W +
+          h.fun(theta, t2[i-1], Y[i-1])*dN2[i-1]
+      }
+      Y <- Y[seq(1, lt2, by = mw)]
+    }
+   
+    result <- list(N = N, Y = Y)
+    if(plot.series){
+      old.settings <- par(no.readonly = TRUE)
+      
+      if(nsim > 1){
+        
+        par(mfrow = c(2,1))
+        plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
+        for(i in 2:nsim) lines(t, N[i,])
+        plot(t, result$Y[1,], type = "l", ylab = "Y", ylim = range(result$Y))
+        for(i in 1:nsim) lines(t, result$Y[i,])
+        
+      }else{
+        
+        par(mfrow = c(2,1))
+        plot(t, N, type = "l")
+        plot(t, result$Y, type = "l", ylab = "Y")
+        
+      }
+      par(old.settings)
+      
+    }
+    return(result)
+})
 
 
 
@@ -394,6 +434,7 @@ setMethod(f = "simulate", signature = "jumpDiffusion",
 #' @param seed optional: seed number for random number generator
 #' @param t vector of time points to make predictions for
 #' @param y0 starting point of process
+#' @param start vector: start[1] starting point time, start[2] starting point for Poisson process
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' model <- set.to.class("Merton", parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = 10))
@@ -401,31 +442,47 @@ setMethod(f = "simulate", signature = "jumpDiffusion",
 #' data <- simulate(model, t = t, y0 = 0.5)
 #' @export
 setMethod(f = "simulate", signature = "Merton",
-          definition = function(object, nsim = 1, seed = NULL, t, y0, plot.series = TRUE) {
-            set.seed(seed)
+          definition = function(object, nsim = 1, seed = NULL, t, y0, start = c(0,0), plot.series = TRUE) {
+    set.seed(seed)
 
-            N <- simN(t, object@xi, len = nsim, Lambda = object@Lambda)$N
-            result <- list(N = N, Y = simY(t, object@phi, object@thetaT, object@gamma2, start = y0, N))
+    N <- simN(t, object@xi, len = nsim, start = start, Lambda = object@Lambda)$N
+    
+    phi <- object@phi
+    thetaT <- object@thetaT
+    gamma2 <- object@gamma2
+    
+    
+    l <- length(t)
+    if(nsim > 1){
+      Y <- t(sapply(1:nsim, function(i){
+        y0*exp( (phi-gamma2/2)*(t-start[1])+sqrt(gamma2)*cumsum(c(0, rnorm(l-1, 0, sqrt(diff(t[-l])))))+thetaT*(N[i,]-start[2]) )
+      }) )
+    }
+    if(nsim == 1){
+      Y <- y0*exp( (phi-gamma2/2)*(t-start[1])+sqrt(gamma2)*cumsum(c(0, rnorm(l-1, 0, sqrt(diff(t[-l])))))+thetaT*(N-start[2]) )
+    }
 
-            if(plot.series){
-              old.settings <- par(no.readonly = TRUE)
-              
-              if(nsim > 1){
-                par(mfrow = c(2,1))
-                plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
-                for(i in 2:nsim) lines(t, N[i,])
-                plot(t, result$Y[1,], type = "l", ylab = "Y", ylim = range(result$Y))
-                for(i in 1:nsim) lines(t, result$Y[i,])
-              }else{
-                par(mfrow = c(2,1))
-                plot(t, N, type = "l")
-                plot(t, result$Y, type = "l", ylab = "Y")
-              }
-              par(old.settings)
-              
-            }
-            return(result)
-          })
+    result <- list(N = N, Y = Y)
+
+    if(plot.series){
+      old.settings <- par(no.readonly = TRUE)
+      
+      if(nsim > 1){
+        par(mfrow = c(2,1))
+        plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
+        for(i in 2:nsim) lines(t, N[i,])
+        plot(t, result$Y[1,], type = "l", ylab = "Y", ylim = range(result$Y))
+        for(i in 1:nsim) lines(t, result$Y[i,])
+      }else{
+        par(mfrow = c(2,1))
+        plot(t, N, type = "l")
+        plot(t, result$Y, type = "l", ylab = "Y")
+      }
+      par(old.settings)
+      
+    }
+    return(result)
+})
 
 
 
@@ -592,110 +649,4 @@ simN <- function(t, xi, len, start = c(0,0), Lambda, int = c("Weibull","Exp")){ 
   list(Times = Times, N = N_out)
 }
 
-#' Simulation of Jump diffusion process
-#'
-#' @description Simulation of Jump diffusion process.
-#' @param t vector of times
-#' @param phi parameter \eqn{\phi}
-#' @param thetaT parameter \eqn{\widetilde{\theta}}
-#' @param gamma2 parameter \eqn{\gamma^2}
-#' @param start starting point ofprocess \eqn{y_0}
-#' @param N Poisson process variables in t
-#'
-#' @return matrix or vector
-#'
-
-simY <- function(t, phi, thetaT, gamma2, start, N){
-  l <- length(t)
-  if(is.matrix(N)){
-    number <- nrow(N)
-    Y <- sapply(1:number, function(i){
-      start*exp(phi*t-gamma2*t/2+sqrt(gamma2)*cumsum(c(0, rnorm(l-1, 0, sqrt(diff(t[-l])))))+thetaT*N[i,])
-    })
-    return(t(Y))
-  }
-  if(is.numeric(N)){
-    Y <- start*exp(phi*t-gamma2*t/2+sqrt(gamma2)*cumsum(c(0, rnorm(l-1, 0, sqrt(diff(t[-l])))))+thetaT*N)
-    return(Y)
-  }
-}
-
-#' Simulation of Jump diffusion process
-#'
-#' @description Simulation of Jump diffusion process.
-#' @param t vector of times
-#' @param phi parameter \eqn{\phi}
-#' @param theta parameter \eqn{\theta}
-#' @param gamma2 parameter \eqn{\gamma^2}
-#' @param b.fun drift function
-#' @param s.fun variance function
-#' @param h.fun jump high function
-#' @param start starting point \eqn{y_0}
-#' @param N Poisson process variables in t
-#' @param mw mesh width for finer Euler approximation
-#'
-#'
-#' @return matrix or vector
-#'
-
-sim_JD_Euler <- function(t, phi, theta, gamma2, b.fun, s.fun, h.fun, start, N, mw = 1){
-  
-  lt <- length(t)
-  lt2 <- (lt-1)*mw+1
-  t2 <- seq(min(t), max(t), length = lt2)
-  dt2 <- t2[2] - t2[1]
-
-  if(is.matrix(N)){
-    dN <- t(apply(N, 1, diff))
-    number <- nrow(N)
-    dN2 <- matrix(0, number, lt2-1)
-    dN2[, seq(1, lt2-1, by = mw)] <- dN
-    Y <- matrix(start, number, lt2)
-    for(i in 2:lt2){
-      W <- rnorm(number, 0, sqrt(dt2))
-      Y[,i] <- Y[,i-1] + b.fun(phi, t2[i-1], Y[,i-1])*dt2 + s.fun(gamma2, t2[i-1], Y[,i-1])*W +
-                  h.fun(theta, t2[i-1], Y[,i-1])*dN2[,i-1]
-    }
-    Y <- Y[, seq(1, lt2, by = mw)]
-  }
-  if(is.vector(N)){
-    Y <- rep(start, lt2)
-    dN2 <- numeric(lt2-1)
-    dN2[seq(1, lt2-1, by = mw)] <- diff(N)
-    for(i in 2:lt2){
-      W <- rnorm(1, 0, sqrt(dt2))
-      Y[i] <- Y[i-1] + b.fun(phi, t2[i-1], Y[i-1])*dt2 + s.fun(gamma2, t2[i-1], Y[i-1])*W +
-        h.fun(theta, t2[i-1], Y[i-1])*dN2[i-1]
-    }
-    Y <- Y[seq(1, lt2, by = mw)]
-  }
-  return(Y)
-}
-
-
-#' Simulation of regression model including the NHPP
-#'
-#' @description Simulation.
-#' @param t vector of times
-#' @param N vector of Poisson process
-#' @param fun regression function
-#' @param theta parameter \eqn{\theta}
-#' @param gamma2 parameter\eqn{\gamma^2}
-#'
-#'
-#' @return matrix or vector
-#'
-
-sim_reg_hiddenNHPP <- function(t, N, fun, theta, gamma2){
-  lt <- length(t)
-
-  if(is.matrix(N)){
-    number <- nrow(N)
-    result <- sapply(1:number, function(i) fun(t, N[i,], theta) + rnorm(lt, 0, sqrt(gamma2)) )
-  }
-  if(is.numeric(N)){
-    result <- fun(t, N, theta) + rnorm(lt, 0, sqrt(gamma2))
-  }
-  return(result)
-}
 

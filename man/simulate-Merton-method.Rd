@@ -5,7 +5,7 @@
 \title{Simulation of jump diffusion process}
 \usage{
 \S4method{simulate}{Merton}(object, nsim = 1, seed = NULL, t, y0,
-  plot.series = TRUE)
+  start = c(0, 0), plot.series = TRUE)
 }
 \arguments{
 \item{object}{class object of parameters: "Merton"}
@@ -17,6 +17,8 @@
 \item{t}{vector of time points to make predictions for}
 
 \item{y0}{starting point of process}
+
+\item{start}{vector: start[1] starting point time, start[2] starting point for Poisson process}
 
 \item{plot.series}{logical(1), if TRUE, simulated series are depicted grafically}
 }
