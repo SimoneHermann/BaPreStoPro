@@ -257,19 +257,6 @@ RejSampling <- function(Fun, dens, len, cand, grid = 1e-03, method = c("vector",
 
 #' Helping function
 #'
-#' @description Returns the ij th matrix entry from a list
-#' @param phi list with each entry a matrix
-#' @param i row
-#' @param j column
-#'
-#' @return vector of samples
-#' @export
-phi_ij <- function(phi, i, j){
-  sapply(phi, function(mat){mat[i, j]})
-}
-
-#' Helping function
-#'
 #' @description Adaptive MCMC
 #' @param chain Markov chain
 #' @param propSd current proposal standard deviation

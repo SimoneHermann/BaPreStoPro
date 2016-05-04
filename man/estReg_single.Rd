@@ -3,7 +3,7 @@
 \alias{estReg_single}
 \title{Bayesian stimation in nonlinear regression models}
 \usage{
-estReg_single(t, y, prior, start, fODE, sVar, len = 1000, mod = "Gompertz")
+estReg_single(t, y, prior, start, fODE, sVar, len = 1000)
 }
 \arguments{
 \item{t}{vector of observation times}
@@ -19,8 +19,6 @@ estReg_single(t, y, prior, start, fODE, sVar, len = 1000, mod = "Gompertz")
 \item{sVar}{variance function}
 
 \item{len}{number of iterations of the MCMC algorithm}
-
-\item{mod}{model out of {Gompertz, Richards, logistic, Weibull}, only used instead of fODE}
 }
 \value{
 \item{phi}{estimator of \eqn{\phi}}

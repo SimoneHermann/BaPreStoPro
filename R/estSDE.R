@@ -13,7 +13,6 @@
 #' @param ipred which of the n trajectories is the one to be predicted
 #' @param cut the index how many of the ipred-th series are used for estimation
 #' @param len number of iterations of the MCMC algorithm - chain length
-#' @param mod model out of {Gompertz, Richards, logistic, Weibull, Paris, Paris2}, only used instead of bSDE
 #' @param propPar proposal standard deviation of phi is |start$mu|*propPar
 #'
 #' @return
@@ -29,8 +28,7 @@
 #' @references Hermann et al. (2015)
 #' @export
 
-estSDE <- function(t, y, prior, start, y0.fun, bSDE, sVar, ipred = 1, cut, len = 1000, mod = c("Gompertz", "logistic", "Weibull", "Richards", "Paris", "Paris2"), propPar = 0.2){
-  mod <- match.arg(mod)
+estSDE <- function(t, y, prior, start, y0.fun, bSDE, sVar, ipred = 1, cut, len = 1000, propPar = 0.2){
   if(is.matrix(y)){
     if(nrow(y) == length(t)){
       y <- t(y)
@@ -52,7 +50,6 @@ estSDE <- function(t, y, prior, start, y0.fun, bSDE, sVar, ipred = 1, cut, len =
     t[[ipred]] <- t1[1:cut]
     y[[ipred]] <- y1[ipred, 1:cut]
   }
-  if(missing(bSDE)) bSDE <- getFun("SDE", mod)
   if(missing(sVar)) sVar <- function(t, x) 1
   if(missing(y0.fun)) y0.fun <- function(phi, t) median(sapply(1:length(y), function(i) y[[i]][1]))
     

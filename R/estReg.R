@@ -12,7 +12,6 @@
 #' @param ipred which of the M trajectories is the one to be predicted
 #' @param cut the index how many of the ipred-th series are used for estimation
 #' @param len number of iterations of the MCMC algorithm
-#' @param mod model out of {Gompertz, Richards, logistic, Weibull}, only used instead of fODE
 #' @param propPar proposal standard deviation of phi is |start$mu|*propPar
 #'
 #' @return
@@ -22,8 +21,7 @@
 #' \item{gamma2}{samples from posterior of \eqn{\gamma^2}}
 #'
 #'
-estReg <- function(t, y, prior, start, fODE, sVar, ipred = 1, cut, len = 1000, mod = c("Gompertz","logistic","Weibull","Richards","Paris","Paris2"), propPar = 0.02){
-  mod <- match.arg(mod)
+estReg <- function(t, y, prior, start, fODE, sVar, ipred = 1, cut, len = 1000, propPar = 0.02){
   if(is.matrix(y)){
     if(nrow(y) == length(t)){
       y <- t(y)
@@ -46,7 +44,6 @@ estReg <- function(t, y, prior, start, fODE, sVar, ipred = 1, cut, len = 1000, m
     y[[ipred]] <- y1[ipred,1:cut]
   }
 
-  if(missing(fODE)) fODE <- getFun("ODE", mod)
   if(missing(sVar)) sVar <- function(t) 1
 
 #  if(Omega == "diag"){
@@ -126,15 +123,13 @@ estReg <- function(t, y, prior, start, fODE, sVar, ipred = 1, cut, len = 1000, m
 #' @param fODE regression function
 #' @param sVar variance function
 #' @param len number of iterations of the MCMC algorithm
-#' @param mod model out of {Gompertz, Richards, logistic, Weibull}, only used instead of fODE
 #'
 #' @return
 #' \item{phi}{estimator of \eqn{\phi}}
 #' \item{gamma2}{estimator of \eqn{\gamma^2}}
 
-estReg_single <- function(t, y, prior, start, fODE, sVar, len = 1000, mod = "Gompertz"){
+estReg_single <- function(t, y, prior, start, fODE, sVar, len = 1000){
 
-  if(missing(fODE)) fODE <- getFun("ODE", mod)
   if(missing(sVar)) sVar <- function(t) 1
 
   propSd <- abs(prior$mu)/50

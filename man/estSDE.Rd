@@ -4,7 +4,6 @@
 \title{Bayesian estimation in mixed stochastic differential equations}
 \usage{
 estSDE(t, y, prior, start, y0.fun, bSDE, sVar, ipred = 1, cut, len = 1000,
-  mod = c("Gompertz", "logistic", "Weibull", "Richards", "Paris", "Paris2"),
   propPar = 0.2)
 }
 \arguments{
@@ -27,8 +26,6 @@ estSDE(t, y, prior, start, y0.fun, bSDE, sVar, ipred = 1, cut, len = 1000,
 \item{cut}{the index how many of the ipred-th series are used for estimation}
 
 \item{len}{number of iterations of the MCMC algorithm - chain length}
-
-\item{mod}{model out of {Gompertz, Richards, logistic, Weibull, Paris, Paris2}, only used instead of bSDE}
 
 \item{propPar}{proposal standard deviation of phi is |start$mu|*propPar}
 }

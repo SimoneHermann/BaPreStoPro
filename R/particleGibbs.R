@@ -300,7 +300,7 @@ partFiltering_mixed <- function(t, y, prior, start, len = 1000, sigmaTilde, y0.f
 
     if (count%%50 == 0){
       propSd <- sapply(1:lphi, function(i){
-        ad.propSd(phi_ij(phi_out[(count-50+1):count], 1, i), propSd[i], count/50) })
+        ad.propSd(sapply(phi_out[(count-50+1):count], function(mat) mat[1, i]), propSd[i], count/50) })
 #      print(propSd)
     }
 

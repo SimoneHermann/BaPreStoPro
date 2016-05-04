@@ -4,7 +4,6 @@
 \title{Bayesian estimation in mixed nonlinear regression models}
 \usage{
 estReg(t, y, prior, start, fODE, sVar, ipred = 1, cut, len = 1000,
-  mod = c("Gompertz", "logistic", "Weibull", "Richards", "Paris", "Paris2"),
   propPar = 0.02)
 }
 \arguments{
@@ -25,8 +24,6 @@ estReg(t, y, prior, start, fODE, sVar, ipred = 1, cut, len = 1000,
 \item{cut}{the index how many of the ipred-th series are used for estimation}
 
 \item{len}{number of iterations of the MCMC algorithm}
-
-\item{mod}{model out of {Gompertz, Richards, logistic, Weibull}, only used instead of fODE}
 
 \item{propPar}{proposal standard deviation of phi is |start$mu|*propPar}
 }
