@@ -67,7 +67,7 @@ setClass(Class = "est.hiddenDiffusion", representation = representation(phi = "m
 
 setClass(Class = "est.hiddenmixedDiffusion", representation = representation(phi = "list", mu = "matrix", Omega = "matrix", gamma2 = "numeric",
                                                                          sigma2 = "numeric", Y.est = "list",
-                                                                         model = "list", t = "numeric", Z = "matrix",
+                                                                         model = "list", t = "numeric", Z = "matrix", t.list = "list", Z.list = "list",
                                                                          burnIn = "numeric", thinning = "numeric"))
 
 setClass(Class = "est.reg_hiddenNHPP", representation = representation(theta = "matrix", gamma2 = "numeric", xi = "matrix", N.est = "matrix",

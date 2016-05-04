@@ -402,8 +402,14 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
 #    if(is.list(object@Y)) J <- length(object@Y)
 #    if(is.matrix(object@Y)) J <- nrow(object@Y)
 
-    J <- nrow(object@Y)
-    n <- ncol(object@Y)  # equal to length(object@t)
+    if(length(object@Y.list) == 0){
+      J <- nrow(object@Y)
+      n <- ncol(object@Y)  # equal to length(object@t)
+    }else{
+      J <- length(object@Y.list)
+      n <- sapply(object@Y.list, length)
+    }
+
 
     if(missing(ind.pred) & which.series == "current") ind.pred <- J
 
@@ -413,8 +419,14 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
     if(missing(t)){
       if(which.series == "new") t <- object@t
       if(which.series == "current"){
-        dt <- median( diff(object@t))
-        t <- object@t[length(object@t)] + cumsum(c(0, rep(dt, M2pred)))
+        if(length(object@Y.list) == 0){
+          dt <- median( diff(object@t))
+          t <- object@t[length(object@t)] + cumsum(c(0, rep(dt, M2pred)))
+        }else{
+          dt <- median( diff(object@t.list[[ind.pred]]))
+          t <- object@t.list[[ind.pred]][n[ind.pred]] + cumsum(c(0, rep(dt, M2pred)))
+        }  
+        
       }
     }
     ind <- seq(burnIn + 1, length(object@gamma2), by = thinning)
@@ -430,9 +442,14 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
       
     }
     if(which.series == "current"){
-      samples <- list(phi = sapply(1:ncol(object@mu) , function(i) phi_ij(object@phi[ind], ind.pred, i) ), gamma2 = object@gamma2[ind])
+      samples <- list(phi = sapply(1:ncol(object@mu) , function(i) sapply(object@phi[ind], function(m) m[ind.pred, i]) ), gamma2 = object@gamma2[ind])
       if(missing(y.start)){
-         y.start <- object@Y[ind.pred, n]
+        if(length(object@Y.list) == 0){
+          y.start <- object@Y[ind.pred, n]
+        }else{
+          y.start <- object@Y.list[[ind.pred]][n[ind.pred]]
+        }  
+         
       }
     }
 
@@ -563,17 +580,33 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
 
     if(plot.prediction){
       qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
-      if(which.series == "new"){
-        plot(object@t, object@Y[1,], type = "l", xlab = "t", ylim = range(c(object@Y, range(qu))), ylab = expression(Y[t]))
-        for(j in 2:J) lines(object@t, object@Y[j,])
-        lines(t, qu[1,], col = 2, lwd = 2)
-        lines(t, qu[2,], col = 2, lwd = 2)
+      
+      if(length(object@Y.list) == 0){
+        if(which.series == "new"){
+          plot(object@t, object@Y[1,], type = "l", xlab = "t", ylim = range(c(object@Y, range(qu))), ylab = expression(Y[t]))
+          for(j in 2:J) lines(object@t, object@Y[j,])
+          lines(t, qu[1,], col = 2, lwd = 2)
+          lines(t, qu[2,], col = 2, lwd = 2)
+        }
+        if(which.series == "current"){
+          plot(object@t, object@Y[ind.pred, ], type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Y[ind.pred, ], range(qu))), xlab = "t", ylab = expression(Y[t]))
+          lines(t, qu[1,], col = 2)
+          lines(t, qu[2,], col = 2)
+        }
+      }else{
+        if(which.series == "new"){
+          plot(object@t.list[[1]], object@Y.list[[1]], type = "l", xlab = "t", ylim = range(c(unlist(object@Y), range(qu))), ylab = expression(Y[t]))
+          for(j in 2:J) lines(object@t.list[[j]], object@Y.list[[j]])
+          lines(t, qu[1,], col = 2, lwd = 2)
+          lines(t, qu[2,], col = 2, lwd = 2)
+        }
+        if(which.series == "current"){
+          plot(object@t.list[[ind.pred]], object@Y.list[[ind.pred]], type = "l", xlim = range(c(object@t.list[[ind.pred]], t)), ylim = range(c(object@Y.list[[ind.pred]], range(qu))), xlab = "t", ylab = expression(Y[t]))
+          lines(t, qu[1,], col = 2)
+          lines(t, qu[2,], col = 2)
+        }
       }
-      if(which.series == "current"){
-        plot(object@t, object@Y[ind.pred, ], type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Y[ind.pred, ], range(qu))), xlab = "t", ylab = expression(Y[t]))
-        lines(t, qu[1,], col = 2)
-        lines(t, qu[2,], col = 2)
-      }
+
     }
     if(which.series == "new") return(list(Y = result, phi = phi.pred))
     if(which.series == "current") return(result)
@@ -849,7 +882,7 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
       samples <- list(phi = phi.pred, gamma2 = object@gamma2[ind], sigma2 = object@sigma2[ind])
     }
     if(which.series == "current"){
-      samples <- list(phi = sapply(1:ncol(object@mu) , function(i) phi_ij(object@phi[ind], ind.pred, i) ), gamma2 = object@gamma2[ind], sigma2 = object@sigma2[ind])
+      samples <- list(phi = sapply(1:ncol(object@mu) , function(i) sapply(object@phi[ind], function(m) m[ind.pred, i]) ), gamma2 = object@gamma2[ind], sigma2 = object@sigma2[ind])
     }
     if(which.series == "new") y.start <- sapply(1:K, function(i) object@model$y0.fun(samples$phi[i, ], t[1]))
     if(which.series == "current") y.start <- sapply(object@Y.est[ind], function(li) li[[ind.pred]][length(li[[ind.pred]])])
@@ -2479,7 +2512,7 @@ setMethod(f = "predict", signature = "est.mixedRegression",
               samples <- list(phi = phi.pred, gamma2 = object@gamma2[ind])
             }
             if(which.series == "current"){
-              samples <- list(phi = sapply(1:ncol(object@mu) , function(i) phi_ij(object@phi[ind], ind.pred, i) ), gamma2 = object@gamma2[ind])
+              samples <- list(phi = sapply(1:ncol(object@mu) , function(i) sapply(object@phi[ind], function(m) m[ind.pred, i]) ), gamma2 = object@gamma2[ind])
             }
             K <- length(samples$gamma2)
             if(missing(sample.length)) sample.length <- K

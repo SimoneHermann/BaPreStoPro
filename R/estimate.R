@@ -25,6 +25,7 @@ setGeneric("estimate", function(model.class, ...) {
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 #' est_diff <- estimate(model, t, data, 1000)
 #' plot(est_diff)
+#' 
 #' @export
 setMethod(f = "estimate", signature = "Diffusion",
           definition = function(model.class, t, data, nMCMC){
@@ -127,7 +128,16 @@ setMethod(f = "estimate", signature = "Diffusion",
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' est <- estimate(model, t, data[1:20,], 100)  # nMCMC should be much larger
 #' plot(est)
-#'
+#' ##
+#' t.list <- list()
+#' for(i in 1:20) t.list[[i]] <- t
+#' t.list[[21]] <- t[1:50]
+#' data.list <- list()
+#' for(i in 1:20) data.list[[i]] <- data[i,]
+#' data.list[[21]] <- data[21, 1:50]
+#' est <- estimate(model, t.list, data.list, 100)
+#' pred <- predict(est, t = t[50:101], which.series = "current", ind.pred = 21, 
+#'    b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
 #' @export
 setMethod(f = "estimate", signature = "mixedDiffusion",
           definition = function(model.class, t, data, nMCMC) {
@@ -262,7 +272,8 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
                     model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
     }else{
       result <- new(Class = "est.mixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
-                    model = class.to.list(model.class), t.list = t, Y.list = data, burnIn = burnIn, thinning = thinning)
+                    model = class.to.list(model.class), t = t[[1]], Y = matrix(data[[1]], 1),
+                    t.list = t, Y.list = data, burnIn = burnIn, thinning = thinning)
     }
 
     return(result)
@@ -303,10 +314,6 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 setMethod(f = "estimate", signature = "hiddenDiffusion",
           definition = function(model.class, t, data, nMCMC, Npart = 100) {
 
-#     result <- partFiltering(t, data, prior = model.class@prior, start = model.class@start, len = nMCMC, sigmaTilde = model.class@sT.fun, Npart = Npart,
-#                             y0.fun = model.class@y0.fun, b.fun = model.class@b.fun, maxIt = 1)
-    
-    
     y <- data
     prior <- model.class@prior
     start <- model.class@start
@@ -316,9 +323,7 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
     b.fun <- model.class@b.fun
     maxIt <- 1   # input parameter ?
     parPropPhi <- 5
-    
-    
-    
+
     lt <- length(t)
     lphi <- length(start$phi)
     
@@ -464,17 +469,171 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
           definition = function(model.class, t, data, nMCMC, Npart = 100) {
 
-    result <-  partFiltering_mixed(t, data, prior = model.class@prior, start = model.class@start, len = nMCMC, sigmaTilde = model.class@sT.fun,
-                                   y0.fun = model.class@y0.fun, b.fun = model.class@b.fun, Npart = Npart, maxIt = 1)
+
+    if(is.matrix(data)){
+      if(nrow(data) == length(t)){
+        y <- t(data)
+      }else{
+        if(ncol(data) != length(t)){
+          stop("length of t has to be equal to the columns of y")
+        }
+      }
+      times <- list()
+      y <- list()
+      for(i in 1:nrow(data)){
+        times[[i]] <- t
+        y[[i]] <- data[i,]
+      }
+    }else{
+      y <- data
+      times <- t
+    }
+    
+    prior <- model.class@prior
+    start <- model.class@start
+    len <- nMCMC
+    sigmaTilde <- model.class@sT.fun
+    y0.fun <- model.class@y0.fun
+    b.fun <- model.class@b.fun
+    maxIt <- 1    # input parameter ?
+    parPropPhi <- 5
+    
+    lphi <- length(start$mu)
+    
+    postSigma2 <- function(alpha, beta, X, y){    # X and y lists with length n, each list entry is one series of length n_i, alpha, beta prior parameters
+      alphaPost <- alpha + sum(unlist(lapply(y,length)))/2
+      betaPost <-  beta + sum((unlist(y)-unlist(X))^2)/2
+      
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    
+    postGamma2 <- function(alpha, beta, X, t, phi, b.fun, sigmaTilde){ #  phi matrix, X, t lists, alpha, beta prior parameters
+      n <- length(X)
+      alphaPost <- alpha + sum(sapply(X,length)-1)/2
+      
+      help <- numeric(n)
+      for(i in 1:n){
+        ni <- length(t[[i]])
+        dt <- t[[i]][-1]-t[[i]][-ni]
+        help[i] <- sum( (X[[i]][-1] - X[[i]][-ni] - b.fun(phi[i,],t[[i]][-ni],X[[i]][-ni])*dt)^2/(sigmaTilde(t[[i]][-ni],X[[i]][-ni])^2*dt) )
+      }
+      betaPost <-  beta + sum(help)/2
+      
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    propSd <- abs(start$mu)/parPropPhi
+    postPhii_Xi <- function(y, t, X, lastPhi, mu, Omega, gamma2, sigma2, B_fixed, propSd){
+      lt <- length(t)
+      likeli <- function(phi,X){
+        prod(dnorm(X[-1], X[-lt]+b.fun(phi, t[-lt], X[-lt])*diff(t), sqrt(gamma2*diff(t))*sigmaTilde(t[-lt],X[-lt])))  # true transition density???
+      }
+      # output variables
+      phi_out <- lastPhi
+      phi <- lastPhi
+      for(k in 1:lphi){
+        for(count in 1:maxIt){
+          phi[k] <- phi_out[k] + rnorm(1, 0, propSd[k])
+          ratio <- dnorm(phi[k], mu[k], sqrt(Omega[k]))/dnorm(phi_out[k], mu[k], sqrt(Omega[k]))
+          ratio <- ratio*likeli(phi, X)/likeli(phi_out, X)
+          ratio <- ratio*dnorm(y[1], y0.fun(phi, t[1]), sqrt(sigma2))/dnorm(y[1], y0.fun(phi_out, t[1]), sqrt(sigma2))
+          if(is.na(ratio)) ratio <- 0
+          
+          if(runif(1) <= ratio){
+            phi_out[k] <- phi[k]
+            break
+          }
+        }
+      }
+      res_SMC <- SMC(phi_out, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, X.cond = X, B_fixed = B_fixed)
+      lign.B <- A.to.B(res_SMC$parents)
+      indice <- sample(1:Npart, 1, prob = res_SMC$W[,lt])
+      X <- res_SMC$x[indice,]
+      
+      list(phi = phi_out, X = X, B_fixed = lign.B[indice,])
+      
+    }
+    
+    n <- length(y)
+    
+    phi_out <- list()
+    mu_out <- matrix(0, len, length(start$mu))
+    Omega_out <- matrix(0, len, length(start$mu))
+    sigma2_out <- numeric(len)
+    gamma2_out <- numeric(len)
+    X_out <- list()
+    
+    phi <- start$phi
+    sigma2 <- start$sigma2
+    gamma2 <- start$gamma2
+    mu <- start$mu
+    Omega <- postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
+    X <- list()
+    B_fixed <- list()
+    
+    for(i in 1:n){
+      
+      if(dnorm(y[[i]][1], y0.fun(phi[i,], times[[i]][1]), sqrt(sigma2)) == 0){
+        stop("bad starting values")
+      }
+      
+      result <- SMC(phi[i,], gamma2, sigma2, Npart, times[[i]], y[[i]], b.fun, y0.fun, sigmaTilde, conditional = FALSE)
+      lign.B <- A.to.B(result$parents)
+      indice <- sample(1:Npart, 1, prob = result$W[,length(times[[i]])])
+      X[[i]] <- result$x[indice,]
+      B_fixed[[i]] <- lign.B[indice,]
+    }
+    
+    for(count in 1:len){
+      
+      for(i in 1:n){
+        help <- postPhii_Xi(y[[i]], times[[i]], X[[i]], phi[i,], mu, Omega, gamma2, sigma2, B_fixed[[i]], propSd)
+        X[[i]] <- help$X
+        phi[i,] <- help$phi
+        B_fixed[[i]] <- help$B_fixed
+      }
+      
+      mu <- postmu(phi, prior$m, prior$v, Omega)
+      Omega <- postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
+      
+      sigma2 <- postSigma2(prior$alpha.sigma, prior$beta.sigma, X, y)
+      gamma2 <- postGamma2(prior$alpha.gamma, prior$beta.gamma, X, times, phi, b.fun, sigmaTilde)
+      
+      phi_out[[count]] <- phi
+      mu_out[count,] <- mu
+      Omega_out[count,] <- Omega
+      sigma2_out[count] <- sigma2
+      gamma2_out[count] <- gamma2
+      X_out[[count]] <- X
+      
+      if (count%%50 == 0){
+        propSd <- sapply(1:lphi, function(i){
+          ad.propSd(sapply(phi_out[(count-50+1):count], function(mat) mat[1, i]), propSd[i], count/50) })
+        #      print(propSd)
+      }
+      
+      if (count%%100 == 0) message(paste(count, "iterations done"))
+    }
+    result <- list(phi = phi_out, mu = mu_out, Omega = Omega_out, sigma2 = sigma2_out, gamma2 = gamma2_out, X = X_out)
+    
+    
+    
     he <- matrix(0, ncol(result$mu) + 2, 2)
     he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$sigma2)
     for(i in 3:(ncol(result$mu)+2)) he[i, ] <- diagnostic(result$mu[,i-2])
     burnIn <- max(he[, 1])
     thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
 
-    result <- new(Class = "est.hiddenmixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
-                  sigma2 = result$sigma2, Y.est = result$X,
-                  model = class.to.list(model.class), t = t, Z = data, burnIn = burnIn, thinning = thinning)
+    if(is.matrix(data)){
+      result <- new(Class = "est.hiddenmixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
+                    sigma2 = result$sigma2, Y.est = result$X,
+                    model = class.to.list(model.class), t = t, Z = data, burnIn = burnIn, thinning = thinning)
+    }else{
+      result <- new(Class = "est.hiddenmixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
+                    sigma2 = result$sigma2, Y.est = result$X,
+                    model = class.to.list(model.class), t = t.list[[1]], Z = matrix(data[[1]], 1),
+                    t.list = t, Z.list = data, burnIn = burnIn, thinning = thinning)
+    }
+
     return(result)
 
 })
@@ -1515,7 +1674,8 @@ setMethod(f = "estimate", signature = "mixedRegression",
                     model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
     }else{
       result <- new(Class = "est.mixedRegression", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
-                    model = class.to.list(model.class), t.list = t, Y.list = data, burnIn = burnIn, thinning = thinning)
+                    model = class.to.list(model.class), t = t[[1]], Y = matrix(data[[1]], 1),
+                    t.list = t, Y.list = data, burnIn = burnIn, thinning = thinning)
     }
     
     

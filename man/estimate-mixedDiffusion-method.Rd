@@ -39,5 +39,15 @@ t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
 est <- estimate(model, t, data[1:20,], 100)  # nMCMC should be much larger
 plot(est)
+##
+t.list <- list()
+for(i in 1:20) t.list[[i]] <- t
+t.list[[21]] <- t[1:50]
+data.list <- list()
+for(i in 1:20) data.list[[i]] <- data[i,]
+data.list[[21]] <- data[21, 1:50]
+est <- estimate(model, t.list, data.list, 100)
+pred <- predict(est, t = t[50:101], which.series = "current", ind.pred = 21,
+   b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
 }
 
