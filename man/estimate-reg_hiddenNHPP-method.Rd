@@ -28,6 +28,7 @@ data <- simulate(model, t = t)
 est <- estimate(model, t, data, 1000)
 plot(est)
 \dontrun{
+# work in progress
 est_hid <- estimate(model, t, data$Y, 1000)
 plot(est_hid)
 }

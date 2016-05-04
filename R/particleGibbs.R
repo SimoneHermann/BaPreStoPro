@@ -1,146 +1,3 @@
-#' Estimation function
-#'
-#' @description Bayesian estimation of the parameter of the model \eqn{Y_i = X_{t_i} + \epsilon_i} with
-#'   \eqn{dX_t = b(\phi,t,X_t)dt + s(\gamma,t,X_t)dW_t}.
-#' @param t vector of time points
-#' @param y vector of observation variables
-#' @param prior list of prior values
-#' @param start list of starting values
-#' @param est one out of "Bayes" or "MLE"
-#' @param len length of Markov chain
-#' @param sigmaTilde variance function \eqn{s(\gamma, t, y) = \gamma sigmaTilde(t, y)}
-#' @param Npart number of particles
-#' @param y0.fun function for starting point dependent on \eqn{\phi}
-#' @param b.fun drift function
-#' @param parPropPhi parameter for proposal standard deviation
-#' @param maxIt maximal iteration of MH step of \eqn{\phi}
-#'
-#' @return
-#' \item{phi}{Markov chain of \eqn{\phi}}
-#' \item{gamma2}{Markov chain of \eqn{\gamma}2}
-#' \item{sigma2}{Markov chain of \eqn{\sigma}2}
-#' \item{X}{filtered process}
-
-#' @author
-#' Simone Hermann and Adeline Leclercq-Samson
-partFiltering <- function(t, y, prior, start, est = c("Bayes","MLE"), len = 1000, sigmaTilde, Npart = 10, y0.fun = 1, b.fun = 1, parPropPhi = 5, maxIt = 10){
-  est <- match.arg(est)
-
-  if(missing(sigmaTilde)){
-    sigmaTilde <- function(t,x) 1
-  }
-  lt <- length(t)
-  lphi <- length(start$phi)
-
-  phi_out <- matrix(0,len,length(start$phi))
-  sigma2_out <- numeric(len)
-  gamma2_out <- numeric(len)
-  X_out <- matrix(0,len,length(t))
-
-  phi <- start$phi
-  sigma2 <- start$sigma2
-  gamma2 <- start$gamma2
-
-  postSigma2 <- function(alpha, beta, X, y){
-    alphaPost <- alpha + length(y)/2
-    betaPost <-  beta + sum((y-X)^2)/2
-
-    1/rgamma(1, alphaPost, betaPost)
-  }
-
-  postGamma2 <- function(alpha, beta, X, t, phi, b.fun, sigmaTilde){
-    ni <- length(t)
-    alphaPost <- alpha + (ni-1)/2
-    help <- sum( (X[-1] - X[-ni] - b.fun(phi,t[-ni],X[-ni])*(t[-1]-t[-ni]))^2/(sigmaTilde(t[-ni],X[-ni])^2*(t[-1]-t[-ni])) )
-
-    betaPost <-  beta + help/2
-
-    1/rgamma(1, alphaPost, betaPost)
-  }
-
-  if(est == "Bayes"){
-    prior_phi <- function(phi, k){
-      dnorm(phi[k],prior$mu[k],sqrt(prior$Omega[k]))
-    }
-    est_gamma2 <- function(phi, X){
-      postGamma2(prior$alpha.gamma, prior$beta.gamma, X, t, phi, b.fun, sigmaTilde)
-    }
-    est_sigma2 <- function(X){
-      postSigma2(prior$alpha.sigma, prior$beta.sigma, X, y)
-    }
-  }else{
-    if(est == "MLE"){
-      prior_phi <- function(phi, k) 1
-      est_gamma2 <- function(phi, X){
-        mean((X[-1]-X[-lt]-b.fun(phi,t[-lt],X[-lt])*diff(t))^2/(diff(t)*sigmaTilde(t[-lt],X[-lt])^2))
-      }
-      est_sigma2 <- function(X){
-        mean((y-X)^2)
-      }
-      }
-  }
-  propSd <- abs(start$phi)/parPropPhi
-  estPhi_and_X <- function(X, lastPhi, gamma2, sigma2, B_fixed, propSd){
-    likeli <- function(phi,X){
-      prod(dnorm(X[-1],X[-lt]+b.fun(phi, t[-lt], X[-lt])*diff(t), sqrt(gamma2*diff(t))*sigmaTilde(t[-lt],X[-lt])))
-    }
-    # output variables
-    phi_out <- lastPhi
-    phi <- lastPhi
-    for(k in 1:lphi){
-      for(count in 1:maxIt){
-        phi[k] <- phi_out[k] + rnorm(1, 0, propSd[k])
-        ratio <- prior_phi(phi, k)/prior_phi(phi_out, k)
-        ratio <- ratio*likeli(phi, X)/likeli(phi_out, X)
-        ratio <- ratio*dnorm(y[1], y0.fun(phi, t[1]), sqrt(sigma2))/dnorm(y[1], y0.fun(phi_out,t[1]), sqrt(sigma2))
-        if(is.na(ratio)) ratio <- 0
-
-        if(runif(1) <= ratio){
-          phi_out[k] <- phi[k]
-          break
-        }
-      }
-    }
-    res_SMC <- SMC(phi_out, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, X.cond = X, B_fixed = B_fixed)
-    lign.B <- A.to.B(res_SMC$parents)
-    indice <- sample(1:Npart, 1, prob = res_SMC$W[,lt])
-    X <- res_SMC$x[indice,]
-
-    list(phi = phi_out, X = X, B_fixed = lign.B[indice,])
-  }
-  res_SMC <- SMC(phi, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, conditional = FALSE)
-  lign.B <- A.to.B(res_SMC$parents)
-  indice <- sample(1:Npart, 1, prob =  res_SMC$W[,lt])
-  X <- res_SMC$x[indice,]
-  B_fixed <- lign.B[indice,]
-
-  for(count in 1:len){
-
-    # Particle Gibbs
-    result <- estPhi_and_X(X, phi, gamma2, sigma2, B_fixed, propSd)
-    phi <- result$phi
-    X <- result$X
-    B_fixed <- result$B_fixed
-
-    gamma2 <- est_gamma2(phi,X)
-    sigma2 <- est_sigma2(X)
-
-    phi_out[count,] <- phi
-    sigma2_out[count] <- sigma2
-    gamma2_out[count] <- gamma2
-    X_out[count,] <- X
-
-    if (count%%50 == 0){
-      propSd <- sapply(1:lphi, function(i){
-        ad.propSd(phi_out[(count-50+1):count, i], propSd[i], count/50) })
-#      print(propSd)
-    }
-
-    if (count%%1000 == 0) message(paste(count, "iterations done"))
-
-  }
-  list(phi = phi_out, sigma2 = sigma2_out, gamma2 = gamma2_out, X = X_out)
-}
 
 #' Estimation function
 #'
@@ -166,8 +23,6 @@ partFiltering <- function(t, y, prior, start, est = c("Bayes","MLE"), len = 1000
 #' \item{sigma2}{Markov chain of \eqn{\sigma^2}}
 #' \item{X}{filtered process}
 
-#' @author
-#' Simone Hermann and Adeline Leclercq-Samson
 partFiltering_mixed <- function(t, y, prior, start, len = 1000, sigmaTilde, y0.fun = 1, b.fun = 1, Npart = 10, parPropPhi = 5, maxIt = 10){
   # if y is a matrix and t a vector, they will be transformed to lists
   if(is.matrix(y)){
@@ -322,6 +177,25 @@ A.to.B <- function(A){
     B[,t-1] <- A[B[,t],t-1]}
   return(B)
 }
+
+#' SMC
+#'
+#' @description Sequential Monte Carlo step - conditional and unconditional.
+#' @param phi parameter \eqn{\phi}
+#' @param gamma2 parameter \eqn{\gamma^2}
+#' @param sigma2 parameter \eqn{\sigma^2}
+#' @param Npart number of particle
+#' @param times vector of time points
+#' @param y observation vector
+#' @param b.fun drift function
+#' @param y0.fun function for starting point dependent on \eqn{\phi}
+#' @param sigmaTilde variance function
+#' @param conditional logical(1), if TRUE conditional SMC
+#' @param X.cond if conditional = TRUE, the series to be hold
+#' @param B_fixed ancestral lineage of X.cond
+
+#' @author
+#' Simone Hermann and Adeline Leclercq-Samson
 
 SMC <- function(phi, gamma2, sigma2, Npart, times, y, b.fun, y0.fun, sigmaTilde, conditional = TRUE, X.cond, B_fixed){
 

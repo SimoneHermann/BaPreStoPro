@@ -32,7 +32,7 @@ plot(est)
 # OU
 b.fun <- function(phi, t, y) phi[1]-phi[2]*y
 model <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5,
-               parameter = list(phi = c(10, 5), gamma2 = 1, sigma2 = 0.1),
+               parameter = list(phi = c(10, 1), gamma2 = 1, sigma2 = 0.1),
                b.fun = b.fun, sT.fun = function(t, x) 1)
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)

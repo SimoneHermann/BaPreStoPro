@@ -27,7 +27,7 @@ model <- set.to.class("mixedRegression",
                  fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
-est <- estimate(model, t, data[1:20,], 2000)
-plot(est)
+est <- estimate(model, t, data[1:20,], 1000)
+plot(est, reduced = FALSE)
 }
 

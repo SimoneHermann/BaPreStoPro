@@ -26,5 +26,9 @@ t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 est <- estimate(model, t, data, 1000)
 plot(est)
+\dontrun{
+est_hidden <- estimate(model, t, data$Y, 1000)
+plot(est_hidden)
+}
 }
 

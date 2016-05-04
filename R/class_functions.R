@@ -150,90 +150,9 @@ defaults <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mix
 #' @export
 
 class.to.list <- function(cl){
-  class.name <- class(cl)[1]
-
-  if(class.name == "jumpDiffusion"){
-    list.out <-  list(class.name = class.name, theta = cl@theta, phi = cl@phi, gamma2 = cl@gamma2, xi = cl@xi,
-               b.fun = cl@b.fun, s.fun = cl@s.fun, h.fun = cl@h.fun, Lambda = cl@Lambda, priorRatio = cl@priorRatio,
-               prior = cl@prior, start = cl@start)
-  }
-  if(class.name == "Merton"){
-    list.out <-  list(class.name = class.name, thetaT = cl@thetaT, phi = cl@phi, gamma2 = cl@gamma2, xi =cl@xi,
-               Lambda = cl@Lambda, prior = cl@prior, start = cl@start)
-  }
-  if(class.name == "Diffusion"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, gamma2 = cl@gamma2,
-               b.fun = cl@b.fun, sT.fun = cl@sT.fun, prior = cl@prior, start = cl@start)
-  }
-  if(class.name == "mixedDiffusion"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, mu = cl@mu, Omega = cl@Omega, gamma2 = cl@gamma2,
-                      y0.fun = cl@y0.fun, b.fun = cl@b.fun, sT.fun = cl@sT.fun, prior = cl@prior, start = cl@start)
-  }
-  if(class.name == "hiddenDiffusion"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, gamma2 = cl@gamma2, sigma2 = cl@sigma2,
-               b.fun = cl@b.fun, sT.fun = cl@sT.fun, y0.fun = cl@y0.fun,
-               prior = cl@prior, start = cl@start)
-  }
-  if(class.name == "hiddenmixedDiffusion"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, mu = cl@mu, Omega = cl@Omega, gamma2 = cl@gamma2,
-               sigma2 = cl@sigma2, b.fun = cl@b.fun, sT.fun = cl@sT.fun, y0.fun = cl@y0.fun,
-               prior = cl@prior, start = cl@start)
-  }
-  if(class.name == "reg_hiddenNHPP"){
-    list.out <-  list(class.name = class.name, theta = cl@theta, gamma2 = cl@gamma2, fun = cl@fun, xi =cl@xi, Lambda = cl@Lambda,
-               prior = cl@prior, start = cl@start)
-  }
-  if(class.name == "NHPP"){
-    list.out <-  list(class.name = class.name, xi = cl@xi, Lambda = cl@Lambda, start = cl@start)
-  }
-  if(class.name == "Regression"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, gamma2 = cl@gamma2,
-                      fun = cl@fun, sT.fun = cl@sT.fun, prior = cl@prior, start = cl@start)
-  }
-  if(class.name == "mixedRegression"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, mu = cl@mu, Omega = cl@Omega, gamma2 = cl@gamma2,
-                      fun = cl@fun, sT.fun = cl@sT.fun, prior = cl@prior, start = cl@start)
-  }
-#######
-  if(class.name == "est.jumpDiffusion"){
-    list.out <-  list(class.name = class.name, theta = cl@theta, phi = cl@phi, gamma2 = cl@gamma2, xi = cl@xi,
-                      model = cl@model, N.est = cl@N.est, t = cl@t, Y = cl@Y, N = cl@N, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.Merton"){
-    list.out <-  list(class.name = class.name, thetaT = cl@thetaT, phi = cl@phi, gamma2 = cl@gamma2, xi =cl@xi,
-                      model = cl@model, N.est = cl@N.est, t = cl@t, Y = cl@Y, N = cl@N, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.Diffusion"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, gamma2 = cl@gamma2,
-                      model = cl@model, t = cl@t, Y = cl@Y, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.mixedDiffusion"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, mu = cl@phi, Omega = cl@Omega, gamma2 = cl@gamma2,
-                      model = cl@model, t = cl@t, Y = cl@Y, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.hiddenDiffusion"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, gamma2 = cl@gamma2, sigma2 = cl@sigma2,
-                      Y.est = cl@Y.est, model = cl@model, t = cl@t, Z = cl@Z, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.hiddenmixedDiffusion"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, mu = cl@mu, Omega = cl@Omega, gamma2 = cl@gamma2,
-                      sigma2 = cl@sigma2, Y.est = cl@Y.est, model = cl@model, t = cl@t, Z = cl@Z, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.reg_hiddenNHPP"){
-    list.out <-  list(class.name = class.name, theta = cl@theta, gamma2 = cl@gamma2, xi = cl@xi,
-                      model = cl@model, N.est = cl@N.est, t = cl@t, Y = cl@Y, N = cl@N, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.NHPP"){
-    list.out <-  list(class.name = class.name, xi = cl@xi, model = cl@model, t = cl@t, N = cl@N, jumpTimes = cl@jumpTimes, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.Regression"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, gamma2 = cl@gamma2,
-                      model = cl@model, t = cl@t, Y = cl@Y, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-  if(class.name == "est.mixedRegression"){
-    list.out <-  list(class.name = class.name, phi = cl@phi, mu = cl@mu, Omega = cl@Omega, gamma2 = cl@gamma2,
-                      model = cl@model, t = cl@t, Y = cl@Y, burnIn = cl@burnIn, thinning = cl@thinning)
-  }
-
-  list.out
+  
+  sN <- slotNames(cl)
+  res <- lapply(sN, function(name) slot(cl, name))
+  names(res) <- sN
+  res
 }

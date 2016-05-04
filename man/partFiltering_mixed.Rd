@@ -41,7 +41,4 @@ partFiltering_mixed(t, y, prior, start, len = 1000, sigmaTilde, y0.fun = 1,
 Bayesian estimation of the parameter of the model \eqn{Y_{ij} = X_{t_{ij}} + \epsilon_{ij}} with
   \eqn{dX_t = b(\phi_j, t, X_t)dt + s(\gamma, t, X_t)dW_t}.
 }
-\author{
-Simone Hermann and Adeline Leclercq-Samson
-}
 

@@ -44,7 +44,7 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
     ind <- 1:length(x@phi)
   }
 
-  p <- nrow(x@xi)
+  p <- ncol(x@xi)
   if(style == "chains"){
     p1 <- c(1, 0)[c(sum(dim(x@N.est)) > 0, sum(dim(x@N.est)) == 0)]
   } else {
@@ -74,7 +74,7 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
     if(any(par2plot[3 + seq_len(p)])){
       for(i in 1:p){
         if(par2plot[3 + i]){
-          plot(x@xi[i, ind], type = "l", ylab = bquote(xi[.(i)]), ...)
+          plot(x@xi[ind, i], type = "l", ylab = bquote(xi[.(i)]), ...)
           if(priorMeans)  abline(h = x@model$xi[i], col = col.priorMean, lty = lty.priorMean)
         }
       }
@@ -93,7 +93,7 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
     if(par2plot[2]) acf(x@theta[ind], xlab = expression(theta), ...)
     if(par2plot[3]) acf(x@gamma2[ind], xlab = expression(gamma^2), ...)
     for(i in 1:p){
-      if(par2plot[3 + i]) acf(x@xi[i, ind], xlab = bquote(xi[.(i)]), ...)
+      if(par2plot[3 + i]) acf(x@xi[ind, i], xlab = bquote(xi[.(i)]), ...)
     }
   }
   if(style == "density"){
@@ -112,7 +112,7 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
     }
     for(i in 1:p){
       if(par2plot[3 + i]){
-        plot(density(x@xi[i, ind]), xlab = bquote(xi[.(i)]), ...)
+        plot(density(x@xi[ind, i]), xlab = bquote(xi[.(i)]), ...)
         if(priorMeans)  abline(v = x@model$xi[i], col = col.priorMean, lty = lty.priorMean)
       }
     }
@@ -168,7 +168,7 @@ setMethod(f = "plot", signature = "est.Merton",
       ind <- 1:length(x@phi)
     }
     
-    p <- nrow(x@xi)
+    p <- ncol(x@xi)
     if(style == "chains"){
       p1 <- c(1, 0)[c(sum(dim(x@N.est)) > 0, sum(dim(x@N.est)) == 0)]
     } else {
@@ -198,7 +198,7 @@ setMethod(f = "plot", signature = "est.Merton",
       if(any(par2plot[3 + seq_len(p)])){
         for(i in 1:p){
           if(par2plot[3 + i]){
-            plot(x@xi[i, ind], type = "l", ylab = bquote(xi[.(i)]), ...)
+            plot(x@xi[ind, i], type = "l", ylab = bquote(xi[.(i)]), ...)
             if(priorMeans)  abline(h = x@model$xi[i], col = col.priorMean, lty = lty.priorMean)
           }
         }
@@ -217,7 +217,7 @@ setMethod(f = "plot", signature = "est.Merton",
       if(par2plot[2]) acf(x@thetaT[ind], xlab = expression(tilde(theta)), ...)
       if(par2plot[3]) acf(x@gamma2[ind], xlab = expression(gamma^2), ...)
       for(i in 1:p){
-        if(par2plot[3 + i]) acf(x@xi[i, ind], xlab = bquote(xi[.(i)]), ...)
+        if(par2plot[3 + i]) acf(x@xi[ind, i], xlab = bquote(xi[.(i)]), ...)
       }
     }
     if(style == "density"){
@@ -236,12 +236,11 @@ setMethod(f = "plot", signature = "est.Merton",
       }
       for(i in 1:p){
         if(par2plot[3 + i]){
-          plot(density(x@xi[i, ind]), xlab = bquote(xi[.(i)]), ...)
+          plot(density(x@xi[ind, i]), xlab = bquote(xi[.(i)]), ...)
           if(priorMeans)  abline(v = x@model$xi[i], col = col.priorMean, lty = lty.priorMean)
         }
       }
     }
-    
     
     par(old.settings)
 })

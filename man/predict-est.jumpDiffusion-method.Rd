@@ -55,9 +55,10 @@ pred_jd2 <- predict(est_jd, pred.alg = "Distribution", pred.alg.N = "Distributio
 est <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
 pred <- predict(est, t = t[81:101], which.series = "current",
                      Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-lines(t, data$Y, type="l", lwd = 2)
+lines(t, data$Y, type = "l", lwd = 2)
 }
 pred_jd4 <- predict(est_jd, pred.alg = "simpleTrajectory", sample.length = 100)
 for(i in 1:100) lines(t[-1], pred_jd4$Y[i,], col = "grey")
+pred_jd5 <- predict(est_jd, pred.alg = "simpleBayesTrajectory", sample.length = 100)
 }
 

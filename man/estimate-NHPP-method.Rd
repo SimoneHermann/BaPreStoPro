@@ -4,7 +4,8 @@
 \alias{estimate,NHPP-method}
 \title{Estimation for Poisson process}
 \usage{
-\S4method{estimate}{NHPP}(model.class, t, data, nMCMC)
+\S4method{estimate}{NHPP}(model.class, t, data, nMCMC,
+  proposal = c("lognormal", "normal"))
 }
 \arguments{
 \item{model.class}{class of the respective model including all required information, see function set.to.class}
@@ -14,6 +15,8 @@
 \item{data}{vector or list or matrix of observation variables}
 
 \item{nMCMC}{length of Markov chain}
+
+\item{proposal}{"lognormal" (for positive parameters, default) or "normal"}
 }
 \description{
 Bayesian estimation of a nonhomogeneous Poisson process.
@@ -23,7 +26,14 @@ model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)),
                    Lambda = function(t, xi) (t/xi[2])^xi[1])
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
-est_NHPP <- estimate(model, t, data$Times, 10000)
-plot(est_NHPP)
+est <- estimate(model, t, data$Times, 10000)
+plot(est)
+##
+model <- set.to.class("NHPP", parameter = list(xi = 5),
+                   Lambda = function(t, xi) t*xi)
+t <- seq(0, 1, by = 0.01)
+data <- simulate(model, t = t, plot.series = TRUE)
+est <- estimate(model, t, data$N, 10000, proposal = "normal")
+plot(est, par.options = list(mfrow = c(1,1)))
 }
 

@@ -29,7 +29,61 @@ setGeneric("estimate", function(model.class, ...) {
 setMethod(f = "estimate", signature = "Diffusion",
           definition = function(model.class, t, data, nMCMC){
 
-    result <- estSDE_single(t = t, X = data, prior = model.class@prior, start = model.class@start, bSDE = model.class@b.fun, sVar = model.class@sT.fun, len = nMCMC)
+    X <- data
+    prior <- model.class@prior
+    start <- model.class@start
+    bSDE <- model.class@b.fun
+    sVar <- model.class@sT.fun
+    len <- nMCMC
+    
+    propSd <- abs(prior$mu)/5
+    lt <- length(t)
+    dt <- t[-1] - t[-lt]
+    lphi <- length(propSd)
+    
+    postPhi <- function(lastPhi, gamma2, propSd){
+      phi_old <- lastPhi
+      
+      phi_drawn <- phi_old + rnorm(lphi, 0, propSd)
+      ratio <- dmvnorm(phi_drawn, prior$mu, as.matrix(prior$Omega)) / dmvnorm(phi_old, prior$mu, as.matrix(prior$Omega))
+      ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
+      if(is.na(ratio)){ratio <- 0}
+      if(runif(1) < ratio){
+        phi_old <- phi_drawn
+      }
+      phi_old
+    }
+    postGamma2 <- function(phi){
+      alphaPost <- prior$alpha + (lt-1)/2
+      betaPost <-  prior$beta + sum( (X[-1] - X[-lt] - bSDE(phi, t[-lt], X[-lt])*dt)^2/(sVar(t[-lt], X[-lt])^2*dt) )/2
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    
+    phi_out <- matrix(0, len, lphi)
+    gamma2_out <- numeric(len)
+    
+    phi <- start$phi
+    gamma2 <- start$gamma2
+    
+    for(count in 1:len){
+      
+      phi <- postPhi(phi, gamma2, propSd)
+      gamma2 <- postGamma2(phi)
+      
+      phi_out[count, ] <- phi
+      gamma2_out[count] <- gamma2
+      
+      if (count%%50 == 0){
+        propSd <- sapply(1:length(phi), function(i){
+          ad.propSd(phi_out[(count-50+1):count, i], propSd[i], count/50) })
+        #      print(propSd)
+      }
+      
+      
+    }
+    result <- list(phi = phi_out, gamma2 = gamma2_out)
+    
+    
     he <- matrix(0, ncol(result$phi) + 1, 2)
     he[1, ] <- diagnostic(result$gamma2)
     for(i in 2:(ncol(result$phi)+1)) he[i, ] <- diagnostic(result$phi[,i-1])
@@ -78,15 +132,139 @@ setMethod(f = "estimate", signature = "Diffusion",
 setMethod(f = "estimate", signature = "mixedDiffusion",
           definition = function(model.class, t, data, nMCMC) {
 
-    result <- estSDE(t, data, model.class@prior, model.class@start, y0.fun = model.class@y0.fun, bSDE = model.class@b.fun, sVar = model.class@sT.fun, len = nMCMC)
+
+    prior <- model.class@prior
+    start <- model.class@start
+    y0.fun <- model.class@y0.fun
+    bSDE <- model.class@b.fun
+    sVar <- model.class@sT.fun
+    len <- nMCMC
+    propPar <- 0.2
+    
+    if(is.matrix(data)){
+      if(nrow(data) == length(t)){
+        y <- t(data)
+      }else{
+        if(ncol(data) != length(t)){
+          stop("length of t has to be equal to the columns of y")
+        }
+      }
+      times <- list()
+      y <- list()
+      for(i in 1:nrow(data)){
+        times[[i]] <- t
+        y[[i]] <- data[i,]
+      }
+    }else{
+      y <- data
+      times <- t
+    }
+
+    postOm <- function(phi, mu){
+      postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
+    }
+    postPhii_old <- function(lastPhi, mu, Omega, gamma2, X, t, propSd){  # constant y0
+      lt <- length(t)
+      dt <- diff(t)
+      phi_old <- lastPhi
+      phi_drawn <- phi_old + rnorm(length(mu), 0, propSd)
+      ratio <- prod(dnorm(phi_drawn, mu, sqrt(Omega)) / dnorm(phi_old, mu, sqrt(Omega)) )
+      ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
+      if(is.na(ratio)) ratio <- 0
+      if(runif(1) <= ratio){
+        phi_old <- phi_drawn
+      }
+      phi_old
+    }
+    postPhii <- function(lastPhi, mu, Omega, gamma2, X, t, propSd){  # X, t vektoren
+      lt <- length(t)
+      dt <- diff(t)
+      phi_old <- lastPhi; lphi <- length(lastPhi)
+      phi_drawn <- phi_old + rnorm(length(mu), 0, propSd)
+      for(k in 1:lphi){
+        
+        phitest <- phi_drawn; phitest[k] <- rnorm(1, phitest[k], 0.1)
+        if(y0.fun(phi_drawn, t[1]) != y0.fun(phitest, t[1])){
+          fun <- function(theta){
+            phi <- phi_drawn; phi[k] <- theta
+            abs(y0.fun(phi, t[1]) - X[1])
+          } 
+          phi_drawn[k] <- optimize(f = fun, phi_drawn[k] + c(-1,1)*start$mu[k], maximum = FALSE)$minimum
+        }
+        
+      }
+      ratio <- prod(dnorm(phi_drawn, mu, sqrt(Omega)) / dnorm(phi_old, mu, sqrt(Omega)) )
+      ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
+      if(is.na(ratio)) ratio <- 0
+      if(runif(1) <= ratio){
+        phi_old <- phi_drawn
+      }
+      phi_old
+    }
+    n <- length(y)
+    N.all <- sum(sapply(y, length)-1)
+    postGamma2 <- function(phi){
+      alphaPost <- prior$alpha.gamma + N.all/2
+      help <- numeric(n)
+      for(i in 1:n){
+        ni <- length(times[[i]])
+        delta <- diff(times[[i]])
+        help[i] <- sum( (y[[i]][-1] - y[[i]][-ni] - bSDE(phi[i,], times[[i]][-ni], y[[i]][-ni])*delta)^2/(sVar(times[[i]][-ni], y[[i]][-ni])^2*delta) )
+      }
+      betaPost <-  prior$beta.gamma + sum(help)/2
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    
+    phi_out <- list()
+    mu_out <- matrix(0, len, length(start$mu))
+    Omega_out <- matrix(0, len, length(start$mu))
+    gamma2_out <- numeric(len)
+    
+    phi <- start$phi
+    gamma2 <- start$gamma2
+    mu <- start$mu
+    Omega <- postOm(phi, mu)
+    
+    propSd <- abs(start$mu)*propPar
+    
+    for(count in 1:len){
+      
+      for(i in 1:n){
+        phi[i,] <- postPhii(phi[i,], mu, Omega, gamma2, y[[i]], times[[i]], propSd)
+      }
+      mu <- postmu(phi, prior$m, prior$v, Omega)
+      Omega <- postOm(phi, mu)
+      gamma2 <- postGamma2(phi)
+      
+      phi_out[[count]] <- phi
+      mu_out[count,] <- mu
+      Omega_out[count,] <- Omega
+      gamma2_out[count] <- gamma2
+      
+      if (count%%50 == 0){
+        propSd <- sapply(1:length(phi[1,]), function(i){
+          ad.propSd(sapply(phi_out[(count-50+1):count], function(mat) mat[1,i]), propSd[i], count/50) })
+        #            print(propSd)
+      }
+      
+    }
+    result <- list(phi = phi_out, mu = mu_out, Omega = Omega_out, gamma2 = gamma2_out)
+    
+
     he <- matrix(0, ncol(result$mu) + 1, 2)
     he[1, ] <- diagnostic(result$gamma2)
     for(i in 2:(ncol(result$mu)+1)) he[i, ] <- diagnostic(result$mu[,i-1])
     burnIn <- max(he[, 1])
     thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    
+    if(is.matrix(data)){
+      result <- new(Class = "est.mixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
+                    model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
+    }else{
+      result <- new(Class = "est.mixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
+                    model = class.to.list(model.class), t.list = t, Y.list = data, burnIn = burnIn, thinning = thinning)
+    }
 
-    result <- new(Class = "est.mixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
-                  model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
     return(result)
 
 })
@@ -114,7 +292,7 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y
 #' model <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5, 
-#'                parameter = list(phi = c(10, 5), gamma2 = 1, sigma2 = 0.1), 
+#'                parameter = list(phi = c(10, 1), gamma2 = 1, sigma2 = 0.1), 
 #'                b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
@@ -125,8 +303,125 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 setMethod(f = "estimate", signature = "hiddenDiffusion",
           definition = function(model.class, t, data, nMCMC, Npart = 100) {
 
-    result <- partFiltering(t, data, prior = model.class@prior, start = model.class@start, len = nMCMC, sigmaTilde = model.class@sT.fun, Npart = Npart,
-                            y0.fun = model.class@y0.fun, b.fun = model.class@b.fun, maxIt = 1)
+#     result <- partFiltering(t, data, prior = model.class@prior, start = model.class@start, len = nMCMC, sigmaTilde = model.class@sT.fun, Npart = Npart,
+#                             y0.fun = model.class@y0.fun, b.fun = model.class@b.fun, maxIt = 1)
+    
+    
+    y <- data
+    prior <- model.class@prior
+    start <- model.class@start
+    len <- nMCMC
+    sigmaTilde <- model.class@sT.fun
+    y0.fun <- model.class@y0.fun
+    b.fun <- model.class@b.fun
+    maxIt <- 1   # input parameter ?
+    parPropPhi <- 5
+    
+    
+    
+    lt <- length(t)
+    lphi <- length(start$phi)
+    
+    phi_out <- matrix(0,len,length(start$phi))
+    sigma2_out <- numeric(len)
+    gamma2_out <- numeric(len)
+    X_out <- matrix(0,len,length(t))
+    
+    phi <- start$phi
+    sigma2 <- start$sigma2
+    gamma2 <- start$gamma2
+    
+    postSigma2 <- function(alpha, beta, X, y){
+      alphaPost <- alpha + length(y)/2
+      betaPost <-  beta + sum((y-X)^2)/2
+      
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    
+    postGamma2 <- function(alpha, beta, X, t, phi, b.fun, sigmaTilde){
+      ni <- length(t)
+      alphaPost <- alpha + (ni-1)/2
+      help <- sum( (X[-1] - X[-ni] - b.fun(phi,t[-ni],X[-ni])*(t[-1]-t[-ni]))^2/(sigmaTilde(t[-ni],X[-ni])^2*(t[-1]-t[-ni])) )
+      
+      betaPost <-  beta + help/2
+      
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    
+    
+    prior_phi <- function(phi, k){
+      dnorm(phi[k],prior$mu[k],sqrt(prior$Omega[k]))
+    }
+    est_gamma2 <- function(phi, X){
+      postGamma2(prior$alpha.gamma, prior$beta.gamma, X, t, phi, b.fun, sigmaTilde)
+    }
+    est_sigma2 <- function(X){
+      postSigma2(prior$alpha.sigma, prior$beta.sigma, X, y)
+    }
+    
+    propSd <- abs(start$phi)/parPropPhi
+    estPhi_and_X <- function(X, lastPhi, gamma2, sigma2, B_fixed, propSd){
+      likeli <- function(phi,X){
+        prod(dnorm(X[-1],X[-lt]+b.fun(phi, t[-lt], X[-lt])*diff(t), sqrt(gamma2*diff(t))*sigmaTilde(t[-lt],X[-lt])))
+      }
+      # output variables
+      phi_out <- lastPhi
+      phi <- lastPhi
+      for(k in 1:lphi){
+        for(count in 1:maxIt){
+          phi[k] <- phi_out[k] + rnorm(1, 0, propSd[k])
+          ratio <- prior_phi(phi, k)/prior_phi(phi_out, k)
+          ratio <- ratio*likeli(phi, X)/likeli(phi_out, X)
+          ratio <- ratio*dnorm(y[1], y0.fun(phi, t[1]), sqrt(sigma2))/dnorm(y[1], y0.fun(phi_out,t[1]), sqrt(sigma2))
+          if(is.na(ratio)) ratio <- 0
+          
+          if(runif(1) <= ratio){
+            phi_out[k] <- phi[k]
+            break
+          }
+        }
+      }
+      res_SMC <- SMC(phi_out, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, X.cond = X, B_fixed = B_fixed)
+      lign.B <- A.to.B(res_SMC$parents)
+      indice <- sample(1:Npart, 1, prob = res_SMC$W[,lt])
+      X <- res_SMC$x[indice,]
+      
+      list(phi = phi_out, X = X, B_fixed = lign.B[indice,])
+    }
+    res_SMC <- SMC(phi, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, conditional = FALSE)
+    lign.B <- A.to.B(res_SMC$parents)
+    indice <- sample(1:Npart, 1, prob =  res_SMC$W[,lt])
+    X <- res_SMC$x[indice,]
+    B_fixed <- lign.B[indice,]
+    
+    for(count in 1:len){
+      
+      # Particle Gibbs
+      result <- estPhi_and_X(X, phi, gamma2, sigma2, B_fixed, propSd)
+      phi <- result$phi
+      X <- result$X
+      B_fixed <- result$B_fixed
+      
+      gamma2 <- est_gamma2(phi,X)
+      sigma2 <- est_sigma2(X)
+      
+      phi_out[count,] <- phi
+      sigma2_out[count] <- sigma2
+      gamma2_out[count] <- gamma2
+      X_out[count,] <- X
+      
+      if (count%%50 == 0){
+        propSd <- sapply(1:lphi, function(i){
+          ad.propSd(phi_out[(count-50+1):count, i], propSd[i], count/50) })
+        #      print(propSd)
+      }
+      
+      if (count%%1000 == 0) message(paste(count, "iterations done"))
+      
+    }
+    result <- list(phi = phi_out, sigma2 = sigma2_out, gamma2 = gamma2_out, X = X_out)
+
+    
     he <- matrix(0, ncol(result$phi) + 2, 2)
     he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$sigma2)
     for(i in 3:(ncol(result$phi)+2)) he[i, ] <- diagnostic(result$phi[,i-2])
@@ -196,20 +491,122 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
-
+#' @param proposal "lognormal" (for positive parameters, default) or "normal"
 #' @examples
 #' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), 
 #'                    Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est_NHPP <- estimate(model, t, data$Times, 10000)
-#' plot(est_NHPP)
+#' est <- estimate(model, t, data$Times, 10000)
+#' plot(est)
+#' ##
+#' model <- set.to.class("NHPP", parameter = list(xi = 5), 
+#'                    Lambda = function(t, xi) t*xi)
+#' t <- seq(0, 1, by = 0.01)
+#' data <- simulate(model, t = t, plot.series = TRUE)
+#' est <- estimate(model, t, data$N, 10000, proposal = "normal")
+#' plot(est, par.options = list(mfrow = c(1,1)))
 #' @export
 setMethod(f = "estimate", signature = "NHPP",
-          definition = function(model.class, t, data, nMCMC) {
+          definition = function(model.class, t, data, nMCMC, proposal = c("lognormal", "normal")) {
 
-  if(length(t) != length(data)){
-    res <- est_NHPP(jumpTimes = data, Tend = max(t), start = model.class@start, n = nMCMC, Lambda = model.class@Lambda)
+    if(length(t) != length(data)){
+      jumpTimes <- data
+    }else{
+      jumpTimes <- dNtoTimes(diff(data), t[-1])
+    }
+    Tend <- max(t)
+    start <- model.class@start
+    n <- nMCMC
+    Lambda <- model.class@Lambda
+    
+
+    proposal <- match.arg(proposal)
+    
+    
+    priorRatio <- function(xi_drawn, xi_old) 1 # change ?
+    
+#             if(missing(Lambda)){
+#               int <- match.arg(int)
+#               if(int=="Weibull"){
+#                 Lambda <- function(t, xi){
+#                   (t/xi[2])^xi[1]
+#                 }
+#                 lambda <- function(t, xi){
+#                   xi[1]/xi[2]*(t/xi[2])^(xi[1]-1)
+#                 }
+#                 Lik <- function(xi){
+#                   lambda_vec <- lambda(jumpTimes, xi)
+#                   prod(lambda_vec)*exp(-Lambda(Tend, xi))
+#                 }
+#               }else{ # int == "Exp
+#                 Lambda <- function(t, xi){
+#                   xi[2]*exp(xi[1]*t)-xi[2]
+#                 }
+#                 lambda <- function(t, xi){
+#                   xi[1]*xi[2]*exp(xi[1]*t)
+#                 }
+#                 Lik <- function(xi){
+#                   lambda_vec <- lambda(jumpTimes, xi)
+#                   prod(lambda_vec)*exp(-Lambda(Tend, xi))
+#                 }
+#               }
+#               proposal <- "lognormal"
+#             }  
+    
+    lambda <- function(t, xi){
+      h <- 1e-05
+      (Lambda(t+h,xi)-Lambda(t,xi))/h
+    }
+    Lik <- function(xi){
+      lambda_vec <- lambda(jumpTimes, xi)
+      prod(lambda_vec)*exp(-Lambda(Tend, xi))
+    }
+    
+    if(proposal == "lognormal"){
+      if(any(start < 0)) message("Attention: proposal density has positive support")
+      proposals <- list()
+      proposals$draw <- function(xi_old, propSd){
+        proposal(xi_old, propSd)
+      }
+      proposals$ratio <- function(xi_drawn, xi_old, propSd){
+        proposalRatio(xi_old, xi_drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(xi_old, propSd){ 
+        rnorm(length(xi_old), xi_old, propSd)
+      }
+      proposals$ratio <- function(xi_drawn, xi_old, propSd) 1
+    }
+    propSd <- (abs(start)+0.1)/2
+    xi_old <- start
+    xi_out <- matrix(0, length(start), n)
+    LikOld <- Lik(xi_old)
+    
+    for(count in 1:n){
+      xi_drawn <- proposals$draw(xi_old, propSd)
+      
+      LikNew <- Lik(xi_drawn)
+      ratio <- proposals$ratio(xi_drawn, xi_old, propSd)
+      ratio <- ratio*priorRatio(xi_drawn, xi_old)
+      ratio <- ratio*LikNew/LikOld
+      if(is.na(ratio)) ratio <- 0
+      
+      if(runif(1) <= ratio){
+        xi_old <- xi_drawn
+        LikOld <- LikNew
+      }
+      xi_out[,count] <- xi_old
+      
+      if (count%%50 == 0){
+        propSd <- sapply(1:length(start), function(i){
+          ad.propSd(xi_out[i, (count-50+1):count], propSd[i], count/50) })
+      }
+      
+    }
+    res <- xi_out
+          
     if(is.vector(res)){
       he <- diagnostic(res); burnIn <- he[1]; thinning <- min( he[2], ceiling((nMCMC-burnIn)/100) )
     }else{
@@ -218,27 +615,17 @@ setMethod(f = "estimate", signature = "NHPP",
       burnIn <- max(he[, 1])
       thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
     }
-
+    
+            
+  if(length(t) != length(data)){
     result <- new(Class = "est.NHPP", xi = t(res), jumpTimes = as.numeric(data), t = t, N = TimestoN(data, t),
                   model = class.to.list(model.class), burnIn = burnIn, thinning = thinning)
 
   } else {
-    jumpTimes <- dNtoTimes(diff(data), t[-1])
-    res <- est_NHPP(jumpTimes, Tend = max(t), start = model.class@start, n = nMCMC, Lambda = model.class@Lambda)
-    if(is.numeric(res)){
-      he <- diagnostic(res); burnIn <- he[1]; thinning <- min( he[2], ceiling((nMCMC-burnIn)/100) )
-    }else{
-      he <- matrix(0, ncol(res), 2)
-      for(i in 1:ncol(res)) he[i,] <- diagnostic(res[i,])
-      burnIn <- max(he[, 1])
-      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
-    }
-
     result <- new(Class = "est.NHPP", xi = t(res), t = t, N = data, jumpTimes = dNtoTimes(diff(data), t),
                   model = class.to.list(model.class), burnIn = burnIn, thinning = thinning)
   }
     return(result)
-
  })
 
 
@@ -260,34 +647,183 @@ setMethod(f = "estimate", signature = "NHPP",
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(model, t, data, 1000)
 #' plot(est)
+#' \dontrun{
+#' est_hidden <- estimate(model, t, data$Y, 1000)
+#' plot(est_hidden)
+#' }
 #' @export
 setMethod(f = "estimate", signature = "jumpDiffusion",
           definition = function(model.class, t, data, nMCMC) {
+            
+    if(is.list(data)){  
+      X <- data$Y
+      N <- data$N
+      jumpTimes <- dNtoTimes(diff(N), t[-1])
+      
+    }else{
+      X <- data
+    }  
+    Tend <- max(t)
+    n <- nMCMC
+    start <- model.class@start
+    Lambda <- model.class@Lambda
+    lambda <- function(t, xi, h = 1e-05) (Lambda(t+h, xi)-Lambda(t, xi))/h
+    Lik.N <- function(xi, jumpTimes){
+      lambda_vec <- lambda(jumpTimes, xi)
+      prod(lambda_vec)*exp(-Lambda(Tend, xi))
+    }
+    
+    b <- model.class@b.fun  
+    s <- model.class@s.fun  
+    h <- model.class@h.fun  
+    priorRatio <- model.class@priorRatio
+
+    propSd <- 0.5
+    it.xi <- 5
+    
+    dX <- diff(X)
+    dt <- diff(t)
+    lt <- length(t)
+    # starting values
+    phi <- start$phi
+    theta <- start$theta
+    gamma2 <- start$gamma2
+    xi <- start$xi
+    
+    if(all(xi > 0)){
+      proposals <- list()
+      proposals$draw <- function(xi_old, propSd){
+        proposal(xi_old, propSd)
+      }
+      proposals$ratio <- function(xi_drawn, xi_old, propSd){
+        proposalRatio(xi_old, xi_drawn, propSd)
+      }
+    } else {
+      proposals <- list()
+      proposals$draw <- function(xi_old, propSd){ 
+        rnorm(length(xi_old), xi_old, propSd)
+      }
+      proposals$ratio <- function(xi_drawn, xi_old, propSd) 1
+    }
+    
+    
+    if(is.numeric(data)){
+      rangeN <- 2
+      post_dN <- function(dN, i, phi, gamma2, theta, xi){
+        Di <- dX[i]-b(phi,t[i],X[i])*dt[i]-h(theta,t[i],X[i])*dN
+        dLambda <- Lambda(t[i+1],xi)-Lambda(t[i],xi)
+        exp(-dLambda)/prod(1:max(dN,1))*exp(-Di^2/(2*s(gamma2,t[i],X[i])^2*dt[i])+dN*log(dLambda))/sqrt(2*pi*s(gamma2,t[i],X[i])^2*dt[i])
+      }
+      drawN <- function(phi, gamma2, theta, xi, dN_old){
+        dN_new <- dN_old
+        cands <- lapply(dN_old, function(n) 0:(n*rangeN+5))
+        prob <- lapply(1:(lt-1), function(i) sapply(cands[[i]], post_dN, i, phi, gamma2, theta, xi))
+        diFu <- lapply(prob, cumsum)
+        ind <- sapply(diFu, function(vec) any(is.na(vec)) | any(is.infinite(vec)) )
+        u <- numeric(length(diFu))
+        if(sum(ind) < length(diFu)){
+          u[!ind] <- runif(length(diFu[!ind]), 0, sapply(diFu[!ind], max))
+          for(j in (1:(lt-1))[!ind]){
+            dN_new[j] <- cands[[j]][which(diFu[[j]] >= u[j])[1]]
+          }
+        }
+        dN_new
+      }
+      if(is.null(start$N)){
+        N <- simN(t, xi, 1, start = c(t[1], 0), Lambda)$N
+      }else{
+        N <- start$N
+      }
+      N_out <- matrix(0, lt, n)
+      sample.N <- TRUE
+    }else{
+      sample.N <- FALSE
+    }
+    dN <- diff(N)
+    
+    likeli <- function(phi, gamma2, theta, dN){
+      dnorm(dX, b(phi, t[-lt], X[-lt])*dt + h(theta, t[-lt], X[-lt])*dN, s(gamma2, t[-lt], X[-lt])*sqrt(dt))
+    }
+    
+    # storage variables
+    phi_out <- rep(0, n)
+    theta_out <- rep(0, n)
+    gamma2_out <- rep(0, n)
+    xi_out <- matrix(0, n, length(xi))
+    
+    propSd_phi <- propSd*start$phi*5
+    propSd_theta <- propSd/5*start$theta
+    propSd_gamma2 <- propSd*start$gamma2
+    propSd_xi <- propSd*(abs(start$xi)+0.1)
+    
+    for(count in 1:n){
+      if(sample.N){
+        dN <- drawN(phi, gamma2, theta, xi, dN)
+        N <- cumsum(c(0, dN))
+        jumpTimes <- dNtoTimes(dN, t[-1])
+      }
+      for(count2 in 1:it.xi){
+        xi_drawn <- proposals$draw(xi, propSd_xi)
+        ratio <- proposals$ratio(xi_drawn, xi, propSd_xi)
+        ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
+        if(is.na(ratio)) ratio <- 0
+        
+        if(runif(1) <= ratio){
+          xi <- xi_drawn
+        }
+      }
+
+      phi_drawn <- rnorm(1, phi, propSd_phi)
+      ratio <- prod(likeli(phi_drawn, gamma2, theta, dN)/likeli(phi, gamma2, theta, dN))
+      ratio <- ratio*priorRatio$phi(phi_drawn, phi)
+      phi[runif(1) <= ratio] <- phi_drawn
+      
+      theta_drawn <- rnorm(1, theta, propSd_theta)
+      ratio <- prod(likeli(phi, gamma2, theta_drawn, dN)/likeli(phi, gamma2, theta, dN))
+      ratio <- ratio*priorRatio$theta(theta_drawn, theta)
+      theta[runif(1) <= ratio] <- theta_drawn
+      
+      gamma2_drawn <- proposal(gamma2, propSd_gamma2)
+      ratio <- prod(likeli(phi, gamma2_drawn, theta, dN)/likeli(phi, gamma2, theta, dN))
+      ratio <- ratio*proposalRatio(gamma2, gamma2_drawn, propSd_gamma2)
+      ratio <- ratio*priorRatio$gamma2(gamma2_drawn, gamma2)
+      gamma2[runif(1) <= ratio] <- gamma2_drawn
+      
+      # storage
+      phi_out[count] <- phi
+      theta_out[count] <- theta
+      gamma2_out[count] <- gamma2
+      xi_out[count, ] <- xi
+      
+      if(sample.N){
+        N_out[, count] <- N
+        if(count %% 1000 == 0) message(paste(count, "iterations are calculated"))
+        
+      }
+      
+      if (count%%50 == 0){
+        propSd_phi <- ad.propSd(phi_out[(count-50+1):count], propSd_phi, count/50)
+        propSd_theta <- ad.propSd(theta_out[(count-50+1):count], propSd_theta, count/50)
+        propSd_gamma2 <- ad.propSd(gamma2_out[(count-50+1):count], propSd_gamma2, count/50)
+        propSd_xi <- sapply(1:length(xi), function(i){
+          ad.propSd(xi_out[(count-50+1):count, i], propSd_xi[i], count/50) })
+      }
+    }
+
+    result <- list(phi = phi_out, gamma2 = gamma2_out, theta = theta_out, xi = xi_out)
+    
+    he <- matrix(0, 3 + ncol(result$xi), 2)
+    he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$theta)
+    for(i in 4:(3+ncol(result$xi))) he[i,] <- diagnostic(result$xi[, i-3])
+    burnIn <- max(he[, 1])
+    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
 
     if(is.list(data)){
-      result <- est_JD_Euler(data$Y, N=data$N, t=t, n = nMCMC, start = model.class@start, b = model.class@b.fun,
-                             s = model.class@s.fun, h = model.class@h.fun, priorRatio = model.class@priorRatio,
-                             Lambda = model.class@Lambda)
-      he <- matrix(0, 3 + nrow(result$xi), 2)
-      he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$theta)
-      for(i in 4:(3+nrow(result$xi))) he[i,] <- diagnostic(result$xi[i-3,])
-      burnIn <- max(he[, 1])
-      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
-
       result <- new(Class = "est.jumpDiffusion", theta = result$theta, phi = result$phi, gamma2 = result$gamma2, xi = result$xi,
                     model = class.to.list(model.class), t = t, Y = data$Y, N = data$N, burnIn = burnIn, thinning = thinning)
     } else {
-      result <- est_JD_Euler(data, t=t, n = nMCMC, start = model.class@start, b = model.class@b.fun,
-                             s = model.class@s.fun, h = model.class@h.fun,
-                             priorRatio = model.class@priorRatio, Lambda = model.class@Lambda)
-      he <- matrix(0, 3 + nrow(result$xi), 2)
-      he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$theta)
-      for(i in 4:(3+nrow(result$xi))) he[i,] <- diagnostic(result$xi[i-3,])
-      burnIn <- max(he[, 1])
-      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
-
       result <- new(Class = "est.jumpDiffusion", theta = result$theta, phi = result$phi, gamma2 = result$gamma2, xi = result$xi,
-                    N.est = result$N, model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
+                    N.est = N_out, model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
     }
 
     return(result)
@@ -317,28 +853,209 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' @export
 setMethod(f = "estimate", signature = "Merton",
           definition = function(model.class, t, data, nMCMC) {
+            
+            
+    if(is.list(data)){  
+      X <- data$Y
+      N <- data$N
+      jumpTimes <- dNtoTimes(diff(N), t[-1])
+      
+    }else{
+      X <- data
+    } 
+    Tend <- max(t)
+            
+    n <- nMCMC
+    start <- model.class@start
+    prior <- model.class@prior        
+    Lambda <- model.class@Lambda
+    lambda <- function(t, xi, h = 1e-05) (Lambda(t+h, xi)-Lambda(t, xi))/h
+    Lik.N <- function(xi, jumpTimes){
+      lambda_vec <- lambda(jumpTimes, xi)
+      prod(lambda_vec)*exp(-Lambda(Tend, xi))
+    }
+    
+    it.xi <- 10
+    
+    
+    Delta <- diff(t)
+    t.l <- t
+    
+    dlX <- diff(log(X))
+    x0 <- X[1]
+    X <- X[-1]
+    t <- t[-1]
     if(is.list(data)){
-      result <- est_Merton(data$Y, data$N, t, n=nMCMC, start = model.class@start, prior = model.class@prior, Lambda=model.class@Lambda)
-      he <- matrix(0, 3 + nrow(result$xi), 2)
-      he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$thetaT)
-      for(i in 4:(3+nrow(result$xi))) he[i,] <- diagnostic(result$xi[i-3,])
-      burnIn <- max(he[, 1])
-      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+      dN <- diff(N)
+      N <- N[-1]
+    }
+    logX <- log(X)
+    logx0 <- log(x0)
+    l <- length(t)
+    if(any(t == 0)){
+      help <- matrix(rep(t, l-1), nrow = l-1, ncol = l-1)
+      Th <- matrix(0, l-1, l-1)
+      Th[lower.tri(Th, diag = TRUE)] <- t(help)[lower.tri(Th, diag = TRUE)]
+      Th[upper.tri(Th)] <- help[upper.tri(help)]
+      T_1 <- solve(Th)
+      T_1 <- cbind(rep(0, l), rbind(rep(0, l-1), T_1))
+    }else{
+      help <- matrix(rep(t, l), nrow = l, ncol = l)
+      Th <- matrix(0, l, l)
+      Th[lower.tri(Th, diag = TRUE)] <- t(help)[lower.tri(Th, diag = TRUE)]
+      Th[upper.tri(Th)] <- help[upper.tri(help)]
+      T_1 <- solve(Th)
+    }
+    postPhi <- function(gamma2, thetaT, N){
+      Vpost <- 1/( t%*%T_1%*%t/gamma2 + 1/prior$s_phi )
+      mpost <- Vpost*( prior$mu_phi/prior$s_phi + 1/gamma2*t%*%T_1%*%(logX - logx0 + gamma2*t/2 - thetaT*N) )
+      
+      rnorm(1, mpost, sqrt(Vpost))
+    }
+    postThetaT <- function(gamma2, phi, N){
+      Vpost <- 1/( N%*%T_1%*%N/gamma2 + 1/prior$s_th )
+      mpost <- Vpost*( prior$mu_th/prior$s_th + 1/gamma2*N%*%T_1%*%(logX - logx0 - phi*t + gamma2*t/2) )
+      
+      rnorm(1, mpost, sqrt(Vpost))
+    }
+    proposalGamma <- function(gamma2, phi, thetaT, N){
+      lt <- length(t)
+      aPost <- prior$alpha+lt/2
+      
+      u_X <- logx0 + (phi-gamma2/2)*t + thetaT*N
+      bPost <- prior$beta+(logX-u_X)%*%T_1%*%(logX-u_X)/2
+      1/rgamma(1, aPost, bPost)
+    }
+    RatioGamma <- function(gamma2, gamma2_drawn, phi, thetaT, N){
+      h1 <- t%*%T_1%*%t
+      h2 <- (logX - logx0 - phi*t - thetaT*N)%*%T_1%*%t
+      exp((1/gamma2_drawn - 1/gamma2)*( (gamma2-gamma2_drawn)*h2/2 + (gamma2-gamma2_drawn)*h1/8))
+    }
 
-      result <- new(Class = "est.Merton", thetaT = result$thetaT, phi = result$phi, gamma2 = result$gamma2, xi = result$xi,
-                    model = class.to.list(model.class), t = t, Y = data$Y, N = data$N, burnIn = burnIn, thinning = thinning)
-
+    # starting values
+    phi <- start$phi
+    thetaT <- start$thetaT
+    gamma2 <- start$gamma2
+    xi <- start$xi
+    propSd_xi <- (abs(start$xi)+0.1)/10
+    
+    if(all(xi > 0)){
+      proposals <- list()
+      proposals$draw <- function(xi_old, propSd){
+        proposal(xi_old, propSd)
+      }
+      proposals$ratio <- function(xi_drawn, xi_old, propSd){
+        proposalRatio(xi_old, xi_drawn, propSd)
+      }
     } else {
-      result <- est_Merton(data, t=t, n=nMCMC, start = model.class@start, prior = model.class@prior, Lambda=model.class@Lambda)
-      he <- matrix(0, 3 + nrow(result$xi), 2)
-      he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$thetaT)
-      for(i in 4:(3+nrow(result$xi))) he[i,] <- diagnostic(result$xi[i-3,])
-      burnIn <- max(he[, 1])
-      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+      proposals <- list()
+      proposals$draw <- function(xi_old, propSd){ 
+        rnorm(length(xi_old), xi_old, propSd)
+      }
+      proposals$ratio <- function(xi_drawn, xi_old, propSd) 1
+    }
+    
+    if(is.numeric(data)){
+      rangeN <- 2
+      
+      post_dN <- function(dN, i, phi, gamma2, thetaT, xi){
+        Di <- dlX[i]-(phi-gamma2/2)*Delta[i]-thetaT*dN
+        dLambda <- Lambda(t.l[i], xi)-Lambda(t.l[i-1], xi)
+        exp(-dLambda)/prod(1:max(dN,1))*exp(-Di^2/(2*gamma2*Delta[i])+dN*log(dLambda))/sqrt(2*pi*gamma2*Delta[i])
+      }
+      drawN <- function(phi, gamma2, thetaT, xi, dN_old){
+        dN_new <- dN_old
+        cands <- lapply(dN_old, function(n) 0:(n*rangeN+5))
+        prob <- lapply(1:l, function(i) sapply(cands[[i]], post_dN, i, phi, gamma2, thetaT, xi))
+        diFu <- lapply(prob, cumsum)
+        ind <- sapply(diFu, function(vec) any(is.na(vec)) | any(is.infinite(vec)) )
+        u <- numeric(length(diFu))
+        if(sum(ind) < length(diFu)){
+          u[!ind] <- runif(length(diFu[!ind]), 0, sapply(diFu[!ind], max))
+          for(j in (1:l)[!ind]){
+            dN_new[j] <- cands[[j]][which(diFu[[j]]>=u[j])[1]]
+          }
+        }
+        dN_new
+      }
+      if(is.null(start$dN)){
+        dN <- diff(simN(t.l, xi, 1, start = c(t[1], 0), Lambda = Lambda)$N)
+      }else{
+        dN <- start$dN
+      }
+      N <- cumsum(dN)
+      sample.N <- TRUE
+      
+      N_out <- matrix(0, l, n)
+      
+    }else{
+      sample.N <- FALSE
+    }
+    
+    # storage variables
+    phi_out <- rep(0, n)
+    thetaT_out <- rep(0, n)
+    gamma2_out <- rep(0, n)
+    xi_out <- matrix(0, n, length(xi))
+    
+    for(count in 1:n){
+      
+      if(sample.N){
+        dN <- drawN(phi, gamma2, thetaT, xi, dN)
+        N <- cumsum(dN)
+        jumpTimes <- dNtoTimes(dN, t)
+        if(count %% 1000 == 0) message(paste(count, "iterations are calculated"))
+      }
+      for(count2 in 1:it.xi){
+        xi_drawn <- proposals$draw(xi, propSd_xi)
+        ratio <- proposals$ratio(xi_drawn, xi, propSd_xi)
+        ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
+        if(is.na(ratio)) ratio <- 0
+        
+        if(runif(1) <= ratio){
+          xi <- xi_drawn
+        }
+      }
+      
+      phi <- postPhi(gamma2, thetaT, N)
+      
+      thetaT <- postThetaT(gamma2, phi, N)
+      
+      gamma2_drawn <- proposalGamma(gamma2, phi, thetaT, N)
+      gamma2[runif(1) <= RatioGamma(gamma2, gamma2_drawn, phi, thetaT, N)] <- gamma2_drawn
+      
+      # storage
+      phi_out[count] <- phi
+      thetaT_out[count] <- thetaT
+      gamma2_out[count] <- gamma2
+      xi_out[count, ] <- xi
+      if(sample.N){
+        N_out[, count] <- N
+      }
+      
+      if (count%%50 == 0){
+        propSd_xi <- sapply(1:length(xi), function(i){
+          ad.propSd(xi_out[(count-50+1):count, i], propSd_xi[i], count/50) })
+      }
+      
+    }
 
+    result <- list(phi = phi_out, gamma2 = gamma2_out, thetaT = thetaT_out, xi = xi_out)
+    
+    he <- matrix(0, 3 + ncol(result$xi), 2)
+    he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$thetaT)
+    for(i in 4:(3+ncol(result$xi))) he[i,] <- diagnostic(result$xi[, i-3])
+    burnIn <- max(he[, 1])
+    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+            
+            
+    if(is.list(data)){
+      result <- new(Class = "est.Merton", thetaT = result$thetaT, phi = result$phi, gamma2 = result$gamma2, xi = result$xi,                    
+                    model = class.to.list(model.class), t = t.l, Y = data$Y, N = data$N, burnIn = burnIn, thinning = thinning)
+    } else {
       result <- new(Class = "est.Merton", thetaT = result$thetaT, phi = result$phi, gamma2 = result$gamma2,
-                    xi = result$xi, N.est = result$N,
-                    model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
+                    xi = result$xi, N.est = N_out,
+                    model = class.to.list(model.class), t = t.l, Y = data, burnIn = burnIn, thinning = thinning)
     }
      return(result)
 
@@ -364,6 +1081,7 @@ setMethod(f = "estimate", signature = "Merton",
 #' est <- estimate(model, t, data, 1000) 
 #' plot(est)
 #' \dontrun{
+#' # work in progress
 #' est_hid <- estimate(model, t, data$Y, 1000)
 #' plot(est_hid)
 #' }
@@ -371,37 +1089,232 @@ setMethod(f = "estimate", signature = "Merton",
 setMethod(f = "estimate", signature = "reg_hiddenNHPP",
           definition = function(model.class, t, data, nMCMC) {
 
+    
     if(is.list(data)){
-      result <- est_reg_hiddenNHPP(Y = data$Y, N = data$N, t = t, fun = model.class@fun, n = nMCMC, start = model.class@start,
-                                   prior = model.class@prior, Lambda = model.class@Lambda)
+      Y <- data$Y
+      N <- data$N
+      jumpTimes <- dNtoTimes(diff(N), t[-1])
+      
+    }else{
+      Y <- data
+    }
+    Tend <- max(t)
+            
+    fun <- model.class@fun
+    n <- nMCMC
+    start <- model.class@start
+    prior <- model.class@prior
+    Lambda <- model.class@Lambda
+    lambda <- function(t, xi, h = 1e-05) (Lambda(t+h, xi)-Lambda(t, xi))/h
+    Lik.N <- function(xi, jumpTimes){
+      lambda_vec <- lambda(jumpTimes, xi)
+      prod(lambda_vec)*exp(-Lambda(Tend, xi))
+    }
+    
+    
+    lt <- length(t)
+    # starting values
+    theta <- start$theta
+    gamma2 <- start$gamma2
+    xi <- start$xi
+    
+    if(all(xi > 0)){
+      proposals <- list()
+      proposals$draw <- function(xi_old, propSd){
+        proposal(xi_old, propSd)
+      }
+      proposals$ratio <- function(xi_drawn, xi_old, propSd){
+        proposalRatio(xi_old, xi_drawn, propSd)
+      }
+    } else {
+      proposals <- list()
+      proposals$draw <- function(xi_old, propSd){ 
+        rnorm(length(xi_old), xi_old, propSd)
+      }
+      proposals$ratio <- function(xi_drawn, xi_old, propSd) 1
+    }
+    
+    if(is.numeric(data)){
+      
+      Npart <- 10
+      rangeN <- 2
+      A.to.B = function(A){
+        B <- matrix(0, Npart, lt)
+        B[,lt] <- 1:Npart;
+        for (t in seq(lt, 2, by = -1)){
+          B[,t-1] <- A[B[,t], t-1]}
+        return(B)
+      }
+      
+      CSMC = function(theta, gamma2, xi, N.cond, B_fixed, conditional = TRUE){# conditional SMC
+        # N.cond = the old samples
+        
+        x <- matrix(0, Npart, lt)
+        w <- matrix(1, Npart, lt)
+        W <- matrix(1, Npart, lt)
+        parents <-  matrix(1, Npart, lt-1)
+        
+        # initialisation
+        x[,1] <- 0  # poisson always starts in 0
+        if(conditional){
+          x[B_fixed[1], 1] <- N.cond[1]
+        }else{
+          N.cond <- numeric(lt)
+        }
+        w[,1] <- dnorm(Y[1], mean = fun(t[1], x[,1], theta), sd = sqrt(gamma2))
+        W[,1] <- w[,1]/sum(w[,1])
+        
+        for (n in 2:lt){
+          if(conditional){
+            set.parents  <- (1:Npart)[-B_fixed[n]]
+            
+            On_1 <- rmultinom(1, Npart-1, W[,n-1])
+            O <- On_1[B_fixed[n-1]] + 1
+            he <- sample(set.parents, O-1)
+            
+            parents[B_fixed[n], n-1] <- B_fixed[n-1]
+            parents[he, n-1] <- B_fixed[n-1]
+            parents[-c(B_fixed[n],he), n-1] <- sample(set.parents, Npart-O, replace = TRUE, prob =  W[-B_fixed[n], n-1])
+            
+          }else{
+            set.parents <- 1:Npart
+            parents[, n-1] <- sample(1:Npart, Npart, replace = TRUE, prob = W[,n-1])
+            
+          }
+          
+          
+          x[,1:(n-1)] <- x[parents[,n-1], 1:(n-1)]
+          x.past <- x[,n-1]
+          
+          
+          dr <- function(Ni, dNi_old){
+            cands <- 0:(dNi_old*rangeN + 5)
+            prob <- dnorm(Y[n], fun(t[n], Ni+cands, theta), sqrt(2*gamma2))*
+              dpois(Ni+cands, Lambda(t[n], xi))
+            diFu <- cumsum(prob)
+            u <- runif(1, 0, max(diFu))
+            Ni + cands[which(diFu >= u)[1]]
+          }
+          x.new <- sapply(x.past, dr, diff(N.cond)[n-1])
+          
+          x[set.parents, n] <- x.new[set.parents]
+          x[-set.parents, n] <- N.cond[n]
+          wn <- dpois(x[, n], Lambda(t[n], xi))*
+            dnorm(Y[n], fun(t[n], x[, n], theta), sqrt(gamma2))/
+            (dnorm(Y[n], fun(t[n], x[, n], theta), sqrt(2*gamma2))*
+               dpois(x[, n], Lambda(t[n], xi)))
+          if(sum(wn) == 0) wn <- rep(1, length(wn))
+          w[, n] <- wn
+          W[, n] <- w[, n]/sum(w[, n])
+        }
+        lign.B <- A.to.B(parents)
+        indice <- sample(1:Npart, 1, prob = W[, lt])
+        X <- x[indice, ]
+        B_fixed <- lign.B[indice,]
+        return(list(N = X, B_fixed = B_fixed) )
+      }
+      
+      if(is.null(start$N)){
+        #      N <- simN(t, xi, 1, start = c(t[1], 0), Lambda = Lambda)$N
+        he <- CSMC(theta, gamma2, xi, conditional = FALSE)
+        N <- he$N
+        B_fixed <- he$B_fixed
+      }else{
+        N <- start$N
+      }
+      N_out <- matrix(0, lt, n)
+      sample.N <- TRUE
+    }else{
+      sample.N <- FALSE
+    }
+    propSd <- abs(prior$mu)/20
+    propSd_xi <- (abs(start$xi)+0.1)/10
+    ltheta <- length(start$theta)
+    it.xi <- 10
+    
+    sVar <- function(t) 1   # generalize ?
+    
+    postTheta <- function(N, gamma2, lastPhi, propSd){  
+      phi_old <- lastPhi
+      phi_drawn <- rnorm(ltheta, phi_old, propSd)
+      ratio <- prod(dnorm(phi_drawn, prior$mu, sqrt(prior$Omega)))/prod(dnorm(phi_old, prior$mu, sqrt(prior$Omega)))
+      ratio <- ratio* prod(dnorm(Y, fun(t, N, phi_drawn), sqrt(gamma2*sVar(t)))/dnorm(Y, fun(t, N, phi_old), sqrt(gamma2*sVar(t))))
+      if(is.na(ratio)) ratio <- 0
+      if(runif(1) < ratio){
+        phi_old <- phi_drawn
+      }
+      phi_old
+    }
+    
+    postGamma2 <- function(theta, N){
+      alphaPost <- prior$alpha + lt/2
+      betaPost <-  prior$beta + sum((Y-fun(t, N, theta))^2/sVar(t))/2
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    
+    theta_out <- matrix(0, n, length(theta))
+    gamma2_out <- numeric(n)
+    xi_out <- matrix(0, n, length(xi))
+    
+    for(count in 1:n){
+      if(sample.N){
+        he <- CSMC(theta, gamma2, xi, N, B_fixed)
+        N <- he$N
+        jumpTimes <- dNtoTimes(diff(N), t[-1])
+        B_fixed <- he$B_fixed
+      }
+      for(count2 in 1:it.xi){
+        xi_drawn <- proposals$draw(xi, propSd_xi)
+        ratio <- proposals$ratio(xi_drawn, xi, propSd_xi)
+        ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
+        if(is.na(ratio)) ratio <- 0
+        
+        if(runif(1) <= ratio){
+          xi <- xi_drawn
+        }
+      }
+      
+      theta <- postTheta(N, gamma2, theta, propSd)
+      
+      gamma2 <- postGamma2(theta, N)
+      
+      # storage
+      theta_out[count, ] <- theta
+      gamma2_out[count] <- gamma2
+      xi_out[count, ] <- xi
+      if(sample.N){
+        N_out[, count] <- N
+      }
+      if (count%%50 == 0){
+        propSd <- sapply(1:length(theta), function(i){
+          ad.propSd(theta_out[(count-50+1):count, i], propSd[i], count/50) })
+        #      print(propSd)
+      }
+      
+    }
 
-      he <- matrix(0, ncol(result$theta) + ncol(result$xi) + 1, 2)
-      he[1, ] <- diagnostic(result$gamma2)
-      for(i in 2:(ncol(result$theta)+1)) he[i, ] <- diagnostic(result$theta[,i-1])
-      for(i in (ncol(result$theta)+2):(ncol(result$theta) + ncol(result$xi) + 1)) he[i, ] <- diagnostic(result$xi[,i - ncol(result$theta) - 1])
-      burnIn <- max(he[, 1])
-      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    
+    result <- list(gamma2 = gamma2_out, theta = theta_out, xi = xi_out)
+    
 
+    he <- matrix(0, ncol(result$theta) + ncol(result$xi) + 1, 2)
+    he[1, ] <- diagnostic(result$gamma2)
+    for(i in 2:(ncol(result$theta)+1)) he[i, ] <- diagnostic(result$theta[,i-1])
+    for(i in (ncol(result$theta)+2):(ncol(result$theta) + ncol(result$xi) + 1)) he[i, ] <- diagnostic(result$xi[,i - ncol(result$theta) - 1])
+    burnIn <- max(he[, 1])
+    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+
+    
+    if(is.list(data)){
       result <- new(Class = "est.reg_hiddenNHPP", theta = result$theta, gamma2 = result$gamma2, xi = result$xi,
                     model = class.to.list(model.class), t = t, Y = data$Y, N = data$N, burnIn = burnIn, thinning = thinning)
 
     }else{
-      result <- est_reg_hiddenNHPP(data, t=t, fun = model.class@fun, n = nMCMC, start = model.class@start,
-                                   prior = model.class@prior, Lambda = model.class@Lambda)
-      he <- matrix(0, ncol(result$theta) + ncol(result$xi) + 1, 2)
-      he[1, ] <- diagnostic(result$gamma2)
-      for(i in 2:(ncol(result$theta)+1)) he[i, ] <- diagnostic(result$theta[,i-1])
-      for(i in (ncol(result$theta)+2):(ncol(result$theta) + ncol(result$xi) + 1)) he[i, ] <- diagnostic(result$xi[,i - ncol(result$theta) - 1])
-      burnIn <- max(he[, 1])
-      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
-
       result <- new(Class = "est.reg_hiddenNHPP", theta = result$theta, gamma2 = result$gamma2,
-                    xi = result$xi, N.est = result$N,
+                    xi = result$xi, N.est = N_out,
                     model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
-
     }
     return(result)
-
 })
 
 
@@ -426,7 +1339,53 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
 setMethod(f = "estimate", signature = "Regression",
           definition = function(model.class, t, data, nMCMC) {
 
-    result <- estReg_single(t = t, y = data, prior = model.class@prior, start = model.class@start, fODE = model.class@fun, sVar = model.class@sT.fun, len = nMCMC)
+    y <- data
+    prior <- model.class@prior
+    start <- model.class@start
+    fODE <- model.class@fun
+    sVar <- model.class@sT.fun
+    len <- nMCMC
+    
+    
+    propSd <- abs(prior$mu)/50
+    lt <- length(t)
+    lphi <- length(start$phi)
+    
+    postPhi <- function(lastPhi, gamma2){
+      phi_old <- lastPhi
+      phi_drawn <- rnorm(lphi, phi_old, propSd)
+      ratio <- dmvnorm(phi_drawn, prior$mu, as.matrix(prior$Omega)) / dmvnorm(phi_old, prior$mu, as.matrix(prior$Omega))
+      ratio <- ratio* prod(dnorm(y, fODE(phi_drawn, t), sqrt(gamma2*sVar(t)))/dnorm(y, fODE(phi_old, t), sqrt(gamma2*sVar(t))))
+      if(is.na(ratio)) ratio <- 0
+      if(runif(1) < ratio){
+        phi_old <- phi_drawn
+      }
+      phi_old
+    }
+    
+    postGamma2 <- function(phi){
+      alphaPost <- prior$alpha + lt/2
+      betaPost <-  prior$beta + sum((y-fODE(phi, t))^2/sVar(t))/2
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    
+    phi_out <- matrix(0,len,length(prior$mu))
+    gamma2_out <- numeric(len)
+    
+    phi <- start$phi
+    gamma2 <- start$gamma2
+    
+    for(count in 1:len){
+      
+      phi <- postPhi(phi, gamma2)
+      gamma2 <- postGamma2(phi)
+      
+      phi_out[count,] <- phi
+      gamma2_out[count] <- gamma2
+    }
+    result <- list(phi = phi_out, gamma2 = gamma2_out)
+    
+    
     he <- matrix(0, ncol(result$phi) + 1, 2)
     he[1, ] <- diagnostic(result$gamma2)
     for(i in 2:(ncol(result$phi)+1)) he[i, ] <- diagnostic(result$phi[,i-1])
@@ -457,22 +1416,109 @@ setMethod(f = "estimate", signature = "Regression",
 #'                  fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est <- estimate(model, t, data[1:20,], 2000)
-#' plot(est)
+#' est <- estimate(model, t, data[1:20,], 1000)
+#' plot(est, reduced = FALSE)
 #'
 #' @export
 setMethod(f = "estimate", signature = "mixedRegression",
           definition = function(model.class, t, data, nMCMC) {
 
-    result <- estReg(t, y = data, model.class@prior, model.class@start, fODE = model.class@fun, sVar = model.class@sT.fun, len = nMCMC)
+    prior <- model.class@prior
+    start <- model.class@start
+    fODE <- model.class@fun
+    sVar <- model.class@sT.fun
+    len <- nMCMC
+    propPar <- 0.2
+    
+    if(is.matrix(data)){
+      if(nrow(data) == length(t)){
+        y <- t(data)
+      }else{
+        if(ncol(data) != length(t)){
+          stop("length of t has to be equal to the columns of y")
+        }
+      }
+      times <- list()
+      y <- list()
+      for(i in 1:nrow(data)){
+        times[[i]] <- t
+        y[[i]] <- data[i,]
+      }
+    }else{
+      y <- data
+      times <- t
+    }
+    
+    postOm <- function(phi,mu){
+      postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
+    }
+    propSd <- abs(start$mu)*propPar
+    postPhii <- function(lastPhi, mu, Omega, gamma2, y, t){
+      lt <- length(t)
+      phi_old <- lastPhi
+      
+      phi_drawn <- rnorm(length(mu),phi_old,propSd)
+      ratio <- prod(dnorm(phi_drawn, mu, sqrt(Omega))/dnorm(phi_old, mu, sqrt(Omega)))
+      ratio <- ratio* prod(dnorm(y, fODE(phi_drawn,t), sqrt(gamma2*sVar(t)))/dnorm(y, fODE(phi_old,t), sqrt(gamma2*sVar(t))))
+      if(is.na(ratio)){ratio <- 0}
+      if(runif(1)<ratio){
+        phi_old <- phi_drawn
+      }
+      phi_old
+    }
+    N_all <- sum(sapply(y,length))
+    n <- length(y)
+    postGamma2 <- function(phi){
+      alphaPost <- prior$alpha.gamma + N_all/2
+      help <- numeric(n)
+      for(i in 1:n){
+        help[i] <- sum((y[[i]]-fODE(phi[i,], times[[i]]))^2/sVar(times[[i]]))
+      }
+      betaPost <-  prior$beta.gamma + sum(help)/2
+      1/rgamma(1, alphaPost, betaPost)
+    }
+    
+    phi_out <- list()
+    mu_out <- matrix(0, len, length(start$mu))
+    Omega_out <- matrix(0, len, length(start$mu))
+    gamma2_out <- numeric(len)
+    
+    phi <- start$phi
+    gamma2 <- start$gamma2
+    mu <- start$mu
+    Omega <- postOm(phi, mu)
+    
+    for(count in 1:len){
+      
+      for(i in 1:n){
+        phi[i,] <- postPhii(phi[i,], mu, Omega, gamma2, y[[i]], times[[i]])
+      }
+      mu <- postmu(phi, prior$m, prior$v, Omega)
+      Omega <- postOm(phi, mu)
+      gamma2 <- postGamma2(phi)
+      
+      phi_out[[count]] <- phi
+      mu_out[count,] <- mu
+      Omega_out[count,] <- Omega
+      gamma2_out[count] <- gamma2
+    }
+    result <- list(phi = phi_out, mu = mu_out, Omega = Omega_out, gamma2 = gamma2_out)
+
     he <- matrix(0, ncol(result$mu) + 1, 2)
     he[1, ] <- diagnostic(result$gamma2)
     for(i in 2:(ncol(result$mu)+1)) he[i, ] <- diagnostic(result$mu[,i-1])
     burnIn <- max(he[, 1])
     thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
 
-    result <- new(Class = "est.mixedRegression", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
-                  model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
+    if(is.matrix(data)){
+      result <- new(Class = "est.mixedRegression", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
+                    model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
+    }else{
+      result <- new(Class = "est.mixedRegression", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
+                    model = class.to.list(model.class), t.list = t, Y.list = data, burnIn = burnIn, thinning = thinning)
+    }
+    
+    
     return(result)
 
 })

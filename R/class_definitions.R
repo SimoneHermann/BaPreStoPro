@@ -58,7 +58,7 @@ setClass(Class = "est.Diffusion", representation = representation(phi = "matrix"
                                                                   burnIn = "numeric", thinning = "numeric"))
 # Y, t as list ?!?
 setClass(Class = "est.mixedDiffusion", representation = representation(phi = "list", mu = "matrix", Omega = "matrix", gamma2 = "numeric",
-                                                                       model = "list", t = "numeric", Y = "matrix",
+                                                                       model = "list", t = "numeric", Y = "matrix", t.list = "list", Y.list = "list",
                                                                        burnIn = "numeric", thinning = "numeric"))
 
 setClass(Class = "est.hiddenDiffusion", representation = representation(phi = "matrix", gamma2 = "numeric", sigma2 = "numeric", Y.est = "matrix",
@@ -82,7 +82,7 @@ setClass(Class = "est.Regression", representation = representation(phi = "matrix
                                                                    burnIn = "numeric", thinning = "numeric"))
 
 setClass(Class = "est.mixedRegression", representation = representation(phi = "list", mu = "matrix", Omega = "matrix", gamma2 = "numeric",
-                                                                        model = "list", t = "numeric", Y = "matrix",
+                                                                        model = "list", t = "numeric", Y = "matrix", t.list = "list", Y.list = "list",
                                                                         burnIn = "numeric", thinning = "numeric"))
 
 
