@@ -55,7 +55,9 @@ setMethod(f = "simulate", signature = "Diffusion",
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
-#' model <- set.to.class("mixedDiffusion", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), y0.fun = function(phi, t) 0.5, b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
+#' model <- set.to.class("mixedDiffusion", y0.fun = function(phi, t) 0.5, 
+#'   parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
+#'   b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' @export
@@ -104,7 +106,8 @@ setMethod(f = "simulate", signature = "mixedDiffusion",
 #' @param t vector of time points to make predictions for
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
-#' model <- set.to.class("Regression", parameter = list(phi = 5, gamma2 = 0.1), fun = function(phi, t) phi*t)
+#' model <- set.to.class("Regression", parameter = list(phi = 5, gamma2 = 0.1), 
+#'    fun = function(phi, t) phi*t)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' @export
@@ -144,7 +147,9 @@ setMethod(f = "simulate", signature = "Regression",
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
-#' model <- set.to.class("mixedRegression", parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), fun = function(phi, t) phi*t, sT.fun = function(t) t)
+#' model <- set.to.class("mixedRegression", 
+#'    parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
+#'    fun = function(phi, t) phi*t, sT.fun = function(t) t)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' @export
@@ -241,9 +246,12 @@ setMethod(f = "simulate", signature = "hiddenDiffusion",
 #' @param mw mesh width for finer Euler approximation
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
-#' mu <- c(5, 1); Omega <- c(0.9, 0.04); phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
+#' mu <- c(5, 1); Omega <- c(0.9, 0.04)
+#' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
 #' y0.fun <- function(phi, t) phi[2]
-#' model <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun, b.fun = function(phi, t, y) phi[1], parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
+#' model <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun, 
+#'    b.fun = function(phi, t, y) phi[1], 
+#'    parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t)
 #' @export
@@ -311,7 +319,8 @@ setMethod(f = "simulate", signature = "hiddenmixedDiffusion",
 #' @param t vector of time points to make predictions for
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
-#' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), 
+#'                       Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t)
 #' @export
@@ -348,7 +357,9 @@ setMethod(f = "simulate", signature = "NHPP",
 #' @param mw mesh width for finer Euler approximation
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
-#' model <- set.to.class("jumpDiffusion", parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), Lambda = function(t, xi) (t/xi[2])^xi[1])
+#' model <- set.to.class("jumpDiffusion", 
+#'    parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), 
+#'    Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, y0 = 0.5)
 #' @export
@@ -491,25 +502,26 @@ setMethod(f = "simulate", signature = "Merton",
 #'
 #' @description Simulation of of the regression model
 #'   \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
-#' @param object class object of parameters: "reg_hiddenNHPP"
+#' @param object class object of parameters: "jumpRegression"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
 #' @param t vector of time points to make predictions for
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
-#' model <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, parameter = list(theta = c(1,2), gamma2 = 0.1, xi = 10))
+#' model <- set.to.class("jumpRegression", fun = function(t, N, theta) theta[1]*t + theta[2]*N, 
+#'    parameter = list(theta = c(1,2), gamma2 = 0.1, xi = 10))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t)
 #' @export
-setMethod(f = "simulate", signature = "reg_hiddenNHPP",
+setMethod(f = "simulate", signature = "jumpRegression",
           definition = function(object, nsim = 1, seed = NULL, t, plot.series = TRUE) {
             set.seed(seed)
 
             N <- simN(t, object@xi, len = nsim, Lambda = object@Lambda)$N
             if(nsim > 1){
-              result <- apply(N, 2, function(Nt) object@fun(t, Nt, object@theta) + rnorm(length(t), 0, sqrt(object@gamma2)))
+              result <- apply(N, 2, function(Nt) object@fun(t, Nt, object@theta) + rnorm(length(t), 0, sqrt(object@gamma2*object@sT.fun(t))))
             }else{
-              result <- object@fun(t, N, object@theta) + rnorm(length(t), 0, sqrt(object@gamma2))
+              result <- object@fun(t, N, object@theta) + rnorm(length(t), 0, sqrt(object@gamma2*object@sT.fun(t)))
             }
 
             result <- list(N = N, Y = result)

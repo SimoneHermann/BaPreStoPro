@@ -10,7 +10,7 @@ setClass(Class = "jumpDiffusion", representation = representation(theta = "numer
                                                                   prior = "list", start = "list"))
 
 setClass(Class = "Merton", representation = representation(thetaT = "numeric", phi = "numeric", gamma2 = "numeric", xi = "numeric",
-                                                           Lambda = "function", prior = "list", start = "list"))
+                                                           Lambda = "function", prior = "list", start = "list", priorRatio = "function"))
 
 setClass(Class = "Diffusion", representation = representation(phi = "numeric", gamma2 = "numeric",
                                                               b.fun = "function", sT.fun = "function", prior = "list", start = "list"))
@@ -28,8 +28,8 @@ setClass(Class = "hiddenmixedDiffusion", representation = representation(phi = "
                                                                     b.fun = "function", sT.fun = "function", y0.fun = "function",
                                                                     prior = "list", start = "list"))
 
-setClass(Class = "reg_hiddenNHPP", representation = representation(theta = "numeric", gamma2 = "numeric", xi = "numeric", fun = "function",
-                                                                   Lambda = "function", prior = "list", start = "list"))
+setClass(Class = "jumpRegression", representation = representation(theta = "numeric", gamma2 = "numeric", xi = "numeric", fun = "function",
+                                                                   Lambda = "function", sT.fun = "function", prior = "list", start = "list"))
 
 setClass(Class = "NHPP", representation = representation(xi = "numeric", Lambda = "function", priorRatio = "function", start = "numeric"))
 
@@ -70,7 +70,7 @@ setClass(Class = "est.hiddenmixedDiffusion", representation = representation(phi
                                                                          model = "list", t = "numeric", Z = "matrix", t.list = "list", Z.list = "list",
                                                                          burnIn = "numeric", thinning = "numeric"))
 
-setClass(Class = "est.reg_hiddenNHPP", representation = representation(theta = "matrix", gamma2 = "numeric", xi = "matrix", N.est = "matrix",
+setClass(Class = "est.jumpRegression", representation = representation(theta = "matrix", gamma2 = "numeric", xi = "matrix", N.est = "matrix",
                                                                        model = "list", t = "numeric", Y = "numeric", N = "numeric",
                                                                        burnIn = "numeric", thinning = "numeric"))
 

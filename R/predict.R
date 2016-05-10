@@ -18,7 +18,7 @@
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param method vectorial ("vector") or not ("free")
-#' @param sampling.alg sampling algorithm, inversion method ("BinSearch") or rejection sampling ("RejSamp")
+#' @param sampling.alg sampling algorithm, inversion method ("InvMethod") or rejection sampling ("RejSamp")
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degree of approximation
 #' @param plot.prediction if TRUE, result are plotted
@@ -48,7 +48,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
                                 b.fun.mat, which.series = c("new", "current"), y.start, M2pred = 10,
                                 cand.length = 1000, pred.alg = c("Distribution", "Trajectory", "simpleTrajectory", "simpleBayesTrajectory"),
                                 method = c("vector", "free"),
-                                sampling.alg = c("BinSearch", "RejSamp"), sample.length, grid, plot.prediction = TRUE) {
+                                sampling.alg = c("InvMethod", "RejSamp"), sample.length, grid, plot.prediction = TRUE) {
 
   pred.alg <- match.arg(pred.alg)
   method <- match.arg(method)
@@ -365,7 +365,8 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' pred_mixdiff <- predict(est_mixdiff, Euler.interval = TRUE, 
 #'      b.fun.mat = function(phi, t, y) phi[,1]*y); lines(t, data[21,], lwd = 2)  
 #'      # one step Euler approximation
-#' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleTrajectory", sample.length = 100)
+#' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleTrajectory", 
+#'                         sample.length = 100)
 #' for(i in 1:100) lines(t, pred_mixdiff$Y[i,], col = "grey")
 #' pred_mixdiff <- predict(est_mixdiff, pred.alg = "simpleBayesTrajectory")
 #'
@@ -374,20 +375,21 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
 #' mu <- c(10, 1, 0.5); Omega <- c(0.9, 0.01, 0.01)
 #' phi <- sapply(1:3, function(i) rnorm(21, mu[i], sqrt(Omega[i])))
-#' cl <- set.to.class("mixedDiffusion", 
+#' model <- set.to.class("mixedDiffusion", 
 #'            parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
 #'            y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(cl, t = t, plot.series = TRUE)
-#' est <- estimate(cl, t, data[1:20,], 2000) 
+#' data <- simulate(model, t = t, plot.series = TRUE)
+#' est <- estimate(model, t, data[1:20,], 2000) 
 #' plot(est)
-#' pred_mixdiff <- predict(est, t = seq(0, 1, length = 21), b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
+#' pred <- predict(est, t = seq(0, 1, length = 21), 
+#'    b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
 #' lines(t, data[21,], lwd = 2)
-#' mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[21, seq(1, length(t), length = 21)] & 
-#'      apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[21, seq(1, length(t), length = 21)])
+#' mean(apply(pred$Y, 2, quantile, 0.025) <= data[21, seq(1, length(t), length = 21)] & 
+#'      apply(pred$Y, 2, quantile, 0.975) >= data[21, seq(1, length(t), length = 21)])
 #' mean(sapply(1:20, function(i){
-#'     mean(apply(pred_mixdiff$Y, 2, quantile, 0.025) <= data[i, seq(1, length(t), length = 21)] & 
-#'     apply(pred_mixdiff$Y, 2, quantile, 0.975) >= data[i, seq(1, length(t), length = 21)])}))
+#'     mean(apply(pred$Y, 2, quantile, 0.025) <= data[i, seq(1, length(t), length = 21)] & 
+#'     apply(pred$Y, 2, quantile, 0.975) >= data[i, seq(1, length(t), length = 21)])}))
 #' }
 #' @export
 setMethod(f = "predict", signature = "est.mixedDiffusion",
@@ -545,7 +547,7 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
 
         result <- matrix(0, sample.length, n-1)
         result[,1] <- pred.base(samples = samples, VFun, dens, x0 = y.start, len = sample.length, method = method,
-                                pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
 
         for(i in 2:(n-1)){
 
@@ -567,7 +569,7 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
           if(missing(grid)) d <- diff(cand.Area)/cand.length
 
           result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
-                                  pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                  pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
           if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
         }
         result <- cbind(y.start, result)
@@ -743,7 +745,7 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
 
       result <- matrix(0, sample.length, n-1)
       result[,1] <- pred.base(samples = samples, VFun, dens, x0 = y.start, len = sample.length, method = method,
-                              pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                              pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
 
       for(i in 2:(n-1)){
 
@@ -766,7 +768,7 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
         if(missing(grid)) d <- diff(cand.Area)/cand.length
 
         result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
-                                pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
         if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
       }
 
@@ -778,7 +780,7 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
       cand.Area <- range(Ypred[, i]) + c(-1, 1)*sqrt(mean(samples$sigma2))*5
       VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1, sqrt(samples$sigma2)))
       result[,i] <- pred.base(samples = samples, VFun, dens, x0 = Ypred[,i], len = sample.length, method = method,
-                              pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                              pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
     }
 
 
@@ -856,9 +858,14 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
     pred.alg <- match.arg(pred.alg)
     which.series <- match.arg(which.series)
 
-    J <- nrow(object@Z)
-    n <- ncol(object@Z)  # equal to length(object@t)
-
+    if(length(object@Z.list) == 0){
+      J <- nrow(object@Z)
+      n <- ncol(object@Z)  # equal to length(object@t)
+    }else{
+      J <- length(object@Z.list)
+      n <- sapply(object@Z.list, length)
+    }
+    
     if(missing(ind.pred) & which.series == "current") ind.pred <- J
 
     if(missing(burnIn)) burnIn <- object@burnIn
@@ -867,10 +874,16 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
     if(missing(t)){
       if(which.series == "new") t <- object@t
       if(which.series == "current"){
-        dt <- median( diff(object@t))
-        t <- object@t[length(object@t)] + cumsum(c(0, rep(dt, M2pred)))
+        if(length(object@Y.list) == 0){
+          dt <- median(diff(object@t))
+          t <- object@t[n] + cumsum(c(0, rep(dt, M2pred)))
+        }else{
+          dt <- median( diff(object@t.list[[ind.pred]]))
+          t <- object@t.list[[ind.pred]][n[ind.pred]] + cumsum(c(0, rep(dt, M2pred)))
+        } 
       }
     }
+    
     ind <- seq(burnIn + 1, length(object@gamma2), by = thinning)
     K <- length(ind)
 
@@ -880,12 +893,12 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
       phi.pred <- predPhi(samples)
 
       samples <- list(phi = phi.pred, gamma2 = object@gamma2[ind], sigma2 = object@sigma2[ind])
+      y.start <- sapply(1:K, function(i) object@model$y0.fun(samples$phi[i, ], t[1]))
     }
     if(which.series == "current"){
       samples <- list(phi = sapply(1:ncol(object@mu) , function(i) sapply(object@phi[ind], function(m) m[ind.pred, i]) ), gamma2 = object@gamma2[ind], sigma2 = object@sigma2[ind])
+      y.start <- sapply(object@Y.est[ind], function(li) li[[ind.pred]][length(li[[ind.pred]])])
     }
-    if(which.series == "new") y.start <- sapply(1:K, function(i) object@model$y0.fun(samples$phi[i, ], t[1]))
-    if(which.series == "current") y.start <- sapply(object@Y.est[ind], function(li) li[[ind.pred]][length(li[[ind.pred]])])
 
     b.fun <- object@model$b.fun
     sT.fun <- object@model$sT.fun
@@ -976,7 +989,7 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 
       result <- matrix(0, sample.length, n-1)
       result[,1] <- pred.base(samples = samples, VFun, dens, x0 = y.start, len = sample.length, method = method,
-                              pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                              pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
 
       for(i in 2:(n-1)){
 
@@ -999,7 +1012,7 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
         if(missing(grid)) d <- diff(cand.Area)/cand.length
 
         result[,i] <- pred.base(samples = samples, VFun, dens, x0 = result[,i-1], len = sample.length, method = method,
-                                pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
         if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
       }
       Ypred <- cbind(y.start, result)
@@ -1010,26 +1023,41 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
         cand.Area <- range(Ypred[, i]) + c(-1, 1)*sqrt(mean(samples$sigma2))*5
         VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, yn_1, sqrt(samples$sigma2)))
         result[,i] <- pred.base(samples = samples, VFun, dens, x0 = Ypred[,i], len = sample.length, method = method,
-                                pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
       }
 
     }
 
     if(plot.prediction){
       qu <- apply(result, 2, quantile, c(0.05 / 2, 1 - 0.05 / 2))
-      if(which.series == "new"){
-        plot(object@t, object@Z[1,], type = "l", xlab = "t", ylim = range(c(object@Z, range(qu))), ylab = expression(Z[t]))
-        for(j in 2:J) lines(object@t, object@Z[j,])
-        lines(t, qu[1,], col = 2, lwd = 2)
-        lines(t, qu[2,], col = 2, lwd = 2)
-      }
-      if(which.series == "current"){
-        plot(object@t, object@Z[ind.pred, ], type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Z[ind.pred, ], range(qu))), xlab = "t", ylab = expression(Z[t]))
-        lines(t, qu[1,], col = 2)
-        lines(t, qu[2,], col = 2)
+      if(length(object@Z.list) == 0){
+        if(which.series == "new"){
+          plot(object@t, object@Z[1,], type = "l", xlab = "t", ylim = range(c(object@Z, range(qu))), ylab = expression(Z[i]))
+          for(j in 2:J) lines(object@t, object@Z[j,])
+          lines(t, qu[1,], col = 2, lwd = 2)
+          lines(t, qu[2,], col = 2, lwd = 2)
+        }
+        if(which.series == "current"){
+          plot(object@t, object@Z[ind.pred, ], type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Z[ind.pred, ], range(qu))), xlab = "t", ylab = expression(Z[t]))
+          lines(t, qu[1,], col = 2)
+          lines(t, qu[2,], col = 2)
+        }
+      }else{
+        if(which.series == "new"){
+          plot(object@t.list[[1]], object@Z.list[[1]], type = "l", xlab = "t", ylim = range(c(unlist(object@Z), range(qu))), ylab = expression(Z[i]))
+          for(j in 2:J) lines(object@t.list[[j]], object@Z.list[[j]])
+          lines(t, qu[1,], col = 2, lwd = 2)
+          lines(t, qu[2,], col = 2, lwd = 2)
+        }
+        if(which.series == "current"){
+          plot(object@t.list[[ind.pred]], object@Z.list[[ind.pred]], type = "l", xlim = range(c(object@t.list[[ind.pred]], t)), ylim = range(c(object@Z.list[[ind.pred]], range(qu))), xlab = "t", ylab = expression(Z[i]))
+          lines(t, qu[1,], col = 2)
+          lines(t, qu[2,], col = 2)
+        }
       }
     }
 
+    
     if(which.series == "new") return(list(Z = result, Y = Ypred, phi = phi.pred))
     if(which.series == "current") return(list(Z = result, Y = Ypred))
 
@@ -1065,19 +1093,23 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #'                Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est_NHPP <- estimate(model, t, data$Times, 1000)  # nMCMC should be much larger!
-#' plot(est_NHPP)
-#' pred <- predict(est_NHPP, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], variable = "PoissonProcess", pred.alg = "Distribution")
+#' est <- estimate(model, t, data$Times, 1000)  # nMCMC should be much larger!
+#' plot(est)
+#' pred <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], 
+#'    variable = "PoissonProcess", pred.alg = "Distribution")
 #' \dontrun{
-#' pred_NHPP <- predict(est_NHPP, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-#' pred_NHPP2 <- predict(est_NHPP, which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-#' pred_NHPP3 <- predict(est_NHPP, variable = "PoissonProcess", which.series = "current", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-#' pred_NHPP4 <- predict(est_NHPP, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
+#' pred_NHPP <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_NHPP <- predict(est, variable = "PoissonProcess", 
+#'    Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_NHPP2 <- predict(est, which.series = "current", 
+#'    Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_NHPP3 <- predict(est, variable = "PoissonProcess", which.series = "current", 
+#'                       Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_NHPP4 <- predict(est, pred.alg = "simpleTrajectory", M2pred = length(data$Times))
 #' }
-#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleTrajectory", 
+#' pred_NHPP <- predict(est, variable = "PoissonProcess", pred.alg = "simpleTrajectory", 
 #'                      M2pred = length(data$Times))
-#' pred_NHPP <- predict(est_NHPP, variable = "PoissonProcess", pred.alg = "simpleBayesTrajectory", 
+#' pred_NHPP <- predict(est, variable = "PoissonProcess", pred.alg = "simpleBayesTrajectory", 
 #'                      M2pred = length(data$Times), sample.length = 100)
 #'
 #' @export
@@ -1156,7 +1188,7 @@ setMethod(f = "predict", signature = "est.NHPP",
       if(pred.alg == "simpleTrajectory"){
         if(missing(sample.length)) sample.length <- 100
         xi <- apply(samples, 2, mean)
-        drawTn <- function(Tn_1){
+        drawTn1 <- function(Tn_1){
           cand <- seq(Tn_1, Tn_1 + 1, by = 1e-04)
           prob <- 1 - exp(-(Lambda(cand, xi)-Lambda(Tn_1, xi)))
           u <- runif(1)
@@ -1166,7 +1198,7 @@ setMethod(f = "predict", signature = "est.NHPP",
         result[, 1] <- Tstart
         for(i in 1:sample.length){
           for(j in 2:(M2pred + 1)){
-            result[i,j] <- drawTn(result[i, j-1])
+            result[i,j] <- drawTn1(result[i, j-1])
           }
         }
         result <- result[, -1]
@@ -1178,7 +1210,7 @@ setMethod(f = "predict", signature = "est.NHPP",
         } else{
           if(sample.length > K) sample.length <- K
         }
-        drawTn <- function(Tn_1, xi){
+        drawTn2 <- function(Tn_1, xi){
           cand <- seq(Tn_1, Tn_1 + 1, by = 1e-04)
           prob <- 1 - exp(-(Lambda(cand, xi)-Lambda(Tn_1, xi)))
           u <- runif(1)
@@ -1188,7 +1220,7 @@ setMethod(f = "predict", signature = "est.NHPP",
         result[, 1] <- Tstart
         for(i in 1:sample.length){
           for(j in 2:(M2pred + 1)){
-            result[i,j] <- drawTn(result[i, j-1], samples[i,])
+            result[i,j] <- drawTn2(result[i, j-1], samples[i,])
           }
         }
         result <- result[, -1]
@@ -1198,7 +1230,7 @@ setMethod(f = "predict", signature = "est.NHPP",
 
         if(missing(sample.length)) sample.length <- 100
 
-        drawTn <- function(Tn_1){
+        drawTn3 <- function(Tn_1){
           u <- runif(1)
           cand <- 1
           memory <- cand
@@ -1226,11 +1258,11 @@ setMethod(f = "predict", signature = "est.NHPP",
           Tn_1 + (lower+upper)/2
         }
         result <- matrix(0, sample.length, M2pred)
-        result[,1] <- sapply(1:sample.length, function(i) drawTn(Tstart))
+        result[,1] <- sapply(1:sample.length, function(i) drawTn3(Tstart))
 
         if(M2pred > 1){
           for(i in 2:M2pred){
-            result[,i] <- vapply(result[,i-1], drawTn, FUN.VALUE = numeric(1))
+            result[,i] <- vapply(result[,i-1], drawTn3, FUN.VALUE = numeric(1))
           }
         }
 
@@ -1314,7 +1346,7 @@ setMethod(f = "predict", signature = "est.NHPP",
 
         }else{
           result <- matrix(0, sample.length, n)
-          drawTn <- function(Tn_1){
+          drawTn1 <- function(Tn_1){
             cand <- seq(Tn_1, Tn_1 + 1, by = 1e-04)
             prob <- 1 - exp(-(Lambda(cand, xi)-Lambda(Tn_1, xi)))
             u <- runif(1)
@@ -1323,9 +1355,9 @@ setMethod(f = "predict", signature = "est.NHPP",
 
           result[, 1] <- max(object@N)
           for(i in 1:sample.length){
-            times <- drawTn(Tstart)
+            times <- drawTn1(Tstart)
             while(times[length(times)] < t[n]){
-              times <- c(times, drawTn(times[length(times)]))
+              times <- c(times, drawTn1(times[length(times)]))
             }
             result[i, ] <- result[i, 1] + TimestoN(times, t)
           }
@@ -1350,7 +1382,7 @@ setMethod(f = "predict", signature = "est.NHPP",
           
         }else{
           result <- matrix(0, sample.length, n)
-          drawTn <- function(Tn_1, xi){
+          drawTn2 <- function(Tn_1, xi){
             cand <- seq(Tn_1, Tn_1 + 1, by = 1e-04)
             prob <- 1 - exp(-(Lambda(cand, xi)-Lambda(Tn_1, xi)))
             u <- runif(1)
@@ -1359,9 +1391,9 @@ setMethod(f = "predict", signature = "est.NHPP",
           
           result[, 1] <- max(object@N)
           for(i in 1:sample.length){
-            times <- drawTn(Tstart)
+            times <- drawTn2(Tstart)
             while(times[length(times)] < t[n]){
-              times <- c(times, drawTn(times[length(times)], samples[i,]))
+              times <- c(times, drawTn2(times[length(times)], samples[i,]))
             }
             result[i, ] <- result[i, 1] + TimestoN(times, t)
           }
@@ -1373,7 +1405,7 @@ setMethod(f = "predict", signature = "est.NHPP",
 
         if(missing(sample.length)) sample.length <- 100
 
-        drawTn <- function(Tn_1){
+        drawTn3 <- function(Tn_1){
           u <- runif(1)
           cand <- 1
           memory <- cand
@@ -1406,9 +1438,9 @@ setMethod(f = "predict", signature = "est.NHPP",
         if(which.series == "current") result[, 1] <- max(object@N)
         for(i in 1:sample.length){
 
-          times <- drawTn(Tstart)
+          times <- drawTn3(Tstart)
           while(times[length(times)] < t[n]){
-            times <- c(times, drawTn(times[length(times)]))
+            times <- c(times, drawTn3(times[length(times)]))
           }
           result[i, ] <- result[i, 1] + TimestoN(times, t)
         }
@@ -1468,7 +1500,8 @@ setMethod(f = "predict", signature = "est.NHPP",
 #' plot(est_jd)
 #' \dontrun{
 #' pred_jd <- predict(est_jd, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
-#' pred_jd2 <- predict(est_jd, pred.alg = "Distribution", pred.alg.N = "Distribution", Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
+#' pred_jd2 <- predict(est_jd, pred.alg = "Distribution", pred.alg.N = "Distribution", 
+#'                     Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 #' est <- estimate(model, t[1:81], data = list(N = data$N[1:81], Y = data$Y[1:81]), 2000)
 #' pred <- predict(est, t = t[81:101], which.series = "current", 
 #'                      Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
@@ -1589,10 +1622,10 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
         result <- matrix(0, K, n-1)  # here: dN_t
 #         candN <- 0:5
         if(missing(Lambda.mat)){
-          Lambda.diff <- function(cand, j, samples){
+          dLambda <- function(cand, j, samples){
             sapply(1:K, function(i) Lambda(t[j+1], samples[i,]) - Lambda(t[j], samples[i,]) )
           }
-          Fun.N <- function(j) vapply(candN, function(c) mean(ppois(Lambda.diff(c, j, samples))), FUN.VALUE = numeric(1))
+          Fun.N <- function(j) vapply(candN, function(c) mean(ppois(dLambda(c, j, samples))), FUN.VALUE = numeric(1))
         }else{
           Fun.N <- function(j){
             vapply(candN, function(c) mean(ppois(c, Lambda.mat(t[j+1], samples) - Lambda.mat(t[j], samples))), FUN.VALUE = numeric(1))
@@ -1624,7 +1657,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 
       result <- matrix(0, sample.length, n-1)
       result[,1] <- pred.base(samples = samples, VFun, x0 = y.start, len = sample.length, method = method,
-                              pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                              pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
 
       for(i in 2:(n-1)){
 
@@ -1635,7 +1668,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
         d <- diff(cand.Area)/cand.length
 
         result[,i] <- pred.base(samples = samples, VFun, x0 = result[,i-1], len = sample.length, method = method,
-                                pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
         if(i %% 10 == 0) message(paste(i, "of", n-1, "jump diffusion predictions are calculated"))
       }
 
@@ -1903,7 +1936,7 @@ setMethod(f = "predict", signature = "est.Merton",
               d <- diff(cand.Area)/cand.length
               
               result[,i] <- pred.base(samples = samples, VFun, x0 = y.start, len = sample.length, method = "vector",
-                                      pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                      pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
               if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
             }
             
@@ -1917,7 +1950,7 @@ setMethod(f = "predict", signature = "est.Merton",
           
           result <- matrix(0, sample.length, n-1)
           result[,1] <- pred.base(samples = samples, VFun, x0 = y.start, len = sample.length, method = "free",
-                                  pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                  pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
           
           for(i in 2:(n-1)){
             VFun <- function(yn, yn_1, samples)  mean(pnorm(log(yn), log(yn_1)+dt[i]*(samples$phi+ samples$gamma2/2) + samples$thetaT*dN[,i], sqrt(samples$gamma2*dt[i])))
@@ -1926,7 +1959,7 @@ setMethod(f = "predict", signature = "est.Merton",
             d <- diff(cand.Area)/cand.length
             
             result[,i] <- pred.base(samples = samples, VFun, x0 = result[,i-1], len = sample.length, method = "free",
-                                    pred.alg = pred.alg, sampling.alg = "BinSearch", candArea = cand.Area, grid = d)
+                                    pred.alg = pred.alg, sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
             if(i %% 10 == 0) message(paste(i, "of", n-1, "predictions are calculated"))
           }
           
@@ -2039,7 +2072,7 @@ setMethod(f = "predict", signature = "est.Merton",
 #'
 #' @description Bayesian prediction of a regression model
 #'   \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
-#' @param object class object of MCMC samples: "est.reg_hiddenNHPP"
+#' @param object class object of MCMC samples: "est.jumpRegression"
 #' @param t vector of time points to make predictions for
 #' @param only.interval if TRUE: only calculation of prediction intervals
 #' @param level level of the prediction intervals
@@ -2057,7 +2090,7 @@ setMethod(f = "predict", signature = "est.Merton",
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
-#' cl <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) theta[1]*t + theta[2]*N, 
+#' cl <- set.to.class("jumpRegression", fun = function(t, N, theta) theta[1]*t + theta[2]*N, 
 #'              parameter = list(theta = c(1,2), gamma2 = 0.1, xi = c(3, 1/4)), 
 #'              Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' data <- simulate(cl, t = t, plot.series = TRUE)
@@ -2069,256 +2102,257 @@ setMethod(f = "predict", signature = "est.Merton",
 #' }
 #' pred <- predict(est, pred.alg = "simpleTrajectory", sample.length = 100)
 #' @export
-setMethod(f = "predict", signature = "est.reg_hiddenNHPP",
+setMethod(f = "predict", signature = "est.jumpRegression",
           definition = function(object, t, only.interval = TRUE, level = 0.05, burnIn, thinning, Lambda.mat, fun.mat, 
                                 which.series = c("new", "current"), M2pred = 10,
                                 cand.length = 1000, pred.alg = c("Distribution", "simpleTrajectory", "simpleBayesTrajectory"),
                                 sample.length, grid = 1e-05, plot.prediction = TRUE) {
             
-            pred.alg <- match.arg(pred.alg)
-            which.series <- match.arg(which.series)
-            
-            if(missing(burnIn)) burnIn <- object@burnIn
-            if(missing(thinning)) thinning <- object@thinning
-            Lambda <- object@model$Lambda
-            fun <- object@model$fun
-            
-            ind <- seq(burnIn + 1, nrow(object@xi), by = thinning)
-            K <- length(ind)
-            
-            if(which.series == "new"){
-              Tstart <- 0
-              if(missing(t)) t <- object@t
-            }
-            
-            if(which.series == "current"){
-              Tstart <- max(object@t)
-              if(missing(t)){
-                dt <- median( diff(object@t))
-                t <- object@t[length(object@t)] + cumsum(c(0, rep(dt, M2pred)))
-              }
-              if(length(object@N.est) == 0){  # -> object@N is equal to observed Poisson process
-                startN <- max(object@N)
-              }else{  # Poisson variables are filtered
-                startN <- object@N.est[nrow(object@N.est), ind]
-              }
-            }
-            
-            n <- length(t)
-            
-            if(pred.alg == "Distribution"){
-              
-              samples <- object@xi[ind, ]
-              
-              if(missing(Lambda.mat)){
-                Lambda.diff <- function(cand, Tn_1, samples){
-                  sapply(1:K, function(i) Lambda(cand + Tn_1, samples[i,]) - Lambda(Tn_1, samples[i,]) )
-                }
-                Fun <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
-              }else{
-                Fun <- function(cand, Tn_1){
-                  1-mean(exp(-(Lambda.mat(cand + Tn_1, samples)-Lambda.mat(Tn_1, samples))))
-                }
-              }
-              sample.lengthN <- K
-              
-              drawTn <- function(Tn_1){
-                u <- runif(1)
-                cand <- Tn_1 + 0.1
-                memory <- cand
-                
-                while(length(unique(memory)) == length(memory)){
-                  if(Fun(cand, Tn_1) < u){
-                    cand <- cand*2
-                    memory <- c(memory, cand)
-                  }else{
-                    cand <- cand/2
-                    memory <- c(memory, cand)
-                  }
-                }
-                lower <- min(memory[length(memory)-1], memory[length(memory)])
-                upper <- max(memory[length(memory)-1], memory[length(memory)])
-                diff <- upper - lower
-                while(diff >= grid){
-                  if(Fun(lower+diff/2, Tn_1) < u){
-                    lower <- lower+diff/2
-                  }else{
-                    upper <- lower+diff/2
-                  }
-                  diff <- upper - lower
-                }
-                Tn_1 + (lower+upper)/2
-              }
-              
-              result <- matrix(0, sample.lengthN, n)  # here: N_t
-              if(which.series == "current") result[, 1] <- startN
-              for(i in 1:sample.lengthN){
-                
-                times <- drawTn(Tstart)
-                while(times[length(times)] < t[n]){
-                  times <- c(times, drawTn(times[length(times)]))
-                }
-                result[i, ] <- result[i, 1] + TimestoN(times, t)
-              }
-              Npred <- result
-              
-              samples <- list(theta = as.matrix(object@theta[ind,]), gamma2 = object@gamma2[ind])
-              sample.length <- K
-              method <- "vector"
-
-           
-              if(only.interval){
-                result <- matrix(0, 2, n)
-                for(i in 1:n){
-                  cand.Area <- range(fun(t[i], Npred[, i], apply(samples$theta, 2, mean))) + 6*c(-1, 1)*sqrt(mean(samples$gamma2))
-                  if(!missing(fun.mat)){
-                    VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, fun.mat(t[i], Npred[,i], samples$theta), sqrt(samples$gamma2*sT.fun(t[i])^2)))
-                  }else{
-                    VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, fun(t[i], Npred[k,i], samples$theta[k,]), sqrt(samples$gamma2[k]))))
-                  }
-                  result[,i] <- prediction.intervals(samples, VFun, x0 = 0, level = level, candArea = cand.Area)
-                }
-                if(plot.prediction){
-                  if(which.series == "new"){
-                    plot(object@t, object@Y, xlab = "t", ylim = range(c(object@Y, range(result))), ylab = expression(Y[t]))
-                    lines(t, result[1,], col = 2)
-                    lines(t, result[2,], col = 2)
-                  }
-                  if(which.series == "current"){
-                    plot(object@t, object@Y, xlim = range(c(object@t, t)), ylim = range(c(object@Y, range(result))), xlab = "t", ylab = expression(Y[t]))
-                    lines(t, result[1,], col = 2)
-                    lines(t, result[2,], col = 2)
-                  }
-                }
-              }else{
-                result <- matrix(0, sample.length, n)
-                for(i in 1:n){
-                  
-                  if(!missing(fun.mat)){
-                    VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, fun.mat(t[i], Npred[,i], samples$theta), sqrt(samples$gamma2)))
-                    dens <- function(yn, yn_1, samples)  mean(dnorm(yn, fun.mat(t[i], Npred[,i], samples$theta), sqrt(samples$gamma2)))
-                  }else{
-                    VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, fun(t[i], Npred[k,i], samples$theta[k,]), sqrt(samples$gamma2[k]))))
-                    dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, fun(t[i], Npred[k,i], samples$theta[k,]), sqrt(samples$gamma2[k]))))
-                  }
-                  
-                  cand.Area <- range(fun(t[i], Npred[, i], apply(samples$theta, 2, mean))) + 6*c(-1, 1)*sqrt(mean(samples$gamma2))
-                  if(missing(grid)) d <- diff(cand.Area)/cand.length
-                  
-                  result[,i] <- pred.base(samples = samples, VFun, dens, x0 = 0, len = sample.length, method = method,
-                                          pred.alg = "Distribution", sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
-                }
-                if(plot.prediction){
-                  qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
-                  if(which.series == "new"){
-                    plot(object@t, object@Y, xlab = "t", ylim = range(c(object@Y, range(qu))), ylab = expression(Y[t]))
-                    lines(t, qu[1,], col = 2)
-                    lines(t, qu[2,], col = 2)
-                  }
-                  if(which.series == "current"){
-                    plot(object@t, object@Y, xlim = range(c(object@t, t)), ylim = range(c(object@Y, range(qu))), xlab = "t", ylab = expression(Y[t]))
-                    lines(t, qu[1,], col = 2)
-                    lines(t, qu[2,], col = 2)
-                  }
-                }
-              }
-              
-              
+    pred.alg <- match.arg(pred.alg)
+    which.series <- match.arg(which.series)
+    
+    if(missing(burnIn)) burnIn <- object@burnIn
+    if(missing(thinning)) thinning <- object@thinning
+    Lambda <- object@model$Lambda
+    fun <- object@model$fun
+    sT.fun <- object@model$sT.fun
+    
+    ind <- seq(burnIn + 1, nrow(object@xi), by = thinning)
+    K <- length(ind)
+    
+    if(which.series == "new"){
+      Tstart <- 0
+      if(missing(t)) t <- object@t
+    }
+    
+    if(which.series == "current"){
+      Tstart <- max(object@t)
+      if(missing(t)){
+        dt <- median( diff(object@t))
+        t <- object@t[length(object@t)] + cumsum(c(0, rep(dt, M2pred)))
+      }
+      if(length(object@N.est) == 0){  # -> object@N is equal to observed Poisson process
+        startN <- max(object@N)
+      }else{  # Poisson variables are filtered
+        startN <- object@N.est[nrow(object@N.est), ind]
+      }
+    }
+    
+    n <- length(t)
+    
+    if(pred.alg == "Distribution"){
+      
+      samples <- object@xi[ind, ]
+      
+      if(missing(Lambda.mat)){
+        Lambda.diff <- function(cand, Tn_1, samples){
+          sapply(1:K, function(i) Lambda(cand + Tn_1, samples[i,]) - Lambda(Tn_1, samples[i,]) )
+        }
+        Fun <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
+      }else{
+        Fun <- function(cand, Tn_1){
+          1-mean(exp(-(Lambda.mat(cand + Tn_1, samples)-Lambda.mat(Tn_1, samples))))
+        }
+      }
+      sample.lengthN <- K
+      
+      drawTn <- function(Tn_1){
+        u <- runif(1)
+        cand <- Tn_1 + 0.1
+        memory <- cand
+        
+        while(length(unique(memory)) == length(memory)){
+          if(Fun(cand, Tn_1) < u){
+            cand <- cand*2
+            memory <- c(memory, cand)
+          }else{
+            cand <- cand/2
+            memory <- c(memory, cand)
+          }
+        }
+        lower <- min(memory[length(memory)-1], memory[length(memory)])
+        upper <- max(memory[length(memory)-1], memory[length(memory)])
+        diff <- upper - lower
+        while(diff >= grid){
+          if(Fun(lower+diff/2, Tn_1) < u){
+            lower <- lower+diff/2
+          }else{
+            upper <- lower+diff/2
+          }
+          diff <- upper - lower
+        }
+        Tn_1 + (lower+upper)/2
+      }
+      
+      result <- matrix(0, sample.lengthN, n)  # here: N_t
+      if(which.series == "current") result[, 1] <- startN
+      for(i in 1:sample.lengthN){
+        
+        times <- drawTn(Tstart)
+        while(times[length(times)] < t[n]){
+          times <- c(times, drawTn(times[length(times)]))
+        }
+        result[i, ] <- result[i, 1] + TimestoN(times, t)
+      }
+      Npred <- result
+      
+      samples <- list(theta = as.matrix(object@theta[ind,]), gamma2 = object@gamma2[ind])
+      sample.length <- K
+      method <- "vector"
+  
+   
+      if(only.interval){
+        result <- matrix(0, 2, n)
+        for(i in 1:n){
+          cand.Area <- range(fun(t[i], Npred[, i], apply(samples$theta, 2, mean))) + 6*c(-1, 1)*sqrt(mean(samples$gamma2))
+          if(!missing(fun.mat)){
+            VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, fun.mat(t[i], Npred[,i], samples$theta), sqrt(samples$gamma2*sT.fun(t[i]))))
+          }else{
+            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, fun(t[i], Npred[k,i], samples$theta[k,]), sqrt(samples$gamma2[k]*sT.fun(t[i])))))
+          }
+          result[,i] <- prediction.intervals(samples, VFun, x0 = 0, level = level, candArea = cand.Area)
+        }
+        if(plot.prediction){
+          if(which.series == "new"){
+            plot(object@t, object@Y, xlab = "t", ylim = range(c(object@Y, range(result))), ylab = expression(Y[t]))
+            lines(t, result[1,], col = 2)
+            lines(t, result[2,], col = 2)
+          }
+          if(which.series == "current"){
+            plot(object@t, object@Y, xlim = range(c(object@t, t)), ylim = range(c(object@Y, range(result))), xlab = "t", ylab = expression(Y[t]))
+            lines(t, result[1,], col = 2)
+            lines(t, result[2,], col = 2)
+          }
+        }
+      }else{
+        result <- matrix(0, sample.length, n)
+        for(i in 1:n){
+          
+          if(!missing(fun.mat)){
+            VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, fun.mat(t[i], Npred[,i], samples$theta), sqrt(samples$gamma2*sT.fun(t[i]))))
+            dens <- function(yn, yn_1, samples)  mean(dnorm(yn, fun.mat(t[i], Npred[,i], samples$theta), sqrt(samples$gamma2*sT.fun(t[i]))))
+          }else{
+            VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, fun(t[i], Npred[k,i], samples$theta[k,]), sqrt(samples$gamma2[k]*sT.fun(t[i])))))
+            dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, fun(t[i], Npred[k,i], samples$theta[k,]), sqrt(samples$gamma2[k]*sT.fun(t[i])))))
+          }
+          
+          cand.Area <- range(fun(t[i], Npred[, i], apply(samples$theta, 2, mean))) + 6*c(-1, 1)*sqrt(mean(samples$gamma2))
+          if(missing(grid)) d <- diff(cand.Area)/cand.length
+          
+          result[,i] <- pred.base(samples = samples, VFun, dens, x0 = 0, len = sample.length, method = method,
+                                  pred.alg = "Distribution", sampling.alg = "InvMethod", candArea = cand.Area, grid = d)
+        }
+        if(plot.prediction){
+          qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
+          if(which.series == "new"){
+            plot(object@t, object@Y, xlab = "t", ylim = range(c(object@Y, range(qu))), ylab = expression(Y[t]))
+            lines(t, qu[1,], col = 2)
+            lines(t, qu[2,], col = 2)
+          }
+          if(which.series == "current"){
+            plot(object@t, object@Y, xlim = range(c(object@t, t)), ylim = range(c(object@Y, range(qu))), xlab = "t", ylab = expression(Y[t]))
+            lines(t, qu[1,], col = 2)
+            lines(t, qu[2,], col = 2)
+          }
+        }
+      }
+      
+      
+    }else{
+      
+      if(pred.alg == "simpleTrajectory"){
+        if(missing(sample.length)) sample.length <- 100
+        xi <- apply(object@xi[ind, ], 2, mean)
+        gamma2 <- mean(object@gamma2[ind])
+        theta <- apply(object@theta[ind,], 2, mean)
+        
+        if(which.series == "new"){
+          cl <- set.to.class("jumpRegression", parameter = list(theta = theta, gamma2 = gamma2, xi = xi), Lambda = Lambda, fun = fun)
+          result <- matrix(0, sample.length, n)
+          Npred <- matrix(0, sample.length, n)  # here: N_t
+          
+          for(i in 1:sample.length){
+            help <- simulate(cl, t = t, plot.series = FALSE)
+            result[i, ] <- help$Y
+            Npred[i, ] <- help$N
+          }
+          
+        }else{
+          result <- matrix(0, sample.length, n)
+          Npred <- matrix(0, sample.length, n)  # here: N_t
+          
+          for(i in 1:sample.length){
+            if(length(startN) > 1){
+              Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN[sample(K, 1)]), Lambda = Lambda)$N
             }else{
-              
-              if(pred.alg == "simpleTrajectory"){
-                if(missing(sample.length)) sample.length <- 100
-                xi <- apply(object@xi[ind, ], 2, mean)
-                gamma2 <- mean(object@gamma2[ind])
-                theta <- apply(object@theta[ind,], 2, mean)
-                
-                if(which.series == "new"){
-                  cl <- set.to.class("reg_hiddenNHPP", parameter = list(theta = theta, gamma2 = gamma2, xi = xi), Lambda = Lambda, fun = fun)
-                  result <- matrix(0, sample.length, n)
-                  Npred <- matrix(0, sample.length, n)  # here: N_t
-                  
-                  for(i in 1:sample.length){
-                    help <- simulate(cl, t = t, plot.series = FALSE)
-                    result[i, ] <- help$Y
-                    Npred[i, ] <- help$N
-                  }
-                  
-                }else{
-                  result <- matrix(0, sample.length, n)
-                  Npred <- matrix(0, sample.length, n)  # here: N_t
-                  
-                  for(i in 1:sample.length){
-                    if(length(startN) > 1){
-                      Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN[sample(K, 1)]), Lambda = Lambda)$N
-                    }else{
-                      ind.i <- 1
-                      Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
-                    }
-                    
-                    result[i, ] <- fun(t, Npred[i,], theta) + rnorm(length(t), 0, sqrt(gamma2))
-                  }
-                }
-
-              }
-              
-              if(pred.alg == "simpleBayesTrajectory"){
-                if(missing(sample.length)){
-                  sample.length <- K
-                } else{
-                  if(sample.length > K) sample.length <- K
-                }
-                xi <- object@xi[ind, ]
-                gamma2 <- object@gamma2[ind]
-                theta <- object@theta[ind,]
-                
-                if(which.series == "new"){
-                  result <- matrix(0, sample.length, n)
-                  Npred <- matrix(0, sample.length, n)  # here: N_t
-                  
-                  for(i in 1:sample.length){
-                    cl <- set.to.class("reg_hiddenNHPP", parameter = list(theta = theta[i,], gamma2 = gamma2[i], xi = xi[i,]), Lambda = Lambda, fun = fun)
-                    help <- simulate(cl, t = t, plot.series = FALSE)
-                    result[i, ] <- help$Y
-                    Npred[i, ] <- help$N
-                  }
-                  
-                }else{
-                  result <- matrix(0, sample.length, n)
-                  Npred <- matrix(0, sample.length, n)  # here: N_t
-                  
-                  for(i in 1:sample.length){
-                    if(length(startN) > 1){
-                      Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN[sample(K, 1)]), Lambda = Lambda)$N
-                    }else{
-                      ind.i <- 1
-                      Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
-                    }
-                    
-                    result[i, ] <- fun(t, Npred[i,], theta[i,]) + rnorm(length(t), 0, sqrt(gamma2[i]))
-                  }
-                }
-                
-              }
-              
-              if(plot.prediction){
-                qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
-                if(which.series == "new"){
-                  plot(object@t, object@Y, type = "l", xlab = "t", ylim = range(c(object@Y, range(qu))), ylab = expression(Y[t]))
-                  lines(t, qu[1,], col = 2)
-                  lines(t, qu[2,], col = 2)
-                }
-                if(which.series == "current"){
-                  plot(object@t, object@Y, type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Y, range(qu))), xlab = "t", ylab = expression(Y[t]))
-                  lines(t, qu[1,], col = 2)
-                  lines(t, qu[2,], col = 2)
-                }
-              }
-              
+              ind.i <- 1
+              Npred[i, ] <- simN(t, xi, len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
             }
             
-           return(list(N = Npred, Y = result))
+            result[i, ] <- fun(t, Npred[i,], theta) + rnorm(length(t), 0, sqrt(gamma2))
+          }
+        }
+  
+      }
+      
+      if(pred.alg == "simpleBayesTrajectory"){
+        if(missing(sample.length)){
+          sample.length <- K
+        } else{
+          if(sample.length > K) sample.length <- K
+        }
+        xi <- object@xi[ind, ]
+        gamma2 <- object@gamma2[ind]
+        theta <- object@theta[ind,]
+        
+        if(which.series == "new"){
+          result <- matrix(0, sample.length, n)
+          Npred <- matrix(0, sample.length, n)  # here: N_t
+          
+          for(i in 1:sample.length){
+            cl <- set.to.class("jumpRegression", parameter = list(theta = theta[i,], gamma2 = gamma2[i], xi = xi[i,]), Lambda = Lambda, fun = fun)
+            help <- simulate(cl, t = t, plot.series = FALSE)
+            result[i, ] <- help$Y
+            Npred[i, ] <- help$N
+          }
+          
+        }else{
+          result <- matrix(0, sample.length, n)
+          Npred <- matrix(0, sample.length, n)  # here: N_t
+          
+          for(i in 1:sample.length){
+            if(length(startN) > 1){
+              Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN[sample(K, 1)]), Lambda = Lambda)$N
+            }else{
+              ind.i <- 1
+              Npred[i, ] <- simN(t, xi[i,], len = 1, start = c(max(object@t), startN), Lambda = Lambda)$N
+            }
             
-          })
+            result[i, ] <- fun(t, Npred[i,], theta[i,]) + rnorm(length(t), 0, sqrt(gamma2[i]))
+          }
+        }
+        
+      }
+      
+      if(plot.prediction){
+        qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
+        if(which.series == "new"){
+          plot(object@t, object@Y, type = "l", xlab = "t", ylim = range(c(object@Y, range(qu))), ylab = expression(Y[t]))
+          lines(t, qu[1,], col = 2)
+          lines(t, qu[2,], col = 2)
+        }
+        if(which.series == "current"){
+          plot(object@t, object@Y, type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Y, range(qu))), xlab = "t", ylab = expression(Y[t]))
+          lines(t, qu[1,], col = 2)
+          lines(t, qu[2,], col = 2)
+        }
+      }
+      
+    }
+    
+   return(list(N = Npred, Y = result))
+    
+})
 
 
 ########
@@ -2337,7 +2371,7 @@ setMethod(f = "predict", signature = "est.reg_hiddenNHPP",
 #' @param M2pred optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param method vectorial ("vector") or not ("free")
-#' @param sampling.alg sampling algorithm, inversion method ("BinSearch") or rejection sampling ("RejSamp")
+#' @param sampling.alg sampling algorithm, inversion method ("InvMethod") or rejection sampling ("RejSamp")
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degree of approximation
 #' @param plot.prediction if TRUE, result are plotted
@@ -2354,13 +2388,14 @@ setMethod(f = "predict", signature = "est.reg_hiddenNHPP",
 #' pred2 <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2], only.interval = FALSE)
 #' plot(density(pred2[,10]))
 #' }
+
 #' @export
 setMethod(f = "predict", signature = "est.Regression",
           definition = function(object,
                                 t, only.interval = TRUE, level = 0.05, burnIn, thinning,
                                 fun.mat, which.series = c("new", "current"), M2pred = 10,
                                 cand.length = 1000, method = c("vector", "free"),
-                                sampling.alg = c("BinSearch", "RejSamp"), sample.length, grid, plot.prediction = TRUE) {
+                                sampling.alg = c("InvMethod", "RejSamp"), sample.length, grid, plot.prediction = TRUE) {
             
             method <- match.arg(method)
             sampling.alg <- match.arg(sampling.alg)
@@ -2464,6 +2499,8 @@ setMethod(f = "predict", signature = "est.Regression",
 #' @param ind.pred index of series to be predicted, optional, if which.series = "current" and ind.pred missing, the last series is taken
 #' @param M2pred optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points
 #' @param cand.length length of candidate samples (if method = "vector")
+#' @param method vectorial ("vector") or not ("free")
+#' @param sampling.alg sampling algorithm, inversion method ("InvMethod") or rejection sampling ("RejSamp")
 #' @param sample.length length of samples to be drawn
 #' @param grid fineness degree of approximation
 #' @param plot.prediction if TRUE, result are plotted
@@ -2471,120 +2508,145 @@ setMethod(f = "predict", signature = "est.Regression",
 #' @examples
 #' mu <- c(10, 5); Omega <- c(0.9, 0.01)
 #' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
-#' cl <- set.to.class("mixedRegression", 
+#' model <- set.to.class("mixedRegression", 
 #'          parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
 #'          fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(cl, t = t, plot.series = TRUE)
-#' est <- estimate(cl, t, data[1:20,], 2000)
+#' data <- simulate(model, t = t, plot.series = TRUE)
+#' est <- estimate(model, t, data[1:20,], 2000)
 #' plot(est)
 #' pred <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2])
 #' points(t, data[21,], pch = 20)
+#' 
+#' t.list <- list()
+#' for(i in 1:20) t.list[[i]] <- t
+#' t.list[[21]] <- t[1:50]
+#' data.list <- list()
+#' for(i in 1:20) data.list[[i]] <- data[i,]
+#' data.list[[21]] <- data[21, 1:50]
+#' est <- estimate(model, t.list, data.list, 100)
+#' pred <- predict(est, t = t[50:101], which.series = "current", ind.pred = 21, 
+#'    fun.mat = function(phi, t) phi[,1]*t + phi[,2])
 #'
 #' @export
 setMethod(f = "predict", signature = "est.mixedRegression",
           definition = function(object, t, only.interval = TRUE, level = 0.05, burnIn, thinning,
                                 fun.mat, which.series = c("new", "current"), ind.pred, M2pred = 10,
-                                cand.length = 1000, sample.length, grid, plot.prediction = TRUE) {
-            which.series <- match.arg(which.series)
-            
-            J <- nrow(object@Y)
-            n <- ncol(object@Y)  # equal to length(object@t)
-            
-            if(missing(ind.pred) & which.series == "current") ind.pred <- J
+                                cand.length = 1000, method = c("vector", "free"),
+                                sampling.alg = c("InvMethod", "RejSamp"), sample.length, grid, plot.prediction = TRUE) {
+    which.series <- match.arg(which.series)
+    
+    if(length(object@Y.list) == 0){
+      J <- nrow(object@Y)
+      n <- ncol(object@Y)  # equal to length(object@t)
+    }else{
+      J <- length(object@Y.list)
+      n <- sapply(object@Y.list, length)
+    }
+    
+    if(missing(ind.pred) & which.series == "current") ind.pred <- J
 
-            if(missing(burnIn)) burnIn <- object@burnIn
-            if(missing(thinning)) thinning <- object@thinning
-            
-            if(missing(t)){
-              if(which.series == "new") t <- object@t
-              if(which.series == "current"){
-                dt <- median( diff(object@t))
-                t <- object@t[length(object@t)] + cumsum(c(0, rep(dt, M2pred)))
-              }
-            }
-            ind <- seq(burnIn + 1, length(object@gamma2), by = thinning)
-            
-            if(which.series == "new"){
-              samples <- list(mu = as.matrix(object@mu[ind,]), Omega = as.matrix(object@Omega[ind,]) )
-              phi.pred <- predPhi(samples)
-              
-              samples <- list(phi = phi.pred, gamma2 = object@gamma2[ind])
-            }
-            if(which.series == "current"){
-              samples <- list(phi = sapply(1:ncol(object@mu) , function(i) sapply(object@phi[ind], function(m) m[ind.pred, i]) ), gamma2 = object@gamma2[ind])
-            }
-            K <- length(samples$gamma2)
-            if(missing(sample.length)) sample.length <- K
-            fun <- object@model$fun
-            sT.fun <- object@model$sT.fun
-            n <- length(t)
+    if(missing(burnIn)) burnIn <- object@burnIn
+    if(missing(thinning)) thinning <- object@thinning
+    
+    if(missing(t)){
+      if(which.series == "new") t <- object@t
+      if(which.series == "current"){
+        if(length(object@Y.list) == 0){
+          dt <- median( diff(object@t))
+          t <- object@t[length(object@t)] + cumsum(c(0, rep(dt, M2pred)))
+        }else{
+          dt <- median( diff(object@t.list[[ind.pred]]))
+          t <- object@t.list[[ind.pred]][n[ind.pred]] + cumsum(c(0, rep(dt, M2pred)))
+        } 
+      }
+    }
+    ind <- seq(burnIn + 1, length(object@gamma2), by = thinning)
+    
+    if(which.series == "new"){
+      samples <- list(mu = as.matrix(object@mu[ind,]), Omega = as.matrix(object@Omega[ind,]) )
+      phi.pred <- predPhi(samples)
+      
+      samples <- list(phi = phi.pred, gamma2 = object@gamma2[ind])
+    }
+    if(which.series == "current"){
+      samples <- list(phi = sapply(1:ncol(object@mu) , function(i) sapply(object@phi[ind], function(m) m[ind.pred, i]) ), gamma2 = object@gamma2[ind])
+    }
+    K <- length(samples$gamma2)
+    if(missing(sample.length)) sample.length <- K
+    fun <- object@model$fun
+    sT.fun <- object@model$sT.fun
+    n <- length(t)
 
-            if(only.interval){
-              
-              result <- matrix(0, 2, n)
-              for(i in 1:n){
-                cand.Area <- fun(apply(samples$phi, 2, mean), t[i]) + 6*c(-1, 1)*sqrt(mean(samples$gamma2))*sT.fun(t[i])
-                if(!missing(fun.mat)){
-                  VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, fun.mat(samples$phi, t[i]), sqrt(samples$gamma2*sT.fun(t[i])^2)))
-                }else{
-                  VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, fun(samples$phi[k,], t[i]), sqrt(samples$gamma2[k]*sT.fun(t[i])^2))))
-                }
-                result[,i] <- prediction.intervals(samples, VFun, x0 = 0, level = level, candArea = cand.Area)
-              }
-              if(plot.prediction){
-                if(which.series == "new"){
-                  plot(object@t, object@Y[1,], type = "l", xlab = "t", ylim = range(c(object@Y, range(result))), ylab = expression(Y[t]))
-                  for(j in 2:J) lines(object@t, object@Y[j,])
-                  lines(t, result[1,], col = 2)
-                  lines(t, result[2,], col = 2)
-                }
-                if(which.series == "current"){
-                  plot(object@t, object@Y[ind.pred, ], type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Y[ind.pred, ], range(result))), xlab = "t", ylab = expression(Y[t]))
-                  lines(t, result[1,], col = 2)
-                  lines(t, result[2,], col = 2)
-                }
-              }
-
-            }else{
-              result <- matrix(0, sample.length, n)
-              for(i in 1:n){
-                
-                if(!missing(fun.mat)){
-                  VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, fun.mat(samples$phi, t[i]), sqrt(samples$gamma2*sT.fun(t[i])^2)))
-                  dens <- function(yn, yn_1, samples)  mean(dnorm(yn, fun.mat(samples$phi, t[i]), sqrt(samples$gamma2*sT.fun(t[i])^2)))
-                }else{
-                  VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, fun(samples$phi[k,], t[i]), sqrt(samples$gamma2[k]*sT.fun(t[i])^2))))
-                  dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, fun(samples$phi[k,], t[i]), sqrt(samples$gamma2[k]*sT.fun(t[i])^2))))
-                }
-                
-                cand.Area <- fun(apply(samples$phi, 2, mean), t[i]) + 6*c(-1, 1)*sqrt(mean(samples$gamma2))*sT.fun(t[i])
-                if(missing(grid)) d <- diff(cand.Area)/cand.length
-                
-                result[,i] <- pred.base(samples = samples, VFun, dens, x0 = 0, len = sample.length, method = method,
-                                        pred.alg = "Distribution", sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
-              }
-              if(plot.prediction){
-                qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
-                if(which.series == "new"){
-                  plot(object@t, object@Y[1,], type = "l", xlab = "t", ylim = range(c(object@Y, range(qu))), ylab = expression(Y[t]))
-                  for(j in 2:J) lines(object@t, object@Y[j,])
-                  lines(t, qu[1,], col = 2, lwd = 2)
-                  lines(t, qu[2,], col = 2, lwd = 2)
-                }
-                if(which.series == "current"){
-                  plot(object@t, object@Y[ind.pred, ], type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Y[ind.pred, ], range(qu))), xlab = "t", ylab = expression(Y[t]))
-                  lines(t, qu[1,], col = 2)
-                  lines(t, qu[2,], col = 2)
-                }
-              }
-              
-            }
-            
-           if(which.series == "new") return(list(Y = result, phi = phi.pred))
-            if(which.series == "current") return(result)
-            
-          })
+    if(only.interval){
+      
+      result <- matrix(0, 2, n)
+      for(i in 1:n){
+        cand.Area <- fun(apply(samples$phi, 2, mean), t[i]) + 6*c(-1, 1)*sqrt(mean(samples$gamma2))*sT.fun(t[i])
+        if(!missing(fun.mat)){
+          VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, fun.mat(samples$phi, t[i]), sqrt(samples$gamma2*sT.fun(t[i])^2)))
+        }else{
+          VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, fun(samples$phi[k,], t[i]), sqrt(samples$gamma2[k]*sT.fun(t[i])^2))))
+        }
+        result[,i] <- prediction.intervals(samples, VFun, x0 = 0, level = level, candArea = cand.Area)
+      }
+      
+    }else{
+      result <- matrix(0, sample.length, n)
+      for(i in 1:n){
+        
+        if(!missing(fun.mat)){
+          VFun <- function(yn, yn_1, samples)  mean(pnorm(yn, fun.mat(samples$phi, t[i]), sqrt(samples$gamma2*sT.fun(t[i])^2)))
+          dens <- function(yn, yn_1, samples)  mean(dnorm(yn, fun.mat(samples$phi, t[i]), sqrt(samples$gamma2*sT.fun(t[i])^2)))
+        }else{
+          VFun <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) pnorm(yn, fun(samples$phi[k,], t[i]), sqrt(samples$gamma2[k]*sT.fun(t[i])^2))))
+          dens <- function(yn, yn_1, samples)  mean(sapply(1:K, function(k) dnorm(yn, fun(samples$phi[k,], t[i]), sqrt(samples$gamma2[k]*sT.fun(t[i])^2))))
+        }
+        
+        cand.Area <- fun(apply(samples$phi, 2, mean), t[i]) + 6*c(-1, 1)*sqrt(mean(samples$gamma2))*sT.fun(t[i])
+        if(missing(grid)) d <- diff(cand.Area)/cand.length
+        
+        result[,i] <- pred.base(samples = samples, VFun, dens, x0 = 0, len = sample.length, method = method,
+                                pred.alg = "Distribution", sampling.alg = sampling.alg, candArea = cand.Area, grid = d)
+      }
+      
+    }
+    if(plot.prediction){
+      
+      qu <- apply(result, 2, quantile, c(level / 2, 1 - level / 2))
+      
+      if(length(object@Y.list) == 0){
+        if(which.series == "new"){
+          plot(object@t, object@Y[1,], type = "l", xlab = expression(t[i]), ylim = range(c(object@Y, range(qu))), ylab = expression(Y[i]))
+          for(j in 2:J) lines(object@t, object@Y[j,])
+          lines(t, qu[1,], col = 2, lwd = 2)
+          lines(t, qu[2,], col = 2, lwd = 2)
+        }
+        if(which.series == "current"){
+          plot(object@t, object@Y[ind.pred, ], type = "l", xlim = range(c(object@t, t)), ylim = range(c(object@Y[ind.pred, ], range(qu))), xlab = expression(t[i]), ylab = expression(Y[i]))
+          lines(t, qu[1,], col = 2)
+          lines(t, qu[2,], col = 2)
+        }
+      }else{
+        if(which.series == "new"){
+          plot(object@t.list[[1]], object@Y.list[[1]], type = "l", xlab = expression(t[i]), ylim = range(c(unlist(object@Y), range(qu))), ylab = expression(Y[i]))
+          for(j in 2:J) lines(object@t.list[[j]], object@Y.list[[j]])
+          lines(t, qu[1,], col = 2, lwd = 2)
+          lines(t, qu[2,], col = 2, lwd = 2)
+        }
+        if(which.series == "current"){
+          plot(object@t.list[[ind.pred]], object@Y.list[[ind.pred]], type = "l", xlim = range(c(object@t.list[[ind.pred]], t)), ylim = range(c(object@Y.list[[ind.pred]], range(qu))), xlab = expression(t[i]), ylab = expression(Y[i]))
+          lines(t, qu[1,], col = 2)
+          lines(t, qu[2,], col = 2)
+        }
+      }
+      
+    }
+    
+   if(which.series == "new") return(list(Y = result, phi = phi.pred))
+    if(which.series == "current") return(result)
+    
+})
 
 
 #####################
@@ -2601,7 +2663,7 @@ setMethod(f = "predict", signature = "est.mixedRegression",
 #' @param x0 starting point
 #' @param method vectorial ("vector") or not ("free")
 #' @param pred.alg prediction algorithm, "Distribution" or "Trajectory"
-#' @param sampling.alg sampling algorithm, rejection sampling ("RejSamp") or inversion method ("BinSearch")
+#' @param sampling.alg sampling algorithm, rejection sampling ("RejSamp") or inversion method ("InvMethod")
 #' @param candArea candidate area
 #' @param grid fineness degree
 #'
@@ -2609,7 +2671,7 @@ setMethod(f = "predict", signature = "est.mixedRegression",
 #' vector of samples from prediction
 #' @export
 pred.base <- function(samples, VFun, dens, len = 100, x0, method = c("vector", "free"),
-                 pred.alg = c("Distribution", "Trajectory"), sampling.alg = c("RejSamp", "BinSearch"),
+                 pred.alg = c("Distribution", "Trajectory"), sampling.alg = c("RejSamp", "InvMethod"),
                  candArea, grid = 0.001){
   # without a candidate area: currently only sampling of positive values...
   method <- match.arg(method)
@@ -2632,8 +2694,8 @@ pred.base <- function(samples, VFun, dens, len = 100, x0, method = c("vector", "
       sample.result <- RejSampling(Fun = function(t) VFun(t, x0, samples), dens = function(t) dens(t, x0, samples),
                   len = len, cand = candArea, grid = grid, method = method)
     }
-    if(sampling.alg == "BinSearch"){
-      sample.result <- BinSearch(Fun = function(t) VFun(t, x0, samples), len = len,
+    if(sampling.alg == "InvMethod"){
+      sample.result <- InvMethod(Fun = function(t) VFun(t, x0, samples), len = len,
                                  candArea = candArea, grid = grid, method = method)
     }
 
@@ -2644,8 +2706,8 @@ pred.base <- function(samples, VFun, dens, len = 100, x0, method = c("vector", "
       sample.result <- sapply(1:len, function(i) RejSampling(Fun = function(t) VFun(t, x0[i], samples), dens = function(t) dens(t, x0, samples),
                                                              len = 1, cand = candArea, grid = grid, method = method) )
     }
-    if(sampling.alg == "BinSearch"){
-      sample.result <- sapply(1:len, function(i) BinSearch(Fun = function(t) VFun(t, x0[i], samples), len = 1,
+    if(sampling.alg == "InvMethod"){
+      sample.result <- sapply(1:len, function(i) InvMethod(Fun = function(t) VFun(t, x0[i], samples), len = 1,
                                                            candArea = candArea, grid = grid, method = method))
     }
 

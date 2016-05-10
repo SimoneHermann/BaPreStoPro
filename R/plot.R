@@ -19,17 +19,19 @@
 #' data <- simulate(model, t = seq(0, 1, by = 0.01), y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.01), data, 1000)  # nMCMC small for example
 #' plot(est)
-#' plot(est, burnIn = 100, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
+#' plot(est, burnIn = 100, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
 #' # plot only for phi and xi ...
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, FALSE, FALSE, TRUE, TRUE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' @export
 setMethod(f = "plot", signature = "est.jumpDiffusion", 
-          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
   if (newwindow) {
     x11(width = 10)
@@ -52,7 +54,8 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
   }
   if(missing(par2plot)) par2plot <- rep(TRUE, 3+p+p1)
   if(missing(par.options)){
-    par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+    if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+    if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
   }
   
   par(par.options)
@@ -82,7 +85,7 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
     
     if(sum(dim(x@N.est) > 0)){
       if(par2plot[3 + p + 1]){
-        plot(x@t, x@N.est[,length(x@phi)], type = "l", xlab = "t", ylab = "N", ...)
+        plot(x@t, x@N.est[,length(x@phi)], type = "l", xlab = "t", ylab = "N", ylim = range(x@N.est[,ind]), ...)
         for(i in ind) lines(x@t, x@N.est[,i])
       }  
     }
@@ -143,17 +146,19 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
 #' data <- simulate(model, t = seq(0, 1, by = 0.01), y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.01), data, 1000)  # nMCMC small for example
 #' plot(est)
-#' plot(est, burnIn = 100, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
+#' plot(est, burnIn = 100, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
 #' # plot only for phi and xi ...
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, FALSE, FALSE, TRUE, TRUE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' @export
 setMethod(f = "plot", signature = "est.Merton", 
-          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
     if (newwindow) {
       x11(width = 10)
@@ -176,7 +181,8 @@ setMethod(f = "plot", signature = "est.Merton",
     }
     if(missing(par2plot)) par2plot <- rep(TRUE, 3+p+p1)
     if(missing(par.options)){
-      par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+      if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+      if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
     }
     
     par(par.options)
@@ -206,7 +212,7 @@ setMethod(f = "plot", signature = "est.Merton",
       
       if(sum(dim(x@N.est) > 0)){
         if(par2plot[3 + p + 1]){
-          plot(x@t, x@N.est[,length(x@phi)], type = "l", xlab = "t", ylab = "N", ...)
+          plot(x@t, x@N.est[,length(x@phi)], type = "l", xlab = "t", ylab = "N", ylim = range(x@N.est[,ind]), ...)
           for(i in ind) lines(x@t, x@N.est[,i])
         }  
       }
@@ -267,16 +273,18 @@ setMethod(f = "plot", signature = "est.Merton",
 #' data <- simulate(model, t = seq(0, 1, by = 0.01), y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.01), data, 1000)  # nMCMC small for example
 #' plot(est)
-#' plot(est, burnIn = 100, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(3,1)), xlab = "iteration")
+#' plot(est, burnIn = 100, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(3,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, TRUE, FALSE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(FALSE, FALSE, TRUE))
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' @export
 setMethod(f = "plot", signature = "est.Diffusion", 
-          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
   if (newwindow) {
     x11(width = 10)
@@ -296,7 +304,8 @@ setMethod(f = "plot", signature = "est.Diffusion",
 
   if(missing(par2plot)) par2plot <- rep(TRUE, 1+p)
   if(missing(par.options)){
-    par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+    if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+    if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
   }
 
   par(par.options)
@@ -362,18 +371,22 @@ setMethod(f = "plot", signature = "est.Diffusion",
 #'     y0 = function(phi, t) phi[3], sT.fun = function(t, x) sqrt(abs(x)))
 #' data <- simulate(model, t = seq(0, 1, by = 0.02), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.02), data, 100)  # nMCMC small for example
+#' \dontrun{
 #' plot(est, newwindow = TRUE)
-#' plot(est, burnIn = 10, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
+#' }
+#' plot(est, burnIn = 10, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "")
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(rep(FALSE, 6), TRUE))
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' plot(est, style = "int.phi", phi = phi, par2plot = c(TRUE, FALSE, FALSE))
 #' @export
 setMethod(f = "plot", signature = "est.mixedDiffusion", 
-          definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, newwindow = FALSE, ...) {
   if (newwindow) {
     x11(width = 10)
@@ -394,7 +407,8 @@ setMethod(f = "plot", signature = "est.mixedDiffusion",
   
   if(missing(par2plot)) par2plot <- rep(TRUE, 1+2*p)
   if(missing(par.options)){
-    par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+    if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+    if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
     if(style == "int.phi") par.options <- list(mfrow = c(sum(par2plot[1:p]), 1))
   }
 
@@ -488,16 +502,18 @@ setMethod(f = "plot", signature = "est.mixedDiffusion",
 #' est <- estimate(model, t = seq(0, 1, by = 0.01), data$Y, 100)  # nMCMC small for example
 #' plot(est)
 #' plot(est, par2plot = c(rep(FALSE, 3), TRUE, FALSE), ylim = c(0.001, 0.1), par.options = list())
-#' plot(est, burnIn = 10, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(3,1)), xlab = "iteration")
+#' plot(est, burnIn = 10, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(3,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, TRUE, FALSE, FALSE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(FALSE, FALSE, TRUE, TRUE))
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' @export
 setMethod(f = "plot", signature = "est.hiddenDiffusion", 
-          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
   if (newwindow) {
     x11(width = 10)
@@ -521,7 +537,8 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
     
   }
   if(missing(par.options)){
-    par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+    if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+    if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
   }
   
   par(par.options)
@@ -542,8 +559,8 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
       if(priorMeans) abline(h = x@model$sigma2, col = col.priorMean, lty = lty.priorMean)
     }
     if(par2plot[p+3]){
-      plot(x@t, x@Z, pch = 20, xlab = "t", ylab = "data", col = col.priorMean)
-      for(i in 1:nrow(x@phi)) lines(x@t, x@Y.est[i,])
+      plot(x@t, x@Z, pch = 20, xlab = "t", ylab = "data", col = col.priorMean, ylim = range(c(x@Z, range(x@Y.est[ind, ]))))
+      for(i in ind) lines(x@t, x@Y.est[i,])
       points(x@t, x@Z, pch = 20, col = col.priorMean)
     }  
   }
@@ -602,19 +619,24 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
 #'     y0 = function(phi, t) phi[3])
 #' data <- simulate(model, t = seq(0, 1, by = 0.02), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.02), data$Z, 1000) 
+#' \dontrun{
 #' plot(est, newwindow = TRUE)
-#' plot(est, burnIn = 10, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
+#' }
+#' plot(est, burnIn = 10, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, TRUE, rep(FALSE, 7)))
-#' plot(est, style = "density", lwd = 2, priorMean = FALSE, par2plot = c(rep(FALSE, 6), TRUE, TRUE, FALSE))
+#' plot(est, style = "density", lwd = 2, priorMean = FALSE, 
+#'    par2plot = c(rep(FALSE, 6), TRUE, TRUE, FALSE))
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(rep(FALSE, 6), TRUE, TRUE))
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' plot(est, style = "int.phi", phi = phi, par2plot = c(TRUE, FALSE, FALSE))
 #' }
 #' @export
 setMethod(f = "plot", signature = "est.hiddenmixedDiffusion", 
-          definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, newwindow = FALSE, ...) {
   if (newwindow) {
     x11(width = 10)
@@ -639,7 +661,9 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
     
   }
   if(missing(par.options)){
-    par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+    if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+    if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+    
     if(style == "int.phi") par.options <- list(mfrow = c(sum(par2plot[1:p]), 1))
   }
   
@@ -667,8 +691,9 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
       if(priorMeans) abline(h = x@model$sigma2, col = col.priorMean, lty = lty.priorMean)
     }
     if(par2plot[2*p+3]){
-      plot(x@t, x@Z[1,], pch = 20, xlab = "t", ylab = "first data series", col = col.priorMean)
-      for(i in 1:nrow(x@mu)) lines(x@t, x@Y.est[[i]][[1]])
+      plot(x@t, x@Z[1,], pch = 20, xlab = "t", ylab = "first data series", col = col.priorMean,
+           ylim = range(c(x@Z[1,], range(sapply(ind, function(i) x@Y.est[[i]][[1]])))))
+      for(i in ind) lines(x@t, x@Y.est[[i]][[1]])
       points(x@t, x@Z[1,], pch = 20, col = col.priorMean)
     }  
   }
@@ -727,8 +752,8 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
 
 #' Plot method for the Bayesian estimation class object
 #' 
-#' @description Plot method for the S4 class est.reg_hiddenNHPP
-#' @param x est.reg_hiddenNHPP class
+#' @description Plot method for the S4 class est.jumpRegression
+#' @param x est.jumpRegression class
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\phi, \theta, \gamma^2, \xi, N)}
@@ -741,22 +766,24 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
 #' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
-#' model <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) exp(theta[1]*t) + theta[2]*N,
+#' model <- set.to.class("jumpRegression", fun = function(t, N, theta) exp(theta[1]*t) + theta[2]*N,
 #'   parameter = list(theta = c(2, 2), gamma2 = 0.25, xi = c(3, 0.5)),
 #'   Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' data <- simulate(model, t = seq(0, 1, by = 0.01), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.01), data, 1000)  # nMCMC small for example
 #' plot(est)
-#' plot(est, burnIn = 100, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
+#' plot(est, burnIn = 100, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2, 3)), xlab = "iteration")
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, FALSE, FALSE, TRUE, TRUE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' @export
-setMethod(f = "plot", signature = "est.reg_hiddenNHPP", 
-          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = TRUE, 
+setMethod(f = "plot", signature = "est.jumpRegression", 
+          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
   if (newwindow) {
     x11(width = 10)
@@ -782,7 +809,8 @@ setMethod(f = "plot", signature = "est.reg_hiddenNHPP",
   }
   if(missing(par2plot)) par2plot <- rep(TRUE, p1+p2+p3+1)
   if(missing(par.options)){
-    par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+    if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+    if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
   }
   
   par(par.options)
@@ -808,7 +836,7 @@ setMethod(f = "plot", signature = "est.reg_hiddenNHPP",
     
     if(sum(dim(x@N.est) > 0)){
       if(par2plot[p1 +p2 + 1]){
-        plot(x@t, x@N.est[,length(x@gamma2)], type = "l", xlab = "t", ylab = "N", ...)
+        plot(x@t, x@N.est[,length(x@gamma2)], type = "l", xlab = "t", ylab = "N", ylim = range(x@N.est[,ind]), ...)
         for(i in ind) lines(x@t, x@N.est[,i])
       }  
     }
@@ -869,16 +897,18 @@ setMethod(f = "plot", signature = "est.reg_hiddenNHPP",
 #' data <- simulate(model, t = seq(0, 1, by = 0.01), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.01), data$Times, 10000)  # nMCMC small for example
 #' plot(est)
-#' plot(est, burnIn = 1000, thinning = 20)
-#' plot(est, reduced = FALSE, xlab = "iteration")
+#' plot(est, burnIn = 1000, thinning = 20, reduced = TRUE)
+#' plot(est, xlab = "iteration")
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, FALSE), par.options = list(mfrow = c(1, 1)))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(FALSE, TRUE), main = "")
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' @export
 setMethod(f = "plot", signature = "est.NHPP", 
-          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
   if (newwindow) {
     x11(width = 10)
@@ -899,7 +929,8 @@ setMethod(f = "plot", signature = "est.NHPP",
 
   if(missing(par2plot)) par2plot <- rep(TRUE, p)
   if(missing(par.options)){
-    par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+    if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+    if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
   }
   
   par(par.options)
@@ -954,16 +985,18 @@ setMethod(f = "plot", signature = "est.NHPP",
 #' data <- simulate(model, t = seq(0, 1, by = 0.01), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.01), data, 1000)  # nMCMC small for example
 #' plot(est)
-#' plot(est, burnIn = 100, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(3,1)), xlab = "iteration")
+#' plot(est, burnIn = 100, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(3,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, TRUE, FALSE))
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(FALSE, FALSE, TRUE))
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' @export
 setMethod(f = "plot", signature = "est.Regression", 
-          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
     if (newwindow) {
       x11(width = 10)
@@ -983,7 +1016,8 @@ setMethod(f = "plot", signature = "est.Regression",
     
     if(missing(par2plot)) par2plot <- rep(TRUE, 1+p)
     if(missing(par.options)){
-      par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+      if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+      if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
     }
     
     par(par.options)
@@ -1050,18 +1084,22 @@ setMethod(f = "plot", signature = "est.Regression",
 #'     parameter = list(mu = mu, Omega = Omega, phi = phi, gamma2 = 0.1))
 #' data <- simulate(model, t = seq(0, 1, by = 0.02), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.02), data, 100)  # nMCMC small for example
+#' \dontrun{
 #' plot(est, newwindow = TRUE)
-#' plot(est, burnIn = 10, thinning = 2)
-#' plot(est, reduced = FALSE, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
+#' }
+#' plot(est, burnIn = 10, thinning = 2, reduced = TRUE)
+#' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "")
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(rep(FALSE, 4), TRUE))
+#' \dontrun{
 #' plot(est, priorMeans = FALSE, newwindow = TRUE)
+#' }
 #' plot(est, style = "int.phi", phi = phi, par2plot = c(TRUE, FALSE))
 #' @export
 setMethod(f = "plot", signature = "est.mixedRegression", 
-          definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = TRUE, 
+          definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = FALSE, 
                                 thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, newwindow = FALSE, ...) {
     if (newwindow) {
       x11(width = 10)
@@ -1082,7 +1120,8 @@ setMethod(f = "plot", signature = "est.mixedRegression",
     
     if(missing(par2plot)) par2plot <- rep(TRUE, 1+2*p)
     if(missing(par.options)){
-      par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
+      if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
+      if(sum(par2plot) > 1) par.options <- list(mfrow = c(ceiling(sum(par2plot)/2), 2))
       if(style == "int.phi") par.options <- list(mfrow = c(sum(par2plot[1:p]), 1))
     }
     

@@ -18,6 +18,8 @@ setGeneric("estimate", function(model.class, ...) {
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{\phi}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #'
 #' @examples
 #' model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))
@@ -28,7 +30,7 @@ setGeneric("estimate", function(model.class, ...) {
 #' 
 #' @export
 setMethod(f = "estimate", signature = "Diffusion",
-          definition = function(model.class, t, data, nMCMC){
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE){
 
     X <- data
     prior <- model.class@prior
@@ -37,16 +39,15 @@ setMethod(f = "estimate", signature = "Diffusion",
     sVar <- model.class@sT.fun
     len <- nMCMC
     
-    propSd <- abs(prior$mu)/5
+    if(missing(propSd)) propSd <- abs(prior$m.phi)/5
     lt <- length(t)
     dt <- t[-1] - t[-lt]
     lphi <- length(propSd)
     
     postPhi <- function(lastPhi, gamma2, propSd){
       phi_old <- lastPhi
-      
       phi_drawn <- phi_old + rnorm(lphi, 0, propSd)
-      ratio <- dmvnorm(phi_drawn, prior$mu, as.matrix(prior$Omega)) / dmvnorm(phi_old, prior$mu, as.matrix(prior$Omega))
+      ratio <- prod(dnorm(phi_drawn, prior$m.phi, sqrt(prior$v.phi)) / dnorm(phi_old, prior$m.phi, sqrt(prior$v.phi)))
       ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
       if(is.na(ratio)){ratio <- 0}
       if(runif(1) < ratio){
@@ -55,8 +56,8 @@ setMethod(f = "estimate", signature = "Diffusion",
       phi_old
     }
     postGamma2 <- function(phi){
-      alphaPost <- prior$alpha + (lt-1)/2
-      betaPost <-  prior$beta + sum( (X[-1] - X[-lt] - bSDE(phi, t[-lt], X[-lt])*dt)^2/(sVar(t[-lt], X[-lt])^2*dt) )/2
+      alphaPost <- prior$alpha.gamma + (lt-1)/2
+      betaPost <-  prior$beta.gamma + sum( (X[-1] - X[-lt] - bSDE(phi, t[-lt], X[-lt])*dt)^2/(sVar(t[-lt], X[-lt])^2*dt) )/2
       1/rgamma(1, alphaPost, betaPost)
     }
     
@@ -74,10 +75,9 @@ setMethod(f = "estimate", signature = "Diffusion",
       phi_out[count, ] <- phi
       gamma2_out[count] <- gamma2
       
-      if (count%%50 == 0){
+      if (adapt && count%%50 == 0){
         propSd <- sapply(1:length(phi), function(i){
           ad.propSd(phi_out[(count-50+1):count, i], propSd[i], count/50) })
-        #      print(propSd)
       }
       
       
@@ -108,6 +108,8 @@ setMethod(f = "estimate", signature = "Diffusion",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{\phi}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
 #' model <- set.to.class("mixedDiffusion", 
@@ -140,7 +142,7 @@ setMethod(f = "estimate", signature = "Diffusion",
 #'    b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
 #' @export
 setMethod(f = "estimate", signature = "mixedDiffusion",
-          definition = function(model.class, t, data, nMCMC) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
 
 
     prior <- model.class@prior
@@ -149,8 +151,7 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
     bSDE <- model.class@b.fun
     sVar <- model.class@sT.fun
     len <- nMCMC
-    propPar <- 0.2
-    
+
     if(is.matrix(data)){
       if(nrow(data) == length(t)){
         y <- t(data)
@@ -235,14 +236,14 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
     mu <- start$mu
     Omega <- postOm(phi, mu)
     
-    propSd <- abs(start$mu)*propPar
+    if(missing(propSd)) propSd <- abs(start$mu)/5
     
     for(count in 1:len){
       
       for(i in 1:n){
         phi[i,] <- postPhii(phi[i,], mu, Omega, gamma2, y[[i]], times[[i]], propSd)
       }
-      mu <- postmu(phi, prior$m, prior$v, Omega)
+      mu <- postmu(phi, prior$m.mu, prior$v.mu, Omega)
       Omega <- postOm(phi, mu)
       gamma2 <- postGamma2(phi)
       
@@ -251,10 +252,9 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
       Omega_out[count,] <- Omega
       gamma2_out[count] <- gamma2
       
-      if (count%%50 == 0){
+      if (adapt && count%%50 == 0){
         propSd <- sapply(1:length(phi[1,]), function(i){
           ad.propSd(sapply(phi_out[(count-50+1):count], function(mat) mat[1,i]), propSd[i], count/50) })
-        #            print(propSd)
       }
       
     }
@@ -282,7 +282,7 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 
 
 ########
-#' Estimation for noisy / hidden diffusion process
+#' Estimation for hidden diffusion process
 #'
 #' @description Bayesian estimation of the model,
 #'   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
@@ -290,6 +290,8 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{\phi}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #' @param Npart number of particles in the particle Gibbs sampler
 #'
 #' @examples
@@ -312,7 +314,7 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "hiddenDiffusion",
-          definition = function(model.class, t, data, nMCMC, Npart = 100) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100) {
 
     y <- data
     prior <- model.class@prior
@@ -322,8 +324,9 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
     y0.fun <- model.class@y0.fun
     b.fun <- model.class@b.fun
     maxIt <- 1   # input parameter ?
-    parPropPhi <- 5
-
+    
+    if(missing(propSd)) propSd <- abs(start$phi)/5
+    
     lt <- length(t)
     lphi <- length(start$phi)
     
@@ -336,35 +339,23 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
     sigma2 <- start$sigma2
     gamma2 <- start$gamma2
     
-    postSigma2 <- function(alpha, beta, X, y){
-      alphaPost <- alpha + length(y)/2
-      betaPost <-  beta + sum((y-X)^2)/2
-      
+    postSigma2 <- function(X){
+      alphaPost <- prior$alpha.sigma + lt/2
+      betaPost <-  prior$beta.sigma + sum((y-X)^2)/2
       1/rgamma(1, alphaPost, betaPost)
     }
     
-    postGamma2 <- function(alpha, beta, X, t, phi, b.fun, sigmaTilde){
-      ni <- length(t)
-      alphaPost <- alpha + (ni-1)/2
-      help <- sum( (X[-1] - X[-ni] - b.fun(phi,t[-ni],X[-ni])*(t[-1]-t[-ni]))^2/(sigmaTilde(t[-ni],X[-ni])^2*(t[-1]-t[-ni])) )
-      
-      betaPost <-  beta + help/2
-      
+    postGamma2 <- function(phi, X){
+      alphaPost <- prior$alpha.gamma + (lt-1)/2
+      help <- sum( (X[-1] - X[-lt] - b.fun(phi,t[-lt],X[-lt])*(t[-1]-t[-lt]))^2/(sigmaTilde(t[-lt],X[-lt])^2*(t[-1]-t[-lt])) )
+      betaPost <-  prior$beta.gamma + help/2
       1/rgamma(1, alphaPost, betaPost)
     }
-    
     
     prior_phi <- function(phi, k){
-      dnorm(phi[k],prior$mu[k],sqrt(prior$Omega[k]))
+      dnorm(phi[k], prior$m.phi[k], sqrt(prior$v.phi[k]))
     }
-    est_gamma2 <- function(phi, X){
-      postGamma2(prior$alpha.gamma, prior$beta.gamma, X, t, phi, b.fun, sigmaTilde)
-    }
-    est_sigma2 <- function(X){
-      postSigma2(prior$alpha.sigma, prior$beta.sigma, X, y)
-    }
-    
-    propSd <- abs(start$phi)/parPropPhi
+
     estPhi_and_X <- function(X, lastPhi, gamma2, sigma2, B_fixed, propSd){
       likeli <- function(phi,X){
         prod(dnorm(X[-1],X[-lt]+b.fun(phi, t[-lt], X[-lt])*diff(t), sqrt(gamma2*diff(t))*sigmaTilde(t[-lt],X[-lt])))
@@ -407,18 +398,17 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
       X <- result$X
       B_fixed <- result$B_fixed
       
-      gamma2 <- est_gamma2(phi,X)
-      sigma2 <- est_sigma2(X)
+      gamma2 <- postGamma2(phi, X)
+      sigma2 <- postSigma2(X)
       
       phi_out[count,] <- phi
       sigma2_out[count] <- sigma2
       gamma2_out[count] <- gamma2
       X_out[count,] <- X
       
-      if (count%%50 == 0){
+      if (adapt && count%%50 == 0){
         propSd <- sapply(1:lphi, function(i){
           ad.propSd(phi_out[(count-50+1):count, i], propSd[i], count/50) })
-        #      print(propSd)
       }
       
       if (count%%1000 == 0) message(paste(count, "iterations done"))
@@ -450,6 +440,8 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{\phi}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #' @param Npart number of particles in the particle Gibbs sampler
 #'
 #' @examples
@@ -467,7 +459,7 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
-          definition = function(model.class, t, data, nMCMC, Npart = 100) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100) {
 
 
     if(is.matrix(data)){
@@ -496,32 +488,34 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
     y0.fun <- model.class@y0.fun
     b.fun <- model.class@b.fun
     maxIt <- 1    # input parameter ?
-    parPropPhi <- 5
+
+    if(missing(propSd)) propSd <- abs(start$mu)/5
     
     lphi <- length(start$mu)
+    n <- length(y)
+    n_all1 <- sum(sapply(y, length) - 1)
+    n_all2 <- sum(sapply(y, length))
     
-    postSigma2 <- function(alpha, beta, X, y){    # X and y lists with length n, each list entry is one series of length n_i, alpha, beta prior parameters
-      alphaPost <- alpha + sum(unlist(lapply(y,length)))/2
-      betaPost <-  beta + sum((unlist(y)-unlist(X))^2)/2
-      
+    postSigma2 <- function(X){   
+      alphaPost <- prior$alpha.sigma + n_all2/2
+      betaPost <-  prior$beta.sigma + sum((unlist(y)-unlist(X))^2)/2
       1/rgamma(1, alphaPost, betaPost)
     }
     
-    postGamma2 <- function(alpha, beta, X, t, phi, b.fun, sigmaTilde){ #  phi matrix, X, t lists, alpha, beta prior parameters
-      n <- length(X)
-      alphaPost <- alpha + sum(sapply(X,length)-1)/2
+    postGamma2 <- function(X, phi){ #  phi matrix, X, t lists, alpha, beta prior parameters
+      alphaPost <- prior$alpha.gamma + n_all1/2
       
       help <- numeric(n)
       for(i in 1:n){
-        ni <- length(t[[i]])
-        dt <- t[[i]][-1]-t[[i]][-ni]
-        help[i] <- sum( (X[[i]][-1] - X[[i]][-ni] - b.fun(phi[i,],t[[i]][-ni],X[[i]][-ni])*dt)^2/(sigmaTilde(t[[i]][-ni],X[[i]][-ni])^2*dt) )
+        ni <- length(times[[i]])
+        dt <- diff(times[[i]])
+        help[i] <- sum( (X[[i]][-1] - X[[i]][-ni] - b.fun(phi[i,],times[[i]][-ni],X[[i]][-ni])*dt)^2/(sigmaTilde(times[[i]][-ni],X[[i]][-ni])^2*dt) )
       }
-      betaPost <-  beta + sum(help)/2
+      betaPost <-  prior$beta.gamma + sum(help)/2
       
       1/rgamma(1, alphaPost, betaPost)
     }
-    propSd <- abs(start$mu)/parPropPhi
+    
     postPhii_Xi <- function(y, t, X, lastPhi, mu, Omega, gamma2, sigma2, B_fixed, propSd){
       lt <- length(t)
       likeli <- function(phi,X){
@@ -592,11 +586,11 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
         B_fixed[[i]] <- help$B_fixed
       }
       
-      mu <- postmu(phi, prior$m, prior$v, Omega)
+      mu <- postmu(phi, prior$m.mu, prior$v.mu, Omega)
       Omega <- postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
       
-      sigma2 <- postSigma2(prior$alpha.sigma, prior$beta.sigma, X, y)
-      gamma2 <- postGamma2(prior$alpha.gamma, prior$beta.gamma, X, times, phi, b.fun, sigmaTilde)
+      sigma2 <- postSigma2(X)
+      gamma2 <- postGamma2(X, phi)
       
       phi_out[[count]] <- phi
       mu_out[count,] <- mu
@@ -605,10 +599,9 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
       gamma2_out[count] <- gamma2
       X_out[[count]] <- X
       
-      if (count%%50 == 0){
+      if (adapt && count%%50 == 0){
         propSd <- sapply(1:lphi, function(i){
           ad.propSd(sapply(phi_out[(count-50+1):count], function(mat) mat[1, i]), propSd[i], count/50) })
-        #      print(propSd)
       }
       
       if (count%%100 == 0) message(paste(count, "iterations done"))
@@ -630,7 +623,7 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
     }else{
       result <- new(Class = "est.hiddenmixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
                     sigma2 = result$sigma2, Y.est = result$X,
-                    model = class.to.list(model.class), t = t.list[[1]], Z = matrix(data[[1]], 1),
+                    model = class.to.list(model.class), t = t[[1]], Z = matrix(data[[1]], 1),
                     t.list = t, Z.list = data, burnIn = burnIn, thinning = thinning)
     }
 
@@ -650,6 +643,8 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{\xi}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #' @param proposal "lognormal" (for positive parameters, default) or "normal"
 #' @examples
 #' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), 
@@ -667,7 +662,7 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 #' plot(est, par.options = list(mfrow = c(1,1)))
 #' @export
 setMethod(f = "estimate", signature = "NHPP",
-          definition = function(model.class, t, data, nMCMC, proposal = c("lognormal", "normal")) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("lognormal", "normal")) {
 
     if(length(t) != length(data)){
       jumpTimes <- data
@@ -678,40 +673,8 @@ setMethod(f = "estimate", signature = "NHPP",
     start <- model.class@start
     n <- nMCMC
     Lambda <- model.class@Lambda
-    
-
     proposal <- match.arg(proposal)
-    
-    
-    priorRatio <- function(xi_drawn, xi_old) 1 # change ?
-    
-#             if(missing(Lambda)){
-#               int <- match.arg(int)
-#               if(int=="Weibull"){
-#                 Lambda <- function(t, xi){
-#                   (t/xi[2])^xi[1]
-#                 }
-#                 lambda <- function(t, xi){
-#                   xi[1]/xi[2]*(t/xi[2])^(xi[1]-1)
-#                 }
-#                 Lik <- function(xi){
-#                   lambda_vec <- lambda(jumpTimes, xi)
-#                   prod(lambda_vec)*exp(-Lambda(Tend, xi))
-#                 }
-#               }else{ # int == "Exp
-#                 Lambda <- function(t, xi){
-#                   xi[2]*exp(xi[1]*t)-xi[2]
-#                 }
-#                 lambda <- function(t, xi){
-#                   xi[1]*xi[2]*exp(xi[1]*t)
-#                 }
-#                 Lik <- function(xi){
-#                   lambda_vec <- lambda(jumpTimes, xi)
-#                   prod(lambda_vec)*exp(-Lambda(Tend, xi))
-#                 }
-#               }
-#               proposal <- "lognormal"
-#             }  
+    priorRatio <- model.class@priorRatio 
     
     lambda <- function(t, xi){
       h <- 1e-05
@@ -723,7 +686,7 @@ setMethod(f = "estimate", signature = "NHPP",
     }
     
     if(proposal == "lognormal"){
-      if(any(start < 0)) message("Attention: proposal density has positive support")
+      if(any(start < 0)) warning("Attention: proposal density has positive support")
       proposals <- list()
       proposals$draw <- function(xi_old, propSd){
         proposal(xi_old, propSd)
@@ -738,7 +701,7 @@ setMethod(f = "estimate", signature = "NHPP",
       }
       proposals$ratio <- function(xi_drawn, xi_old, propSd) 1
     }
-    propSd <- (abs(start)+0.1)/2
+    if(missing(propSd)) propSd <- (abs(start)+0.1)/2
     xi_old <- start
     xi_out <- matrix(0, length(start), n)
     LikOld <- Lik(xi_old)
@@ -758,7 +721,7 @@ setMethod(f = "estimate", signature = "NHPP",
       }
       xi_out[,count] <- xi_old
       
-      if (count%%50 == 0){
+      if (adapt && count%%50 == 0){
         propSd <- sapply(1:length(start), function(i){
           ad.propSd(xi_out[i, (count-50+1):count], propSd[i], count/50) })
       }
@@ -798,10 +761,24 @@ setMethod(f = "estimate", signature = "NHPP",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{(\phi, \theta, \gamma^2, \xi)}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #'
 #' @examples
+#' # non-informative
 #' model <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
 #'                parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)))
+#' t <- seq(0, 1, by = 0.01)
+#' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
+#' est <- estimate(model, t, data, 1000)
+#' plot(est)
+#' # informative
+#' model <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
+#'    parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)),
+#'    priorRatio = list(phi = function(new, old) dnorm(new, 0.05, 0.01)/dnorm(old, 0.05, 0.01),
+#'                theta = function(new, old) dgamma(1/new, 10, 0.1*9)/dgamma(1/old, 10, 0.1*9),
+#'              gamma2 = function(new, old) dgamma(1/new, 10, 0.1*9)/dgamma(1/old, 10, 0.1*9),
+#' xi = function(new, old) prod(dnorm(new, c(3, 1/4), c(1,1))/dnorm(new, c(3, 1/4), c(1,1)))))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(model, t, data, 1000)
@@ -812,7 +789,7 @@ setMethod(f = "estimate", signature = "NHPP",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "jumpDiffusion",
-          definition = function(model.class, t, data, nMCMC) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
             
     if(is.list(data)){  
       X <- data$Y
@@ -837,7 +814,6 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
     h <- model.class@h.fun  
     priorRatio <- model.class@priorRatio
 
-    propSd <- 0.5
     it.xi <- 5
     
     dX <- diff(X)
@@ -910,10 +886,17 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
     gamma2_out <- rep(0, n)
     xi_out <- matrix(0, n, length(xi))
     
-    propSd_phi <- propSd*start$phi*5
-    propSd_theta <- propSd/5*start$theta
-    propSd_gamma2 <- propSd*start$gamma2
-    propSd_xi <- propSd*(abs(start$xi)+0.1)
+    if(missing(propSd)){
+      propSd_phi <- start$phi
+      propSd_theta <- start$theta/5
+      propSd_gamma2 <- start$gamma2/5
+      propSd_xi <- (abs(start$xi)+0.1)/5
+    }else{
+      propSd_phi <- propSd[1]
+      propSd_theta <- propSd[2]
+      propSd_gamma2 <- propSd[3]
+      propSd_xi <- propSd[4:length(propSd)]
+    }
     
     for(count in 1:n){
       if(sample.N){
@@ -925,6 +908,7 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
         xi_drawn <- proposals$draw(xi, propSd_xi)
         ratio <- proposals$ratio(xi_drawn, xi, propSd_xi)
         ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
+        ratio <- ratio*priorRatio$xi(xi_drawn, xi)
         if(is.na(ratio)) ratio <- 0
         
         if(runif(1) <= ratio){
@@ -960,7 +944,7 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
         
       }
       
-      if (count%%50 == 0){
+      if (adapt && count%%50 == 0){
         propSd_phi <- ad.propSd(phi_out[(count-50+1):count], propSd_phi, count/50)
         propSd_theta <- ad.propSd(theta_out[(count-50+1):count], propSd_theta, count/50)
         propSd_gamma2 <- ad.propSd(gamma2_out[(count-50+1):count], propSd_gamma2, count/50)
@@ -998,6 +982,8 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{\xi}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #'
 #' @examples
 #' model <- set.to.class("Merton", parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = 10))
@@ -1011,7 +997,7 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "Merton",
-          definition = function(model.class, t, data, nMCMC) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
             
             
     if(is.list(data)){  
@@ -1033,9 +1019,8 @@ setMethod(f = "estimate", signature = "Merton",
       lambda_vec <- lambda(jumpTimes, xi)
       prod(lambda_vec)*exp(-Lambda(Tend, xi))
     }
-    
+    priorRatio <- model.class@priorRatio        
     it.xi <- 10
-    
     
     Delta <- diff(t)
     t.l <- t
@@ -1066,23 +1051,23 @@ setMethod(f = "estimate", signature = "Merton",
       T_1 <- solve(Th)
     }
     postPhi <- function(gamma2, thetaT, N){
-      Vpost <- 1/( t%*%T_1%*%t/gamma2 + 1/prior$s_phi )
-      mpost <- Vpost*( prior$mu_phi/prior$s_phi + 1/gamma2*t%*%T_1%*%(logX - logx0 + gamma2*t/2 - thetaT*N) )
+      Vpost <- 1/( t%*%T_1%*%t/gamma2 + 1/prior$v.phi )
+      mpost <- Vpost*( prior$m.phi/prior$v.phi + 1/gamma2*t%*%T_1%*%(logX - logx0 + gamma2*t/2 - thetaT*N) )
       
       rnorm(1, mpost, sqrt(Vpost))
     }
     postThetaT <- function(gamma2, phi, N){
-      Vpost <- 1/( N%*%T_1%*%N/gamma2 + 1/prior$s_th )
-      mpost <- Vpost*( prior$mu_th/prior$s_th + 1/gamma2*N%*%T_1%*%(logX - logx0 - phi*t + gamma2*t/2) )
+      Vpost <- 1/( N%*%T_1%*%N/gamma2 + 1/prior$v.thetaT )
+      mpost <- Vpost*( prior$m.thetaT/prior$v.thetaT + 1/gamma2*N%*%T_1%*%(logX - logx0 - phi*t + gamma2*t/2) )
       
       rnorm(1, mpost, sqrt(Vpost))
     }
     proposalGamma <- function(gamma2, phi, thetaT, N){
       lt <- length(t)
-      aPost <- prior$alpha+lt/2
+      aPost <- prior$alpha.gamma+lt/2
       
       u_X <- logx0 + (phi-gamma2/2)*t + thetaT*N
-      bPost <- prior$beta+(logX-u_X)%*%T_1%*%(logX-u_X)/2
+      bPost <- prior$beta.gamma+(logX-u_X)%*%T_1%*%(logX-u_X)/2
       1/rgamma(1, aPost, bPost)
     }
     RatioGamma <- function(gamma2, gamma2_drawn, phi, thetaT, N){
@@ -1096,7 +1081,7 @@ setMethod(f = "estimate", signature = "Merton",
     thetaT <- start$thetaT
     gamma2 <- start$gamma2
     xi <- start$xi
-    propSd_xi <- (abs(start$xi)+0.1)/10
+    if(missing(propSd)) propSd <- (abs(start$xi)+0.1)/10
     
     if(all(xi > 0)){
       proposals <- list()
@@ -1166,9 +1151,10 @@ setMethod(f = "estimate", signature = "Merton",
         if(count %% 1000 == 0) message(paste(count, "iterations are calculated"))
       }
       for(count2 in 1:it.xi){
-        xi_drawn <- proposals$draw(xi, propSd_xi)
-        ratio <- proposals$ratio(xi_drawn, xi, propSd_xi)
+        xi_drawn <- proposals$draw(xi, propSd)
+        ratio <- proposals$ratio(xi_drawn, xi, propSd)
         ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
+        ratio <- ratio*priorRatio(xi_drawn, xi)
         if(is.na(ratio)) ratio <- 0
         
         if(runif(1) <= ratio){
@@ -1192,11 +1178,10 @@ setMethod(f = "estimate", signature = "Merton",
         N_out[, count] <- N
       }
       
-      if (count%%50 == 0){
-        propSd_xi <- sapply(1:length(xi), function(i){
-          ad.propSd(xi_out[(count-50+1):count, i], propSd_xi[i], count/50) })
+      if (adapt && count%%50 == 0){
+        propSd <- sapply(1:length(xi), function(i){
+          ad.propSd(xi_out[(count-50+1):count, i], propSd[i], count/50) })
       }
-      
     }
 
     result <- list(phi = phi_out, gamma2 = gamma2_out, thetaT = thetaT_out, xi = xi_out)
@@ -1230,10 +1215,12 @@ setMethod(f = "estimate", signature = "Merton",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{(\theta, \xi)}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
-#' model <- set.to.class("reg_hiddenNHPP", fun = function(t, N, theta) exp(theta[1]*t) + theta[2]*N, 
+#' model <- set.to.class("jumpRegression", fun = function(t, N, theta) exp(theta[1]*t) + theta[2]*N, 
 #'                    parameter = list(theta = c(2, 2), gamma2 = 0.25, xi = c(3, 0.5)),
 #'                    Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' data <- simulate(model, t = t)
@@ -1245,8 +1232,8 @@ setMethod(f = "estimate", signature = "Merton",
 #' plot(est_hid)
 #' }
 #' @export
-setMethod(f = "estimate", signature = "reg_hiddenNHPP",
-          definition = function(model.class, t, data, nMCMC) {
+setMethod(f = "estimate", signature = "jumpRegression",
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
 
     
     if(is.list(data)){
@@ -1269,7 +1256,7 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
       lambda_vec <- lambda(jumpTimes, xi)
       prod(lambda_vec)*exp(-Lambda(Tend, xi))
     }
-    
+    sVar <- model.class@sT.fun
     
     lt <- length(t)
     # starting values
@@ -1386,17 +1373,22 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
     }else{
       sample.N <- FALSE
     }
-    propSd <- abs(prior$mu)/20
-    propSd_xi <- (abs(start$xi)+0.1)/10
     ltheta <- length(start$theta)
     it.xi <- 10
     
-    sVar <- function(t) 1   # generalize ?
+    if(missing(propSd)){
+      propSd_theta <- abs(prior$m.theta)/20
+      propSd_xi <- (abs(start$xi)+0.1)/10
+    }else{
+      propSd_theta <- propSd[1:ltheta]
+      propSd_xi <- propSd[(ltheta+1):length(propSd)]
+    }
+    
     
     postTheta <- function(N, gamma2, lastPhi, propSd){  
       phi_old <- lastPhi
       phi_drawn <- rnorm(ltheta, phi_old, propSd)
-      ratio <- prod(dnorm(phi_drawn, prior$mu, sqrt(prior$Omega)))/prod(dnorm(phi_old, prior$mu, sqrt(prior$Omega)))
+      ratio <- prod(dnorm(phi_drawn, prior$m.theta, sqrt(prior$v.theta)))/prod(dnorm(phi_old, prior$m.theta, sqrt(prior$v.theta)))
       ratio <- ratio* prod(dnorm(Y, fun(t, N, phi_drawn), sqrt(gamma2*sVar(t)))/dnorm(Y, fun(t, N, phi_old), sqrt(gamma2*sVar(t))))
       if(is.na(ratio)) ratio <- 0
       if(runif(1) < ratio){
@@ -1406,12 +1398,12 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
     }
     
     postGamma2 <- function(theta, N){
-      alphaPost <- prior$alpha + lt/2
-      betaPost <-  prior$beta + sum((Y-fun(t, N, theta))^2/sVar(t))/2
+      alphaPost <- prior$alpha.gamma + lt/2
+      betaPost <-  prior$beta.gamma + sum((Y-fun(t, N, theta))^2/sVar(t))/2
       1/rgamma(1, alphaPost, betaPost)
     }
     
-    theta_out <- matrix(0, n, length(theta))
+    theta_out <- matrix(0, n, ltheta)
     gamma2_out <- numeric(n)
     xi_out <- matrix(0, n, length(xi))
     
@@ -1433,7 +1425,7 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
         }
       }
       
-      theta <- postTheta(N, gamma2, theta, propSd)
+      theta <- postTheta(N, gamma2, theta, propSd_theta)
       
       gamma2 <- postGamma2(theta, N)
       
@@ -1444,10 +1436,11 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
       if(sample.N){
         N_out[, count] <- N
       }
-      if (count%%50 == 0){
-        propSd <- sapply(1:length(theta), function(i){
-          ad.propSd(theta_out[(count-50+1):count, i], propSd[i], count/50) })
-        #      print(propSd)
+      if (adapt && count%%50 == 0){
+        propSd <- sapply(1:ltheta, function(i){
+          ad.propSd(theta_out[(count-50+1):count, i], propSd_theta[i], count/50) })
+        propSd_xi <- sapply(1:length(xi), function(i){
+          ad.propSd(xi_out[(count-50+1):count, i], propSd_xi[i], count/50) })
       }
       
     }
@@ -1465,11 +1458,11 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
 
     
     if(is.list(data)){
-      result <- new(Class = "est.reg_hiddenNHPP", theta = result$theta, gamma2 = result$gamma2, xi = result$xi,
+      result <- new(Class = "est.jumpRegression", theta = result$theta, gamma2 = result$gamma2, xi = result$xi,
                     model = class.to.list(model.class), t = t, Y = data$Y, N = data$N, burnIn = burnIn, thinning = thinning)
 
     }else{
-      result <- new(Class = "est.reg_hiddenNHPP", theta = result$theta, gamma2 = result$gamma2,
+      result <- new(Class = "est.jumpRegression", theta = result$theta, gamma2 = result$gamma2,
                     xi = result$xi, N.est = N_out,
                     model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
     }
@@ -1486,6 +1479,8 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{\phi}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
@@ -1496,7 +1491,7 @@ setMethod(f = "estimate", signature = "reg_hiddenNHPP",
 #' plot(est)
 #' @export
 setMethod(f = "estimate", signature = "Regression",
-          definition = function(model.class, t, data, nMCMC) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
 
     y <- data
     prior <- model.class@prior
@@ -1506,14 +1501,14 @@ setMethod(f = "estimate", signature = "Regression",
     len <- nMCMC
     
     
-    propSd <- abs(prior$mu)/50
+    if(missing(propSd)) propSd <- abs(prior$m.phi)/50
     lt <- length(t)
     lphi <- length(start$phi)
     
-    postPhi <- function(lastPhi, gamma2){
+    postPhi <- function(lastPhi, gamma2, propSd){
       phi_old <- lastPhi
       phi_drawn <- rnorm(lphi, phi_old, propSd)
-      ratio <- dmvnorm(phi_drawn, prior$mu, as.matrix(prior$Omega)) / dmvnorm(phi_old, prior$mu, as.matrix(prior$Omega))
+      ratio <- prod(dnorm(phi_drawn, prior$m.phi, sqrt(prior$v.phi)) / dnorm(phi_old, prior$m.phi, sqrt(prior$v.phi)))
       ratio <- ratio* prod(dnorm(y, fODE(phi_drawn, t), sqrt(gamma2*sVar(t)))/dnorm(y, fODE(phi_old, t), sqrt(gamma2*sVar(t))))
       if(is.na(ratio)) ratio <- 0
       if(runif(1) < ratio){
@@ -1523,12 +1518,12 @@ setMethod(f = "estimate", signature = "Regression",
     }
     
     postGamma2 <- function(phi){
-      alphaPost <- prior$alpha + lt/2
-      betaPost <-  prior$beta + sum((y-fODE(phi, t))^2/sVar(t))/2
+      alphaPost <- prior$alpha.gamma + lt/2
+      betaPost <-  prior$beta.gamma + sum((y-fODE(phi, t))^2/sVar(t))/2
       1/rgamma(1, alphaPost, betaPost)
     }
     
-    phi_out <- matrix(0,len,length(prior$mu))
+    phi_out <- matrix(0, len, length(prior$m.phi))
     gamma2_out <- numeric(len)
     
     phi <- start$phi
@@ -1536,11 +1531,18 @@ setMethod(f = "estimate", signature = "Regression",
     
     for(count in 1:len){
       
-      phi <- postPhi(phi, gamma2)
+      phi <- postPhi(phi, gamma2, propSd)
       gamma2 <- postGamma2(phi)
       
       phi_out[count,] <- phi
       gamma2_out[count] <- gamma2
+      
+      if (adapt && count%%50 == 0){
+        propSd <- sapply(1:length(phi), function(i){
+          ad.propSd(phi_out[(count-50+1):count, i], propSd[i], count/50) })
+      }
+      
+      
     }
     result <- list(phi = phi_out, gamma2 = gamma2_out)
     
@@ -1567,6 +1569,8 @@ setMethod(f = "estimate", signature = "Regression",
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables
 #' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances for \eqn{\phi}
+#' @param adapt if TRUE (default), proposal variance is adapted
 #' @examples
 #' mu <- c(10, 5); Omega <- c(0.9, 0.01)
 #' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
@@ -1576,18 +1580,18 @@ setMethod(f = "estimate", signature = "Regression",
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' est <- estimate(model, t, data[1:20,], 1000)
-#' plot(est, reduced = FALSE)
+#' plot(est)
 #'
 #' @export
 setMethod(f = "estimate", signature = "mixedRegression",
-          definition = function(model.class, t, data, nMCMC) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
 
     prior <- model.class@prior
     start <- model.class@start
     fODE <- model.class@fun
     sVar <- model.class@sT.fun
     len <- nMCMC
-    propPar <- 0.2
+    if(missing(propSd)) propSd <- abs(start$mu)/5
     
     if(is.matrix(data)){
       if(nrow(data) == length(t)){
@@ -1611,12 +1615,11 @@ setMethod(f = "estimate", signature = "mixedRegression",
     postOm <- function(phi,mu){
       postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
     }
-    propSd <- abs(start$mu)*propPar
-    postPhii <- function(lastPhi, mu, Omega, gamma2, y, t){
+    postPhii <- function(lastPhi, mu, Omega, gamma2, y, t, propSd){
       lt <- length(t)
       phi_old <- lastPhi
       
-      phi_drawn <- rnorm(length(mu),phi_old,propSd)
+      phi_drawn <- rnorm(length(mu), phi_old, propSd)
       ratio <- prod(dnorm(phi_drawn, mu, sqrt(Omega))/dnorm(phi_old, mu, sqrt(Omega)))
       ratio <- ratio* prod(dnorm(y, fODE(phi_drawn,t), sqrt(gamma2*sVar(t)))/dnorm(y, fODE(phi_old,t), sqrt(gamma2*sVar(t))))
       if(is.na(ratio)){ratio <- 0}
@@ -1650,9 +1653,9 @@ setMethod(f = "estimate", signature = "mixedRegression",
     for(count in 1:len){
       
       for(i in 1:n){
-        phi[i,] <- postPhii(phi[i,], mu, Omega, gamma2, y[[i]], times[[i]])
+        phi[i,] <- postPhii(phi[i,], mu, Omega, gamma2, y[[i]], times[[i]], propSd)
       }
-      mu <- postmu(phi, prior$m, prior$v, Omega)
+      mu <- postmu(phi, prior$m.mu, prior$v.mu, Omega)
       Omega <- postOm(phi, mu)
       gamma2 <- postGamma2(phi)
       
@@ -1660,6 +1663,12 @@ setMethod(f = "estimate", signature = "mixedRegression",
       mu_out[count,] <- mu
       Omega_out[count,] <- Omega
       gamma2_out[count] <- gamma2
+      
+      if (adapt && count%%50 == 0){
+        propSd <- sapply(1:length(phi[1,]), function(i){
+          ad.propSd(sapply(phi_out[(count-50+1):count], function(mat) mat[1,i]), propSd[i], count/50) })
+      }
+      
     }
     result <- list(phi = phi_out, mu = mu_out, Omega = Omega_out, gamma2 = gamma2_out)
 

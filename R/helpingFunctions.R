@@ -1,5 +1,5 @@
-
-
+#'
+#'
 #' Transformation of vector of event times to counting process
 #'
 #' @description Transformation of vector of event times to counting process.
@@ -151,11 +151,11 @@ scoreRule <- function(l, u, x, alpha = 0.05){
 #'
 #' @return vector of samples
 #' @examples
-#' test <- BinSearch(function(x) pnorm(x, 5, 1), 1000, candArea = c(0, 10), method = "free")
+#' test <- InvMethod(function(x) pnorm(x, 5, 1), 1000, candArea = c(0, 10), method = "free")
 #' plot(density(test))
 #' curve(dnorm(x, 5, 1), col = 2, add = TRUE)
 #' @export
-BinSearch <- function(Fun, len, candArea, grid = 1e-05, method = c("vector", "free")){
+InvMethod <- function(Fun, len, candArea, grid = 1e-05, method = c("vector", "free")){
   method <- match.arg(method)
   if(missing(candArea)){
     candArea <- findCandidateArea(Fun)
@@ -204,8 +204,10 @@ BinSearch <- function(Fun, len, candArea, grid = 1e-05, method = c("vector", "fr
 #'
 #' @return vector of samples
 #' @examples
-#' plot(density(RejSampling(Fun = function(x) pnorm(x, 5, 1), dens = function(x) dnorm(x, 5, 1), len = 500, cand = seq(2, 9, by = 0.001), method = "free")))
-#' lines(density(RejSampling(function(x) pnorm(x, 5, 1), function(x) dnorm(x, 5, 1), 500, cand = seq(2, 9, by = 0.001), method = "vector")), col=2)
+#' plot(density(RejSampling(Fun = function(x) pnorm(x, 5, 1), dens = function(x) dnorm(x, 5, 1), 
+#'    len = 500, cand = seq(2, 9, by = 0.001), method = "free")))
+#' lines(density(RejSampling(function(x) pnorm(x, 5, 1), function(x) dnorm(x, 5, 1), 500, 
+#'       cand = seq(2, 9, by = 0.001), method = "vector")), col=2)
 #' curve(dnorm(x, 5, 1), from = 2, to = 8, add = TRUE, col = 3)
 #' @export
 RejSampling <- function(Fun, dens, len, cand, grid = 1e-03, method = c("vector", "free")){  # for negative support?!?
@@ -359,3 +361,5 @@ out <- function(x){
   names(res) <- sN
   res
 }
+
+

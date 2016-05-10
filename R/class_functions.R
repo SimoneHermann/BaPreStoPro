@@ -16,12 +16,13 @@
 #' @return class
 #' @examples
 #' set.to.class("jumpDiffusion")
-#' cl_jd <- set.to.class("jumpDiffusion", parameter = list(theta = 0.1, phi = 0.01, gamma2 = 0.1, xi = 3))
+#' cl_jd <- set.to.class("jumpDiffusion", 
+#'              parameter = list(theta = 0.1, phi = 0.01, gamma2 = 0.1, xi = 3))
 #' summary(class.to.list(cl_jd))
 #'
 
 #' @export
-set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion", "reg_hiddenNHPP", "NHPP", "Regression", "mixedRegression"),
+set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion", "jumpRegression", "NHPP", "Regression", "mixedRegression"),
                          parameter, prior, start, b.fun, s.fun, h.fun, sT.fun, y0.fun, fun, Lambda, priorRatio){
   class.name <- match.arg(class.name)
 
@@ -42,10 +43,10 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
   if(missing(y0.fun)) y0.fun <- function(phi, t) 1
   if(missing(fun)){
     if(class.name %in% c("Regression", "mixedRegression")) fun1 <- function(phi, t) phi
-    if(class.name == "reg_hiddenNHPP") fun2 <- function(t, N, theta) theta
+    if(class.name == "jumpRegression") fun2 <- function(t, N, theta) theta
   }else{
     if(class.name %in% c("Regression", "mixedRegression")) fun1 <- fun
-    if(class.name == "reg_hiddenNHPP") fun2 <- fun
+    if(class.name == "jumpRegression") fun2 <- fun
   }
 
   if(missing(Lambda)) Lambda <- function(t, xi) xi*t
@@ -56,15 +57,17 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
       priorRatio <- list(
         phi = function(phi_drawn, phi_old) 1,
         theta = function(theta_drawn, theta_old) 1,
-        gamma2 = function(gamma2_drawn, gamma2_old) 1 )
+        gamma2 = function(gamma2_drawn, gamma2_old) 1,
+        xi = function(xi_drawn, xi_old) 1)
     }
     return(new(Class = class.name, theta = parameter$theta, phi = parameter$phi, gamma2 = parameter$gamma2, xi = parameter$xi,
                b.fun = b.fun, s.fun = s.fun, h.fun = h.fun, Lambda = Lambda, priorRatio = priorRatio,
                prior = prior, start = start))
   }
   if(class.name == "Merton"){
+    if(missing(priorRatio)) priorRatio <- function(xi_drawn, xi_old) 1
     return(new(Class = class.name, thetaT = parameter$thetaT, phi = parameter$phi, gamma2 = parameter$gamma2, xi = parameter$xi,
-               Lambda = Lambda, prior = prior, start = start))
+               Lambda = Lambda, prior = prior, start = start, priorRatio = priorRatio))
   }
   if(class.name == "Diffusion"){
     return(new(Class = class.name, phi = parameter$phi, gamma2 = parameter$gamma2,
@@ -86,12 +89,13 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
                  sigma2 = parameter$sigma2, b.fun = b.fun, sT.fun = sT.fun, y0.fun = y0.fun,
                  prior = prior, start = start))
   }
-  if(class.name == "reg_hiddenNHPP"){
+  if(class.name == "jumpRegression"){
     return(new(Class = class.name, theta = parameter$theta, gamma2 = parameter$gamma2, xi = parameter$xi, fun = fun2, Lambda = Lambda,
-               prior = prior, start = start))
+               sT.fun = sT.fun, prior = prior, start = start))
   }
   if(class.name == "NHPP"){
-    return(new(Class = class.name, xi = parameter$xi, Lambda = Lambda, start = parameter$xi))
+    if(missing(priorRatio)) priorRatio <- function(xi_drawn, xi_old) 1
+    return(new(Class = class.name, xi = parameter$xi, Lambda = Lambda, start = parameter$xi, priorRatio = priorRatio))
   }
   if(class.name == "Regression"){
     return(new(Class = class.name, phi = parameter$phi, gamma2 = parameter$gamma2,
@@ -106,7 +110,7 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
 
 }
 
-defaults <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion", "reg_hiddenNHPP", "NHPP", "Regression", "mixedRegression")){
+defaults <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion", "jumpRegression", "NHPP", "Regression", "mixedRegression")){
 
   class.name <- match.arg(class.name)
   if(class.name == "jumpDiffusion"){
@@ -127,7 +131,7 @@ defaults <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mix
   if(class.name == "hiddenmixedDiffusion"){
     name.vec <- c("phi", "mu", "Omega", "gamma2", "sigma2")
   }
-  if(class.name == "reg_hiddenNHPP"){
+  if(class.name == "jumpRegression"){
     name.vec <- c("theta", "gamma2", "xi")
   }
   if(class.name == "NHPP"){
