@@ -658,7 +658,7 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
   if(missing(par2plot)){
     if(style == "chains")  par2plot <- rep(TRUE, 3+2*p)
     if(style %in% c("acf", "density"))  par2plot <- rep(TRUE, 2+2*p)
-    
+    if(style == "int.phi") par2plot <- rep(TRUE, p)
   }
   if(missing(par.options)){
     if(sum(par2plot) == 1) par.options <- list(mfrow = c(1, 1))
