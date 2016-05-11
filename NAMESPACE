@@ -24,5 +24,3 @@ exportMethods(estimate)
 exportMethods(plot)
 exportMethods(predict)
 exportMethods(simulate)
-
-import(methods)

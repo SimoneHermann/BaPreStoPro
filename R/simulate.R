@@ -517,34 +517,34 @@ setMethod(f = "simulate", signature = "jumpRegression",
           definition = function(object, nsim = 1, seed = NULL, t, plot.series = TRUE) {
             set.seed(seed)
 
-            N <- simN(t, object@xi, len = nsim, Lambda = object@Lambda)$N
-            if(nsim > 1){
-              result <- apply(N, 2, function(Nt) object@fun(t, Nt, object@theta) + rnorm(length(t), 0, sqrt(object@gamma2*object@sT.fun(t))))
-            }else{
-              result <- object@fun(t, N, object@theta) + rnorm(length(t), 0, sqrt(object@gamma2*object@sT.fun(t)))
-            }
+    N <- simN(t, object@xi, len = nsim, Lambda = object@Lambda)$N
+    if(nsim > 1){
+      result <- apply(N, 2, function(Nt) object@fun(t, Nt, object@theta) + rnorm(length(t), 0, sqrt(object@gamma2*object@sT.fun(t))))
+    }else{
+      result <- object@fun(t, N, object@theta) + rnorm(length(t), 0, sqrt(object@gamma2*object@sT.fun(t)))
+    }
 
-            result <- list(N = N, Y = result)
+    result <- list(N = N, Y = result)
 
-            if(plot.series){
-              old.settings <- par(no.readonly = TRUE)
-              
-              if(nsim > 1){
-                par(mfrow = c(2,1))
-                plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
-                for(i in 2:nsim) lines(t, N[i,])
-                plot(t, result$Y[1,], type = "l", ylab = "Y", ylim = range(result$Y))
-                for(i in 1:nsim) lines(t, result$Y[i,])
-              }else{
-                par(mfrow = c(2,1))
-                plot(t, N, type = "l")
-                plot(t, result$Y, ylab = "Y")
-              }
-              par(old.settings)
-              
-            }
-            return(result)
-          })
+    if(plot.series){
+      old.settings <- par(no.readonly = TRUE)
+      
+      if(nsim > 1){
+        par(mfrow = c(2,1))
+        plot(t, N[1,], type = "l", ylab = "N", ylim = range(N))
+        for(i in 2:nsim) lines(t, N[i,])
+        plot(t, result$Y[1,], type = "l", ylab = "Y", ylim = range(result$Y))
+        for(i in 1:nsim) lines(t, result$Y[i,])
+      }else{
+        par(mfrow = c(2,1))
+        plot(t, N, type = "l")
+        plot(t, result$Y, ylab = "Y")
+      }
+      par(old.settings)
+      
+    }
+    return(result)
+})
 
 
 

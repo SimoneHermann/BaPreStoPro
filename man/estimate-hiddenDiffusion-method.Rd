@@ -3,7 +3,7 @@
 \docType{methods}
 \name{estimate,hiddenDiffusion-method}
 \alias{estimate,hiddenDiffusion-method}
-\title{Estimation for noisy / hidden diffusion process}
+\title{Estimation for hidden diffusion process}
 \usage{
 \S4method{estimate}{hiddenDiffusion}(model.class, t, data, nMCMC, propSd,
   adapt = TRUE, Npart = 100)

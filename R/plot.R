@@ -121,7 +121,7 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
     }
   }
 
-  par(old.settings)
+  par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 
@@ -248,7 +248,7 @@ setMethod(f = "plot", signature = "est.Merton",
       }
     }
     
-    par(old.settings)
+    par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 
@@ -343,7 +343,7 @@ setMethod(f = "plot", signature = "est.Diffusion",
     }
   }
 
-  par(old.settings)
+  par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 #' Plot method for the Bayesian estimation class object
@@ -476,7 +476,7 @@ setMethod(f = "plot", signature = "est.mixedDiffusion",
     
   }
   
-  par(old.settings)
+  par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 #' Plot method for the Bayesian estimation class object
@@ -590,7 +590,7 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
     }
   }
 
-  par(old.settings)
+  par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 #' Plot method for the Bayesian estimation class object
@@ -747,7 +747,7 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
   }
   
 
-  par(old.settings)
+  par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 #' Plot method for the Bayesian estimation class object
@@ -873,7 +873,7 @@ setMethod(f = "plot", signature = "est.jumpRegression",
 
   }
 
-  par(old.settings)
+  par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 #' Plot method for the Bayesian estimation class object
@@ -961,7 +961,7 @@ setMethod(f = "plot", signature = "est.NHPP",
     }
   }
   
-  par(old.settings)
+  par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 #' Plot method for the Bayesian estimation class object
@@ -1055,7 +1055,7 @@ setMethod(f = "plot", signature = "est.Regression",
       }
     }
     
-    par(old.settings)
+    par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 
@@ -1189,7 +1189,7 @@ setMethod(f = "plot", signature = "est.mixedRegression",
       
     }
     
-    par(old.settings)
+    par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
 
