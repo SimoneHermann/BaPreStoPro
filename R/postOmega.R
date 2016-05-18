@@ -19,15 +19,8 @@ postOmega <- function(alpha, beta, phi, mu){  # length(alpha)=length(beta)=lengt
   Dia
 }
 
-#' Posterior
-#'
-#' @description Posterior for parameters \eqn{\Omega}
-#' @param R prior matrix of wishart distribution
-#' @param phi matrix of random effects
-#' @param mu mean of random effects
-#' @return one sample of posterior
 
-postOmega_matrix <- function(R, phi, mu){
-  Rpost <- solve(R + (t(phi)-as.vector(mu))%*%t((t(phi)-as.vector(mu))))
-  solve( rWishart(1,nrow(phi)+length(mu)+1,Rpost)[,,1])
-}
+# postOmega_matrix <- function(R, phi, mu){
+#   Rpost <- solve(R + (t(phi)-as.vector(mu))%*%t((t(phi)-as.vector(mu))))
+#   solve( rWishart(1,nrow(phi)+length(mu)+1,Rpost)[,,1])
+# }

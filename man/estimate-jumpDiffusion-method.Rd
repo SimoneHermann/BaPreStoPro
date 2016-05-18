@@ -27,7 +27,7 @@
 }
 \description{
 Bayesian estimation of a stochastic process
-  \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\eta,t,Y_t)dN_t}.
+  \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t}.
 }
 \section{Description}{
 

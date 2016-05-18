@@ -5,13 +5,31 @@
 \alias{jumpDiffusion-class}
 \title{S4 class for the jump diffusion process}
 \description{
-S4 class for the jump diffusion process
+Informations of model
+\eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t} with
+\eqn{N_t\sim Pois(\Lambda(t, \xi))}.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{theta}}{}
+\item{\code{theta}}{parameter \eqn{\theta}}
 
-\item{\code{phi}}{...}
+\item{\code{phi}}{parameter \eqn{\phi}}
+
+\item{\code{gamma2}}{parameter \eqn{\gamma^2}}
+
+\item{\code{xi}}{parameter \eqn{\xi}}
+
+\item{\code{b.fun}}{function \eqn{b(\phi,t,Y_t)}}
+
+\item{\code{s.fun}}{function \eqn{s(\gamma^2,t,Y_t)}}
+
+\item{\code{h.fun}}{function \eqn{b(\theta,t,Y_t)}}
+
+\item{\code{Lambda}}{function \eqn{\Lambda(t,\xi)}}
+
+\item{\code{priorRatio}}{list of prior ratio functions}
+
+\item{\code{start}}{list of starting values for the Metropolis within Gibbs sampler}
 }}
 

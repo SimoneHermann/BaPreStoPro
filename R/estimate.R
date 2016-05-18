@@ -850,7 +850,7 @@ setMethod(f = "estimate", signature = "NHPP",
 #' Estimation for jump diffusion process
 #'
 #' @description Bayesian estimation of a stochastic process
-#'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\eta,t,Y_t)dN_t}.
+#'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t}.
 #' @param model.class class of the respective model including all required information, see function set.to.class
 #' @param t vector of time points
 #' @param data vector or list or matrix of observation variables

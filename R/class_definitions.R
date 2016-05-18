@@ -1,8 +1,20 @@
 
 
 #' S4 class for the jump diffusion process
-#' @slot theta
-#' @slot phi ...
+#' @description Informations of model 
+#' \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t} with 
+#' \eqn{N_t\sim Pois(\Lambda(t, \xi))}.
+#' @slot theta parameter \eqn{\theta}
+#' @slot phi parameter \eqn{\phi}
+#' @slot gamma2 parameter \eqn{\gamma^2}
+#' @slot xi parameter \eqn{\xi}
+#' @slot b.fun function \eqn{b(\phi,t,Y_t)}
+#' @slot s.fun function \eqn{s(\gamma^2,t,Y_t)}
+#' @slot h.fun function \eqn{b(\theta,t,Y_t)}
+#' @slot Lambda function \eqn{\Lambda(t,\xi)}
+#' @slot priorRatio list of prior ratio functions
+#' @slot start list of starting values for the Metropolis within Gibbs sampler
+#' 
 
 setClass(Class = "jumpDiffusion", representation = representation(theta = "numeric", phi = "numeric", gamma2 = "numeric", xi = "numeric",
                                                                   b.fun = "function", s.fun = "function", h.fun = "function",

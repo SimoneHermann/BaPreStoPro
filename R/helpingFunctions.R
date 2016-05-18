@@ -313,16 +313,4 @@ diagnostic <- function(chain, dependence = 0.8, m = 10) {
 }
 
 
-#' Transfers the class object to a list
-#' 
-#' @description Method for the S4 classes
-#' @param x  class object
-#' @export
-out <- function(x){
-  sN <- slotNames(x)
-  res <- lapply(sN, function(name) slot(x, name))
-  names(res) <- sN
-  res
-}
-
 
