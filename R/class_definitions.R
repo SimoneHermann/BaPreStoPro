@@ -6,8 +6,7 @@
 
 setClass(Class = "jumpDiffusion", representation = representation(theta = "numeric", phi = "numeric", gamma2 = "numeric", xi = "numeric",
                                                                   b.fun = "function", s.fun = "function", h.fun = "function",
-                                                                  Lambda = "function", priorRatio = "list",
-                                                                  prior = "list", start = "list"))
+                                                                  Lambda = "function", priorRatio = "list", start = "list"))
 
 setClass(Class = "Merton", representation = representation(thetaT = "numeric", phi = "numeric", gamma2 = "numeric", xi = "numeric",
                                                            Lambda = "function", prior = "list", start = "list", priorRatio = "function"))

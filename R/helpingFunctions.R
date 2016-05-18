@@ -88,43 +88,6 @@ proposalRatio <- function(parOld, parNew, propSd){
   prod(dlnorm(parOld, muNew, sqrt(sigma2New))/dlnorm(parNew, muOld, sqrt(sigma2Old)))
 }
 
-#' Plot function for credibility or prediction intervals
-#'
-#' @description Plots intervals.
-#' @param input list or matrix of samples from posterior or predictive distribution
-#' @param xlab a title for the x axis
-#' @param ylab a title for the y axis
-#' @param main an overall title for the plot
-#' @param l lower bound
-#' @param u upper bound
-#' @param color color of the lines to be drawn
-#'
-plotQuantiles <- function(input, xlab = "", ylab = "", main = "", l = 0.025, u = 0.975, color = 1){
-  if(is.list(input)){
-    qu1 <- sapply(input, quantile, l)
-    qu2 <- sapply(input, quantile, u)
-    me <- sapply(input, median)
-  }else{
-    if(is.matrix(input)){
-      qu1 <- apply(input, 2, quantile, l)
-      qu2 <- apply(input, 2, quantile, u)
-      me <- apply(input, 2, median)
-    }else{print("input has to be a list or a matrix")}
-  }
-  len <- length(me)
-  ra <- range(c(qu1, qu2))
-  if(any(qu2[1:20] > (ra[2]-(ra[2]-ra[1])*0.1))){
-    yplot <- ra + c(0, (ra[2]-ra[1])*0.1)
-  }else{
-    yplot <- ra
-  }
-  plot(me, pch = 20, ylim = yplot, xlab = xlab, ylab = ylab, main = main)
-  segments(1:len, qu1, 1:len, qu2, col = color)
-  segments(1:len-len/200, qu1, 1:len+len/200, qu1, col = color)
-  segments(1:len-len/200, qu2, 1:len+len/200, qu2, col = color)
-  legend("topleft", "median", pch = 20, inset = 0.01, box.lty = 0)
-}
-
 #' Calculation of interval score
 #'
 #' @description Scoring rule of Raftery and Gneiting (??).

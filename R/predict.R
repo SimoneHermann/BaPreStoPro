@@ -51,7 +51,15 @@ setMethod(f = "predict", signature = "est.Diffusion",
                                 sampling.alg = c("InvMethod", "RejSamp"), sample.length, grid, plot.prediction = TRUE) {
 
   pred.alg <- match.arg(pred.alg)
-  method <- match.arg(method)
+  if(missing(method)){
+    if(pred.alg == "Trajectory"){
+      method <- "free"
+    } else {
+      method <- "vector"
+    }
+  }
+  
+#  method <- match.arg(method)
   sampling.alg <- match.arg(sampling.alg)
   which.series <- match.arg(which.series)
 
@@ -169,7 +177,6 @@ setMethod(f = "predict", signature = "est.Diffusion",
     }
   
   if(pred.alg == "Trajectory"){
-    
     
     if(Euler.interval){
       result <- matrix(0, 2, n-1)
@@ -2685,7 +2692,7 @@ pred.base <- function(samples, VFun, dens, len = 100, x0, method = c("vector", "
     if(method == "free" & length(candArea) > 2) candArea <- c(min(candArea), max(candArea))
   }
 
-  if(method == "vector" & pred.alg == "Trajectory") message("does not make much sense")
+  if(method == "vector" & pred.alg == "Trajectory") message("would be faster with method = free")
 
 
   if(pred.alg == "Distribution"){

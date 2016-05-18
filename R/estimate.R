@@ -20,6 +20,7 @@ setGeneric("estimate", function(model.class, ...) {
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
+#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
 #'
 #' @examples
 #' model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))
@@ -28,10 +29,16 @@ setGeneric("estimate", function(model.class, ...) {
 #' est_diff <- estimate(model, t, data, 1000)
 #' plot(est_diff)
 #' 
+#' @references 
+#' Hermann, S., K. Ickstadt and C. H. Mueller (2016). 
+#' Bayesian Prediction of Crack Growth Based on a Hierarchical Diffusion Model. 
+#' Applied Stochastic Models in Business and Industry, DOI: 10.1002/asmb.2175.
+#' 
 #' @export
 setMethod(f = "estimate", signature = "Diffusion",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE){
-
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")){
+    proposal <- match.arg(proposal)
+            
     X <- data
     prior <- model.class@prior
     start <- model.class@start
@@ -43,12 +50,29 @@ setMethod(f = "estimate", signature = "Diffusion",
     lt <- length(t)
     dt <- t[-1] - t[-lt]
     lphi <- length(propSd)
+    if(proposal == "lognormal"){
+      if(any(start$phi < 0)) warning("Attention: proposal density has positive support")
+      proposals <- list()
+      proposals$draw <- function(old, propSd){
+        proposal(old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd){
+        proposalRatio(old, drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(old, propSd){ 
+        rnorm(length(old), old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd) 1
+    }
     
     postPhi <- function(lastPhi, gamma2, propSd){
       phi_old <- lastPhi
-      phi_drawn <- phi_old + rnorm(lphi, 0, propSd)
+      phi_drawn <- proposals$draw(phi_old, propSd)
       ratio <- prod(dnorm(phi_drawn, prior$m.phi, sqrt(prior$v.phi)) / dnorm(phi_old, prior$m.phi, sqrt(prior$v.phi)))
       ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
+      ratio <- ratio* proposals$ratio(phi_drawn, phi_old, propSd)
       if(is.na(ratio)){ratio <- 0}
       if(runif(1) < ratio){
         phi_old <- phi_drawn
@@ -110,6 +134,7 @@ setMethod(f = "estimate", signature = "Diffusion",
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
+#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
 #' model <- set.to.class("mixedDiffusion", 
@@ -140,11 +165,16 @@ setMethod(f = "estimate", signature = "Diffusion",
 #' est <- estimate(model, t.list, data.list, 100)
 #' pred <- predict(est, t = t[50:101], which.series = "current", ind.pred = 21, 
 #'    b.fun.mat = function(phi, t, y) phi[,1]-phi[,2]*y)
+#' @references 
+#' Hermann, S., K. Ickstadt and C. H. Mueller (2016). 
+#' Bayesian Prediction of Crack Growth Based on a Hierarchical Diffusion Model. 
+#' Applied Stochastic Models in Business and Industry, DOI: 10.1002/asmb.2175.
 #' @export
 setMethod(f = "estimate", signature = "mixedDiffusion",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
 
 
+    proposal <- match.arg(proposal)
     prior <- model.class@prior
     start <- model.class@start
     y0.fun <- model.class@y0.fun
@@ -174,13 +204,31 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
     postOm <- function(phi, mu){
       postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
     }
+    if(proposal == "lognormal"){
+      if(any(start$phi < 0)) warning("Attention: proposal density has positive support")
+      proposals <- list()
+      proposals$draw <- function(old, propSd){
+        proposal(old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd){
+        proposalRatio(old, drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(old, propSd){ 
+        rnorm(length(old), old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd) 1
+    }
+    
     postPhii_old <- function(lastPhi, mu, Omega, gamma2, X, t, propSd){  # constant y0
       lt <- length(t)
       dt <- diff(t)
       phi_old <- lastPhi
-      phi_drawn <- phi_old + rnorm(length(mu), 0, propSd)
+      phi_drawn <- proposals$draw(phi_old, propSd) 
       ratio <- prod(dnorm(phi_drawn, mu, sqrt(Omega)) / dnorm(phi_old, mu, sqrt(Omega)) )
       ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
+      ratio <- ratio* proposals$ratio(phi_drawn, phi_old, propSd)
       if(is.na(ratio)) ratio <- 0
       if(runif(1) <= ratio){
         phi_old <- phi_drawn
@@ -293,7 +341,11 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
 #' @param Npart number of particles in the particle Gibbs sampler
+#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
 #'
+#' @references 
+#' Andrieu, C., A. Doucet and R. Holenstein (2010). Particle Markov Chain Monte Carlo Methods. 
+#' Journal of the Royal Statistical Society B 72, pp. 269-342.
 #' @examples
 #' model <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5, 
 #'              parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
@@ -314,8 +366,9 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "hiddenDiffusion",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100) {
-
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal")) {
+    proposal <- match.arg(proposal)
+            
     y <- data
     prior <- model.class@prior
     start <- model.class@start
@@ -355,7 +408,23 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
     prior_phi <- function(phi, k){
       dnorm(phi[k], prior$m.phi[k], sqrt(prior$v.phi[k]))
     }
-
+    if(proposal == "lognormal"){
+      if(any(start$phi < 0)) warning("Attention: proposal density has positive support")
+      proposals <- list()
+      proposals$draw <- function(old, propSd){
+        proposal(old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd){
+        proposalRatio(old, drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(old, propSd){ 
+        rnorm(length(old), old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd) 1
+    }
+    
     estPhi_and_X <- function(X, lastPhi, gamma2, sigma2, B_fixed, propSd){
       likeli <- function(phi,X){
         prod(dnorm(X[-1],X[-lt]+b.fun(phi, t[-lt], X[-lt])*diff(t), sqrt(gamma2*diff(t))*sigmaTilde(t[-lt],X[-lt])))
@@ -365,8 +434,9 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
       phi <- lastPhi
       for(k in 1:lphi){
         for(count in 1:maxIt){
-          phi[k] <- phi_out[k] + rnorm(1, 0, propSd[k])
+          phi[k] <- proposals$draw(phi_out[k], propSd[k])
           ratio <- prior_phi(phi, k)/prior_phi(phi_out, k)
+          ratio <- ratio * proposals$ratio(phi[k], phi_out[k], propSd[k])
           ratio <- ratio*likeli(phi, X)/likeli(phi_out, X)
           ratio <- ratio*dnorm(y[1], y0.fun(phi, t[1]), sqrt(sigma2))/dnorm(y[1], y0.fun(phi_out,t[1]), sqrt(sigma2))
           if(is.na(ratio)) ratio <- 0
@@ -443,7 +513,10 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
 #' @param Npart number of particles in the particle Gibbs sampler
-#'
+#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
+#' @references 
+#' Andrieu, C., A. Doucet and R. Holenstein (2010). Particle Markov Chain Monte Carlo Methods. 
+#' Journal of the Royal Statistical Society B 72, pp. 269-342.
 #' @examples
 #' mu <- c(5, 1); Omega <- c(0.9, 0.04)
 #' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
@@ -459,9 +532,9 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal")) {
 
-
+    proposal <- match.arg(proposal)
     if(is.matrix(data)){
       if(nrow(data) == length(t)){
         y <- t(data)
@@ -490,6 +563,22 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
     maxIt <- 1    # input parameter ?
 
     if(missing(propSd)) propSd <- abs(start$mu)/5
+    if(proposal == "lognormal"){
+      if(any(start$phi < 0)) warning("Attention: proposal density has positive support")
+      proposals <- list()
+      proposals$draw <- function(old, propSd){
+        proposal(old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd){
+        proposalRatio(old, drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(old, propSd){ 
+        rnorm(length(old), old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd) 1
+    }
     
     lphi <- length(start$mu)
     n <- length(y)
@@ -526,8 +615,9 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
       phi <- lastPhi
       for(k in 1:lphi){
         for(count in 1:maxIt){
-          phi[k] <- phi_out[k] + rnorm(1, 0, propSd[k])
+          phi[k] <- proposals$draw(phi_out[k], propSd[k])
           ratio <- dnorm(phi[k], mu[k], sqrt(Omega[k]))/dnorm(phi_out[k], mu[k], sqrt(Omega[k]))
+          ratio <- ratio * proposals$ratio(phi[k], phi_out[k], propSd[k])
           ratio <- ratio*likeli(phi, X)/likeli(phi_out, X)
           ratio <- ratio*dnorm(y[1], y0.fun(phi, t[1]), sqrt(sigma2))/dnorm(y[1], y0.fun(phi_out, t[1]), sqrt(sigma2))
           if(is.na(ratio)) ratio <- 0
@@ -646,6 +736,10 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 #' @param propSd vector of proposal variances for \eqn{\xi}
 #' @param adapt if TRUE (default), proposal variance is adapted
 #' @param proposal "lognormal" (for positive parameters, default) or "normal"
+#' @references 
+#' Hermann, S., K. Ickstadt and C. H. Mueller (2016). 
+#' Bayesian Prediction for a Jump Diffusion Process with Application to Crack Growth in Fatigue Experiments.
+#' SFB 823 discussion paper 30/15.
 #' @examples
 #' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), 
 #'                    Lambda = function(t, xi) (t/xi[2])^xi[1])
@@ -763,7 +857,12 @@ setMethod(f = "estimate", signature = "NHPP",
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{(\phi, \theta, \gamma^2, \xi)}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#'
+#' @param proposal proposal density for phi, theta "normal" (default) or "lognormal" (for positive parameters)
+#' @param it.xi number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})
+#' @section Description:
+#' There are several possibilities to choose the proposal densities. For \eqn{\gamma^2}, always the lognormal density is taken, since the parameter is always positive.
+#' For \eqn{\theta} and \eqn{\phi}, there is the possibility to choose "normal" or "lognormal" (for both together). 
+#' The proposal density for \eqn{\xi} depends on the starting value of \eqn{\xi}. If all components are positive, the proposal density is lognormal, and normal otherwise.
 #' @examples
 #' # non-informative
 #' model <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
@@ -789,13 +888,14 @@ setMethod(f = "estimate", signature = "NHPP",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "jumpDiffusion",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
-            
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 5) {
+    proposal <- match.arg(proposal)
+
+    
     if(is.list(data)){  
       X <- data$Y
       N <- data$N
       jumpTimes <- dNtoTimes(diff(N), t[-1])
-      
     }else{
       X <- data
     }  
@@ -814,8 +914,6 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
     h <- model.class@h.fun  
     priorRatio <- model.class@priorRatio
 
-    it.xi <- 5
-    
     dX <- diff(X)
     dt <- diff(t)
     lt <- length(t)
@@ -825,20 +923,37 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
     gamma2 <- start$gamma2
     xi <- start$xi
     
-    if(all(xi > 0)){
+    if(proposal == "lognormal"){
+      if(any(start$phi < 0) | any(start$theta < 0)) warning("Attention: proposal density has positive support")
       proposals <- list()
-      proposals$draw <- function(xi_old, propSd){
+      proposals$draw <- function(old, propSd){
+        proposal(old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd){
+        proposalRatio(old, drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(old, propSd){ 
+        rnorm(length(old), old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd) 1
+    }
+    
+    if(all(xi > 0)){
+      proposals_xi <- list()
+      proposals_xi$draw <- function(xi_old, propSd){
         proposal(xi_old, propSd)
       }
-      proposals$ratio <- function(xi_drawn, xi_old, propSd){
+      proposals_xi$ratio <- function(xi_drawn, xi_old, propSd){
         proposalRatio(xi_old, xi_drawn, propSd)
       }
     } else {
-      proposals <- list()
-      proposals$draw <- function(xi_old, propSd){ 
+      proposals_xi <- list()
+      proposals_xi$draw <- function(xi_old, propSd){ 
         rnorm(length(xi_old), xi_old, propSd)
       }
-      proposals$ratio <- function(xi_drawn, xi_old, propSd) 1
+      proposals_xi$ratio <- function(xi_drawn, xi_old, propSd) 1
     }
     
     
@@ -905,8 +1020,8 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
         jumpTimes <- dNtoTimes(dN, t[-1])
       }
       for(count2 in 1:it.xi){
-        xi_drawn <- proposals$draw(xi, propSd_xi)
-        ratio <- proposals$ratio(xi_drawn, xi, propSd_xi)
+        xi_drawn <- proposals_xi$draw(xi, propSd_xi)
+        ratio <- proposals_xi$ratio(xi_drawn, xi, propSd_xi)
         ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
         ratio <- ratio*priorRatio$xi(xi_drawn, xi)
         if(is.na(ratio)) ratio <- 0
@@ -916,14 +1031,16 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
         }
       }
 
-      phi_drawn <- rnorm(1, phi, propSd_phi)
+      phi_drawn <- proposals$draw(phi, propSd_phi)
       ratio <- prod(likeli(phi_drawn, gamma2, theta, dN)/likeli(phi, gamma2, theta, dN))
       ratio <- ratio*priorRatio$phi(phi_drawn, phi)
+      ratio <- ratio*proposals$ratio(phi_drawn, phi, propSd_phi)
       phi[runif(1) <= ratio] <- phi_drawn
       
-      theta_drawn <- rnorm(1, theta, propSd_theta)
+      theta_drawn <- proposals$draw(theta, propSd_theta)
       ratio <- prod(likeli(phi, gamma2, theta_drawn, dN)/likeli(phi, gamma2, theta, dN))
       ratio <- ratio*priorRatio$theta(theta_drawn, theta)
+      ratio <- ratio*proposals$ratio(theta_drawn, theta, propSd_theta)
       theta[runif(1) <= ratio] <- theta_drawn
       
       gamma2_drawn <- proposal(gamma2, propSd_gamma2)
@@ -941,7 +1058,6 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
       if(sample.N){
         N_out[, count] <- N
         if(count %% 1000 == 0) message(paste(count, "iterations are calculated"))
-        
       }
       
       if (adapt && count%%50 == 0){
@@ -984,7 +1100,14 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\xi}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#'
+#' @param it.xi number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})
+#' @references 
+#' Hermann, S. and F. Ruggeri (2016). Modelling Wear Degradation in Cylinder Liners. 
+#' SFB 823 discussion paper 06/16.
+#' 
+#' Hermann, S., K. Ickstadt and C. H. Mueller (2016). 
+#' Bayesian Prediction for a Jump Diffusion Process with Application to Crack Growth in Fatigue Experiments.
+#' SFB 823 discussion paper 30/15.
 #' @examples
 #' model <- set.to.class("Merton", parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = 10))
 #' t <- seq(0, 1, by = 0.01)
@@ -997,14 +1120,12 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "Merton",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
-            
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, it.xi = 10) {
             
     if(is.list(data)){  
       X <- data$Y
       N <- data$N
       jumpTimes <- dNtoTimes(diff(N), t[-1])
-      
     }else{
       X <- data
     } 
@@ -1020,8 +1141,7 @@ setMethod(f = "estimate", signature = "Merton",
       prod(lambda_vec)*exp(-Lambda(Tend, xi))
     }
     priorRatio <- model.class@priorRatio        
-    it.xi <- 10
-    
+
     Delta <- diff(t)
     t.l <- t
     
@@ -1217,7 +1337,13 @@ setMethod(f = "estimate", signature = "Merton",
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{(\theta, \xi)}
 #' @param adapt if TRUE (default), proposal variance is adapted
+#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
+#' @param it.xi number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})
 #'
+#' @references 
+#' Heeke, G., S. Hermann, R. Maurer, K. Ickstadt, and C. H. Mueller (2015). 
+#' Stochastic Modeling and Statistical Analysis of Fatigue Tests on Prestressed Concrete Beams under Cyclic Loadings.
+#' SFB 823 discussion paper 25/15.
 #' @examples
 #' t <- seq(0,1, by = 0.01)
 #' model <- set.to.class("jumpRegression", fun = function(t, N, theta) exp(theta[1]*t) + theta[2]*N, 
@@ -1233,14 +1359,13 @@ setMethod(f = "estimate", signature = "Merton",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "jumpRegression",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 10) {
 
-    
+    proposal <- match.arg(proposal)
     if(is.list(data)){
       Y <- data$Y
       N <- data$N
       jumpTimes <- dNtoTimes(diff(N), t[-1])
-      
     }else{
       Y <- data
     }
@@ -1264,20 +1389,36 @@ setMethod(f = "estimate", signature = "jumpRegression",
     gamma2 <- start$gamma2
     xi <- start$xi
     
-    if(all(xi > 0)){
+    if(proposal == "lognormal"){
+      if(any(start$theta < 0)) warning("Attention: proposal density has positive support")
       proposals <- list()
-      proposals$draw <- function(xi_old, propSd){
+      proposals$draw <- function(old, propSd){
+        proposal(old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd){
+        proposalRatio(old, drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(old, propSd){ 
+        rnorm(length(old), old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd) 1
+    }
+    if(all(xi > 0)){
+      proposals_xi <- list()
+      proposals_xi$draw <- function(xi_old, propSd){
         proposal(xi_old, propSd)
       }
-      proposals$ratio <- function(xi_drawn, xi_old, propSd){
+      proposals_xi$ratio <- function(xi_drawn, xi_old, propSd){
         proposalRatio(xi_old, xi_drawn, propSd)
       }
     } else {
       proposals <- list()
-      proposals$draw <- function(xi_old, propSd){ 
+      proposals_xi$draw <- function(xi_old, propSd){ 
         rnorm(length(xi_old), xi_old, propSd)
       }
-      proposals$ratio <- function(xi_drawn, xi_old, propSd) 1
+      proposals_xi$ratio <- function(xi_drawn, xi_old, propSd) 1
     }
     
     if(is.numeric(data)){
@@ -1374,8 +1515,7 @@ setMethod(f = "estimate", signature = "jumpRegression",
       sample.N <- FALSE
     }
     ltheta <- length(start$theta)
-    it.xi <- 10
-    
+
     if(missing(propSd)){
       propSd_theta <- abs(prior$m.theta)/20
       propSd_xi <- (abs(start$xi)+0.1)/10
@@ -1387,9 +1527,10 @@ setMethod(f = "estimate", signature = "jumpRegression",
     
     postTheta <- function(N, gamma2, lastPhi, propSd){  
       phi_old <- lastPhi
-      phi_drawn <- rnorm(ltheta, phi_old, propSd)
+      phi_drawn <- proposals$draw(phi_old, propSd)
       ratio <- prod(dnorm(phi_drawn, prior$m.theta, sqrt(prior$v.theta)))/prod(dnorm(phi_old, prior$m.theta, sqrt(prior$v.theta)))
       ratio <- ratio* prod(dnorm(Y, fun(t, N, phi_drawn), sqrt(gamma2*sVar(t)))/dnorm(Y, fun(t, N, phi_old), sqrt(gamma2*sVar(t))))
+      ratio <- ratio * proposals$ratio(phi_drawn, phi_old, propSd)
       if(is.na(ratio)) ratio <- 0
       if(runif(1) < ratio){
         phi_old <- phi_drawn
@@ -1415,8 +1556,8 @@ setMethod(f = "estimate", signature = "jumpRegression",
         B_fixed <- he$B_fixed
       }
       for(count2 in 1:it.xi){
-        xi_drawn <- proposals$draw(xi, propSd_xi)
-        ratio <- proposals$ratio(xi_drawn, xi, propSd_xi)
+        xi_drawn <- proposals_xi$draw(xi, propSd_xi)
+        ratio <- proposals_xi$ratio(xi_drawn, xi, propSd_xi)
         ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
         if(is.na(ratio)) ratio <- 0
         
@@ -1481,7 +1622,12 @@ setMethod(f = "estimate", signature = "jumpRegression",
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
+#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
 #'
+#' @references 
+#' Hermann, S., K. Ickstadt, and C. H. Mueller (2016). 
+#' Bayesian Prediction of Crack Growth Based on a Hierarchical Diffusion Model. 
+#' Applied Stochastic Models in Business and Industry, DOI: 10.1002/asmb.2175.
 #' @examples
 #' t <- seq(0,1, by = 0.01)
 #' model <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2], 
@@ -1491,8 +1637,8 @@ setMethod(f = "estimate", signature = "jumpRegression",
 #' plot(est)
 #' @export
 setMethod(f = "estimate", signature = "Regression",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
-
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
+    proposal <- match.arg(proposal)
     y <- data
     prior <- model.class@prior
     start <- model.class@start
@@ -1505,11 +1651,28 @@ setMethod(f = "estimate", signature = "Regression",
     lt <- length(t)
     lphi <- length(start$phi)
     
+    if(proposal == "lognormal"){
+      if(any(start$phi < 0)) warning("Attention: proposal density has positive support")
+      proposals <- list()
+      proposals$draw <- function(old, propSd){
+        proposal(old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd){
+        proposalRatio(old, drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(old, propSd){ 
+        rnorm(length(old), old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd) 1
+    }
     postPhi <- function(lastPhi, gamma2, propSd){
       phi_old <- lastPhi
-      phi_drawn <- rnorm(lphi, phi_old, propSd)
+      phi_drawn <- proposals$draw(phi_old, propSd)
       ratio <- prod(dnorm(phi_drawn, prior$m.phi, sqrt(prior$v.phi)) / dnorm(phi_old, prior$m.phi, sqrt(prior$v.phi)))
       ratio <- ratio* prod(dnorm(y, fODE(phi_drawn, t), sqrt(gamma2*sVar(t)))/dnorm(y, fODE(phi_old, t), sqrt(gamma2*sVar(t))))
+      ratio <- ratio * proposals$ratio(phi_drawn, phi_old, propSd)
       if(is.na(ratio)) ratio <- 0
       if(runif(1) < ratio){
         phi_old <- phi_drawn
@@ -1571,6 +1734,11 @@ setMethod(f = "estimate", signature = "Regression",
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
+#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
+#' @references 
+#' Hermann, S., K. Ickstadt, and C. H. Mueller (2016). 
+#' Bayesian Prediction of Crack Growth Based on a Hierarchical Diffusion Model. 
+#' Applied Stochastic Models in Business and Industry, DOI: 10.1002/asmb.2175.
 #' @examples
 #' mu <- c(10, 5); Omega <- c(0.9, 0.01)
 #' phi <- cbind(rnorm(21, mu[1], sqrt(Omega[1])), rnorm(21, mu[2], sqrt(Omega[2])))
@@ -1584,8 +1752,8 @@ setMethod(f = "estimate", signature = "Regression",
 #'
 #' @export
 setMethod(f = "estimate", signature = "mixedRegression",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE) {
-
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
+    proposal <- match.arg(proposal)
     prior <- model.class@prior
     start <- model.class@start
     fODE <- model.class@fun
@@ -1615,15 +1783,32 @@ setMethod(f = "estimate", signature = "mixedRegression",
     postOm <- function(phi,mu){
       postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
     }
+    if(proposal == "lognormal"){
+      if(any(start$phi < 0)) warning("Attention: proposal density has positive support")
+      proposals <- list()
+      proposals$draw <- function(old, propSd){
+        proposal(old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd){
+        proposalRatio(old, drawn, propSd)
+      }
+    }else{
+      proposals <- list()
+      proposals$draw <- function(old, propSd){ 
+        rnorm(length(old), old, propSd)
+      }
+      proposals$ratio <- function(drawn, old, propSd) 1
+    }
     postPhii <- function(lastPhi, mu, Omega, gamma2, y, t, propSd){
       lt <- length(t)
       phi_old <- lastPhi
       
-      phi_drawn <- rnorm(length(mu), phi_old, propSd)
+      phi_drawn <- proposals$draw(phi_old, propSd)
       ratio <- prod(dnorm(phi_drawn, mu, sqrt(Omega))/dnorm(phi_old, mu, sqrt(Omega)))
       ratio <- ratio* prod(dnorm(y, fODE(phi_drawn,t), sqrt(gamma2*sVar(t)))/dnorm(y, fODE(phi_old,t), sqrt(gamma2*sVar(t))))
+      ratio <- ratio * proposals$ratio(phi_drawn, phi_old, propSd)
       if(is.na(ratio)){ratio <- 0}
-      if(runif(1)<ratio){
+      if(runif(1) < ratio){
         phi_old <- phi_drawn
       }
       phi_old

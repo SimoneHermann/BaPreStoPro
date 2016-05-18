@@ -1,6 +1,6 @@
-#' Builds classes
+#' Building of model classes
 #'
-#' @description Defines classes
+#' @description Defines the model class
 #' @param class.name name of model class
 #' @param parameter list of parameter values
 #' @param prior optional list of prior parameters
@@ -13,12 +13,27 @@
 #' @param fun regression function
 #' @param Lambda intensity rate of Poisson process
 #' @param priorRatio list of functions for prior ratios, only for jumpDiffusion, is missing: non-informative estimation
-#' @return class
+#' @section Description:
+#' \code{set.to.class} is the central function to define a model, which is a S4 class, where the \code{simulate} and the \code{estimate} methods build up.
+#' Main input parameter is \code{class.name}, which is one out of "jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion", "jumpRegression", "NHPP", "Regression" and "mixedRegression", which is the name of the class containing all information of the model.
+#' If you write \code{set.to.class(class.name)} without any further input parameter, the function tells you which entries the list \code{parameter} has to contain.
+#' This is the second cetral input parameter. If input parameter \code{start} is missing, it is set to \code{parameters}. 
+#' If input parameter \code{prior}, which is a list of prior parameters, is missing, they are calculated from \code{parameter} in that way, that prior mean and standard deviation is equal to the entries of \code{parameter}.
+#' Functions \code{b.fun, s.fun, h.fun} can be seen in the model definition of the jump diffusion \eqn{dY_t = b(\phi, t, Y_t)dt + s(\gamma^2, t, Y_t)dW_t + h(\theta, t, Y_t)dN_t}.
+#' In the case of a continuous diffusion, one out of "Diffusion", "mixedDiffusion", "hiddenDiffusion" or "hiddenmixedDiffusion", variance function \eqn{s(\gamma^2, t, y)} is restricted to the case \eqn{s(\gamma^2, t, y)=\gamma\widetilde{s}(t, y)}. \code{sT.fun} stands for \eqn{\widetilde{s}(t, y)}.
+#' In the case of a regression model, "Regression" or "mixedRegression", \code{sT.fun} means the variance function dependent on t of the regression error \eqn{\epsilon_i\sim N(0,\sigma^2\widetilde{s}(t)}.
+#' In both cases, default value is \code{sT.fun = function(t, y) 1}.
+#' \code{y0.fun} is for the models, where the starting value depends on the parameter phi, "mixedDiffusion", "hiddenDiffusion" or "hiddenmixedDiffusion". Default value is a constant function in 1.
+#' \code{fun} is the regression function for the models "Regression", "mixedRegression" and "jumpRegression". In the first two cases, this is \eqn{f(\phi, t)} and in the third \eqn{f(t, N, \theta)}.
+#' Function \code{Lambda} is the cumulative intensity function in the models including the non-homogeneous Poisson process.
+#' Input parameter \code{priorRatio} is for the model class "jumpDiffusion", where a list of functions for the prior specification can be included. Default is a non-informative approach.
+#' 
+#' @return model class
 #' @examples
 #' set.to.class("jumpDiffusion")
-#' cl_jd <- set.to.class("jumpDiffusion", 
+#' model <- set.to.class("jumpDiffusion", 
 #'              parameter = list(theta = 0.1, phi = 0.01, gamma2 = 0.1, xi = 3))
-#' summary(class.to.list(cl_jd))
+#' summary(class.to.list(model))
 #'
 
 #' @export
@@ -62,7 +77,7 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
     }
     return(new(Class = class.name, theta = parameter$theta, phi = parameter$phi, gamma2 = parameter$gamma2, xi = parameter$xi,
                b.fun = b.fun, s.fun = s.fun, h.fun = h.fun, Lambda = Lambda, priorRatio = priorRatio,
-               prior = prior, start = start))
+               start = start))
   }
   if(class.name == "Merton"){
     if(missing(priorRatio)) priorRatio <- function(xi_drawn, xi_old) 1
