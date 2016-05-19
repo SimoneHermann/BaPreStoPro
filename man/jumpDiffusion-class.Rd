@@ -20,11 +20,11 @@ Informations of model
 
 \item{\code{xi}}{parameter \eqn{\xi}}
 
-\item{\code{b.fun}}{function \eqn{b(\phi,t,Y_t)}}
+\item{\code{b.fun}}{function \eqn{b(\phi,t,y)}}
 
-\item{\code{s.fun}}{function \eqn{s(\gamma^2,t,Y_t)}}
+\item{\code{s.fun}}{function \eqn{s(\gamma^2,t,y)}}
 
-\item{\code{h.fun}}{function \eqn{b(\theta,t,Y_t)}}
+\item{\code{h.fun}}{function \eqn{b(\theta,t,y)}}
 
 \item{\code{Lambda}}{function \eqn{\Lambda(t,\xi)}}
 
@@ -32,4 +32,21 @@ Informations of model
 
 \item{\code{start}}{list of starting values for the Metropolis within Gibbs sampler}
 }}
+\examples{
+parameter <- list(phi = 0.01, theta = 0.1, gamma2 = 0.01, xi = c(2, 0.2))
+b.fun <- function(phi, t, y) phi * y
+s.fun <- function(gamma2, t, y) sqrt(gamma2) * y
+h.fun <- function(theta, t, y) theta * y
+Lambda <- function(t, xi) (t / xi[2])^xi[1]
+priorRatio <- list(
+phi = function(new, old) 1,
+theta = function(new, old) dnorm(new, 0.1, 0.001)/dnorm(old, 0.1, 0.001),
+gamma2 = function(new, old) dgamma(1/new, 3, 0.01*2)/dgamma(1/old, 3, 0.01*2),
+xi = function(new, old) prod(dgamma(new, c(2, 0.2), 1)/dgamma(old, c(2, 0.2), 1))
+)
+start <- parameter
+model <- set.to.class("jumpDiffusion", parameter, start = start,
+  b.fun = b.fun, s.fun = s.fun, h.fun = h.fun, Lambda = Lambda,
+  priorRatio = priorRatio)
+}
 

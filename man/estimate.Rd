@@ -4,10 +4,14 @@
 \alias{estimate}
 \title{Estimation}
 \usage{
-estimate(model.class, ...)
+estimate(model.class, t, data, ...)
 }
 \arguments{
 \item{model.class}{class}
+
+\item{t}{vector or list of time points}
+
+\item{data}{vector or list or matrix of observation variables}
 
 \item{...}{parameters dependent on the model class}
 }

@@ -25,7 +25,8 @@
 }
 \description{
 Bayesian estimation of the parameter of the regression model
-  \eqn{y_i = f(\phi_j, t_i) + \epsilon_i, \phi_j~N(\mu, \Omega)}.
+  \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j~N(\mu, \Omega),
+  \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
 }
 \examples{
 mu <- c(10, 5); Omega <- c(0.9, 0.01)
@@ -34,7 +35,7 @@ model <- set.to.class("mixedRegression",
                  parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1),
                  fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
 t <- seq(0, 1, by = 0.01)
-data <- simulate(model, t = t, plot.series = TRUE)
+data <- simulate(model, t = t, plot.series = FALSE)
 est <- estimate(model, t, data[1:20,], 1000)
 plot(est)
 }

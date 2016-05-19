@@ -31,6 +31,7 @@
 #' @return model class
 #' @examples
 #' set.to.class("jumpDiffusion")
+#' (names <- set.to.class("jumpDiffusion"))
 #' model <- set.to.class("jumpDiffusion", 
 #'              parameter = list(theta = 0.1, phi = 0.01, gamma2 = 0.1, xi = 3))
 #' summary(class.to.list(model))
@@ -40,12 +41,33 @@
 set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion", "jumpRegression", "NHPP", "Regression", "mixedRegression"),
                          parameter, prior, start, b.fun, s.fun, h.fun, sT.fun, y0.fun, fun, Lambda, priorRatio){
   class.name <- match.arg(class.name)
-
+  df <- defaults(class.name)
   if(missing(parameter)){
-    print("parameter has to be a list of ")
-    return(defaults(class.name))
+    message(paste("parameter has to be list of", toString(df)))
+    return(invisible(df))
   }
-
+  
+  Check <- ArgumentCheck::newArgCheck()
+  
+  if (!is.list(parameter)) 
+    ArgumentCheck::addError(
+      msg = paste("parameter has to be list of", toString(df)),
+      argcheck = Check
+    )
+  if (!missing(prior) && !all(getPriorNames(class.name) %in% names(prior)) && !(class.name %in% c("jumpDiffusion", "NHPP"))) 
+    ArgumentCheck::addError(
+      msg = paste("prior has to be list of", toString(getPriorNames(class.name))),
+      argcheck = Check
+    )
+  if (!missing(start) && !all(df %in% names(start))) 
+    ArgumentCheck::addError(
+      msg = paste("start has to be a list of", toString(df)),
+      argcheck = Check
+    )
+  
+  
+  ArgumentCheck::finishArgCheck(Check)
+  
 
   if(missing(prior)) prior <- getPrior(parameter, class.name)
   if(missing(start)) start <- parameter
@@ -159,6 +181,39 @@ defaults <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mix
     name.vec <- c("phi", "mu", "Omega", "gamma2")
   }
   name.vec
+}
+
+getPriorNames <- function(model = c("jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion",
+                                          "jumpRegression", "NHPP", "Regression", "mixedRegression")){
+  model <- match.arg(model)
+  
+  names <- NULL
+  
+  if(model == "Merton"){
+    names <- c("m.phi", "v.phi", "m.thetaT", "v.thetaT", "alpha.gamma", "beta.gamma")
+  }
+  if(model=="Diffusion"){
+    names <- c("m.phi", "v.phi", "alpha.gamma", "beta.gamma")
+  }
+  if(model=="mixedDiffusion"){
+    names <- c("m.mu", "v.mu", "alpha.omega", "beta.omega", "alpha.gamma", "beta.gamma")
+  }
+  if(model=="hiddenDiffusion"){
+    names <- c("m.phi", "v.phi", "alpha.gamma", "beta.gamma", "alpha.sigma", "beta.sigma")
+  }
+  if(model=="hiddenmixedDiffusion"){
+    names <- c("m.mu", "v.mu", "alpha.omega", "beta.omega", "alpha.gamma", "beta.gamma", "alpha.sigma", "beta.sigma")
+  }
+  if(model =="jumpRegression"){
+    names <- c("m.theta", "v.theta", "alpha.gamma", "beta.gamma")
+  }
+  if(model == "Regression"){
+    names <- c("m.phi", "v.phi", "alpha.gamma", "beta.gamma")
+  }
+  if(model == "mixedRegression"){
+    names <- c("m.mu", "v.mu", "alpha.omega", "beta.omega", "alpha.gamma", "beta.gamma")
+  }
+  names
 }
 
 #' Builds a list from class
