@@ -41,40 +41,40 @@ setMethod(f = "estimate", signature = "Diffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")){
             proposal <- match.arg(proposal)
             
-            Check <- ArgumentCheck::newArgCheck()
+            Check <- createCeck()
             
             if (!is.vector(t, mode = "numeric")) 
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t has to be a vector",
                 argcheck = Check
               )
             if (!is.vector(data, mode = "numeric"))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data has to be a vector",
                 argcheck = Check
               )
             if (length(t) != length(data))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t and data must have the same length",
                 argcheck = Check
               )
             if(!missing(propSd) && length(model.class@start$phi) != length(propSd))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "propSd must have length of phi",
                 argcheck = Check
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              ArgumentCheck::addError(
+              addErr(
                 msg = "nMCMC has to be a natural number",
                 argcheck = Check
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              ArgumentCheck::addError(
+              addErr(
                 msg = "lognormal proposal density has positive support and starting value is negative",
                 argcheck = Check
               )
             
-            ArgumentCheck::finishArgCheck(Check)
+            printChecks(Check)
             
             
             
@@ -214,45 +214,45 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
             
-            Check <- ArgumentCheck::newArgCheck()
+            Check <- createCeck()
             
             if (!(is.vector(t))) 
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t has to be a vector or a list",
                 argcheck = Check
               )
             if (!(is.matrix(data) || is.list(data)))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data has to be a matrix or a list",
                 argcheck = Check
               )
             if (is.vector(t, mode = "numeric") && (length(t) != nrow(data) && length(t) != ncol(data)))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "length of t has to be equal to the columns/rows of data",
                 argcheck = Check
               )
             if (is.list(t) && ( length(t) != length(data) || !all(sapply(t, length) == sapply(data, length))))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data must match with t",
                 argcheck = Check
               )
             if(!missing(propSd) && ncol(model.class@start$phi) != length(propSd))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "propSd must have length of phi_j",
                 argcheck = Check
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              ArgumentCheck::addError(
+              addErr(
                 msg = "nMCMC has to be a natural number",
                 argcheck = Check
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              ArgumentCheck::addError(
+              addErr(
                 msg = "lognormal proposal density has positive support and starting value is negative",
                 argcheck = Check
               )
             
-            ArgumentCheck::finishArgCheck(Check)
+            printChecks(Check)
             
     prior <- model.class@prior
     start <- model.class@start
@@ -442,40 +442,40 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 setMethod(f = "estimate", signature = "hiddenDiffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
-            Check <- ArgumentCheck::newArgCheck()
+            Check <- createCeck()
             
             if (!is.vector(t, mode = "numeric")) 
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t has to be a vector",
                 argcheck = Check
               )
             if (!is.vector(data, mode = "numeric"))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data has to be a vector",
                 argcheck = Check
               )
             if (length(t) != length(data))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t and data must have the same length",
                 argcheck = Check
               )
             if(!missing(propSd) && length(model.class@start$phi) != length(propSd))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "propSd must have length of phi",
                 argcheck = Check
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              ArgumentCheck::addError(
+              addErr(
                 msg = "nMCMC has to be a natural number",
                 argcheck = Check
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              ArgumentCheck::addError(
+              addErr(
                 msg = "lognormal proposal density has positive support and starting value is negative",
                 argcheck = Check
               )
             
-            ArgumentCheck::finishArgCheck(Check)
+            printChecks(Check)
             
             
             
@@ -644,45 +644,45 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
-            Check <- ArgumentCheck::newArgCheck()
+            Check <- createCeck()
             
             if (!(is.vector(t))) 
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t has to be a vector or a list",
                 argcheck = Check
               )
             if (!(is.matrix(data) || is.list(data)))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data has to be a matrix or a list",
                 argcheck = Check
               )
             if (is.vector(t, mode = "numeric") && (length(t) != nrow(data) && length(t) != ncol(data)))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "length of t has to be equal to the columns/rows of data",
                 argcheck = Check
               )
             if (is.list(t) && ( length(t) != length(data) || !all(sapply(t, length) == sapply(data, length))))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data must match with t",
                 argcheck = Check
               )
             if(!missing(propSd) && ncol(model.class@start$phi) != length(propSd))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "propSd must have length of phi_j",
                 argcheck = Check
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              ArgumentCheck::addError(
+              addErr(
                 msg = "nMCMC has to be a natural number",
                 argcheck = Check
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              ArgumentCheck::addError(
+              addErr(
                 msg = "lognormal proposal density has positive support and starting value is negative",
                 argcheck = Check
               )
             
-            ArgumentCheck::finishArgCheck(Check)
+            printChecks(Check)
             
     if(is.matrix(data)){
       if(nrow(data) == length(t)){
@@ -907,34 +907,34 @@ setMethod(f = "estimate", signature = "NHPP",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("lognormal", "normal")) {
             proposal <- match.arg(proposal)
             
-            Check <- ArgumentCheck::newArgCheck()
+            Check <- createCeck()
             
             if (!is.vector(t, mode = "numeric"))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t has to be a vector",
                 argcheck = Check
               )
             if (!is.vector(data, mode = "numeric"))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data has to be a vector",
                 argcheck = Check
               )
             if(!missing(propSd) && ncol(model.class@start) != length(propSd))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "propSd must have length of xi",
                 argcheck = Check
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              ArgumentCheck::addError(
+              addErr(
                 msg = "nMCMC has to be a natural number",
                 argcheck = Check
               )
             if(any(model.class@start < 0) && proposal == "lognormal")
-              ArgumentCheck::addError(
+              addErr(
                 msg = "lognormal proposal density has positive support and starting value is negative",
                 argcheck = Check
               )
-            ArgumentCheck::finishArgCheck(Check)
+            printChecks(Check)
             
     if(length(t) != length(data)){
       jumpTimes <- data
@@ -1066,45 +1066,45 @@ setMethod(f = "estimate", signature = "NHPP",
 setMethod(f = "estimate", signature = "jumpDiffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 5) {
     proposal <- match.arg(proposal)
-    Check <- ArgumentCheck::newArgCheck()
+    Check <- createCeck()
     
     if (!is.vector(t, mode = "numeric")) 
-      ArgumentCheck::addError(
+      addErr(
         msg = "t has to be a vector",
         argcheck = Check
       )
     if (!is.vector(data))
-      ArgumentCheck::addError(
+      addErr(
         msg = "data has to be a vector or a list with entries N and Y",
         argcheck = Check
       )
     if (is.vector(data, mode = "numeric") && length(t) != length(data))
-      ArgumentCheck::addError(
+      addErr(
         msg = "t and data must have the same length",
         argcheck = Check
       )
     if (is.list(data) &&  !(length(t) == length(data$Y) && length(t) == length(data$N)) ) 
-      ArgumentCheck::addError(
+      addErr(
         msg = "t, data$N and data$Y must have the same length",
         argcheck = Check
       )
     if(!missing(propSd) && length(model.class@start$xi) + 3 != length(propSd))
-      ArgumentCheck::addError(
+      addErr(
         msg = "propSd must have length of xi + 3",
         argcheck = Check
       )
     if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-      ArgumentCheck::addError(
+      addErr(
         msg = "nMCMC has to be a natural number",
         argcheck = Check
       )
     if(any(c(model.class@start$theta, model.class@start$phi) < 0) && proposal == "lognormal")
-      ArgumentCheck::addError(
+      addErr(
         msg = "lognormal proposal density has positive support and starting value is negative",
         argcheck = Check
       )
     
-    ArgumentCheck::finishArgCheck(Check)
+    printChecks(Check)
     
     
     if(is.list(data)){  
@@ -1335,39 +1335,39 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' @export
 setMethod(f = "estimate", signature = "Merton",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, it.xi = 10) {
-            Check <- ArgumentCheck::newArgCheck()
+            Check <- createCeck()
             
             if (!is.vector(t, mode = "numeric")) 
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t has to be a vector",
                 argcheck = Check
               )
             if (!is.vector(data))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data has to be a vector or a list with entries N and Y",
                 argcheck = Check
               )
             if (is.vector(data, mode = "numeric") && length(t) != length(data))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t and data must have the same length",
                 argcheck = Check
               )
             if (is.list(data) &&  !(length(t) == length(data$Y) && length(t) == length(data$N)) ) 
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t, data$N and data$Y must have the same length",
                 argcheck = Check
               )
             if(!missing(propSd) && length(model.class@start$xi) != length(propSd))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "propSd must have length of phi",
                 argcheck = Check
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              ArgumentCheck::addError(
+              addErr(
                 msg = "nMCMC has to be a natural number",
                 argcheck = Check
               )
-            ArgumentCheck::finishArgCheck(Check)
+            printChecks(Check)
             
     if(is.list(data)){  
       X <- data$Y
@@ -1609,45 +1609,45 @@ setMethod(f = "estimate", signature = "jumpRegression",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 10) {
 
     proposal <- match.arg(proposal)
-    Check <- ArgumentCheck::newArgCheck()
+    Check <- createCeck()
     
     if (!is.vector(t, mode = "numeric")) 
-      ArgumentCheck::addError(
+      addErr(
         msg = "t has to be a vector",
         argcheck = Check
       )
     if (!is.vector(data))
-      ArgumentCheck::addError(
+      addErr(
         msg = "data has to be a vector or a list with entries N and Y",
         argcheck = Check
       )
     if (is.vector(data, mode = "numeric") && length(t) != length(data))
-      ArgumentCheck::addError(
+      addErr(
         msg = "t and data must have the same length",
         argcheck = Check
       )
     if (is.list(data) &&  !(length(t) == length(data$Y) && length(t) == length(data$N)) ) 
-      ArgumentCheck::addError(
+      addErr(
         msg = "t, data$N and data$Y must have the same length",
         argcheck = Check
       )
     if(!missing(propSd) && length(model.class@start$theta) != length(propSd))
-      ArgumentCheck::addError(
+      addErr(
         msg = "propSd must have length of phi",
         argcheck = Check
       )
     if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-      ArgumentCheck::addError(
+      addErr(
         msg = "nMCMC has to be a natural number",
         argcheck = Check
       )
     if(any(model.class@start$theta < 0) && proposal == "lognormal")
-      ArgumentCheck::addError(
+      addErr(
         msg = "lognormal proposal density has positive support and starting value is negative",
         argcheck = Check
       )
     
-    ArgumentCheck::finishArgCheck(Check)
+    printChecks(Check)
     
     
     if(is.list(data)){
@@ -1926,40 +1926,40 @@ setMethod(f = "estimate", signature = "jumpRegression",
 setMethod(f = "estimate", signature = "Regression",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
-            Check <- ArgumentCheck::newArgCheck()
+            Check <- createCeck()
             
             if (!is.vector(t, mode = "numeric")) 
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t has to be a vector",
                 argcheck = Check
               )
             if (!is.vector(data, mode = "numeric"))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data has to be a vector",
                 argcheck = Check
               )
             if (length(t) != length(data))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t and data must have the same length",
                 argcheck = Check
               )
             if(!missing(propSd) && length(model.class@start$phi) != length(propSd))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "propSd must have length of phi",
                 argcheck = Check
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              ArgumentCheck::addError(
+              addErr(
                 msg = "nMCMC has to be a natural number",
                 argcheck = Check
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              ArgumentCheck::addError(
+              addErr(
                 msg = "lognormal proposal density has positive support and starting value is negative",
                 argcheck = Check
               )
             
-            ArgumentCheck::finishArgCheck(Check)
+            printChecks(Check)
             
             
     y <- data
@@ -2077,45 +2077,45 @@ setMethod(f = "estimate", signature = "Regression",
 setMethod(f = "estimate", signature = "mixedRegression",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
-            Check <- ArgumentCheck::newArgCheck()
+            Check <- createCeck()
             
             if (!(is.vector(t))) 
-              ArgumentCheck::addError(
+              addErr(
                 msg = "t has to be a vector or a list",
                 argcheck = Check
               )
             if (!(is.matrix(data) || is.list(data)))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data has to be a matrix or a list",
                 argcheck = Check
               )
             if (is.vector(t, mode = "numeric") && (length(t) != nrow(data) && length(t) != ncol(data)))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "length of t has to be equal to the columns/rows of data",
                 argcheck = Check
               )
             if (is.list(t) && ( length(t) != length(data) || !all(sapply(t, length) == sapply(data, length))))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "data must match with t",
                 argcheck = Check
               )
             if(!missing(propSd) && ncol(model.class@start$phi) != length(propSd))
-              ArgumentCheck::addError(
+              addErr(
                 msg = "propSd must have length of phi_j",
                 argcheck = Check
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              ArgumentCheck::addError(
+              addErr(
                 msg = "nMCMC has to be a natural number",
                 argcheck = Check
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              ArgumentCheck::addError(
+              addErr(
                 msg = "lognormal proposal density has positive support and starting value is negative",
                 argcheck = Check
               )
             
-            ArgumentCheck::finishArgCheck(Check)
+            printChecks(Check)
             
     prior <- model.class@prior
     start <- model.class@start

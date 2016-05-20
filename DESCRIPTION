@@ -13,6 +13,5 @@ Description: Bayesian estimation and prediction for stochastic processes based
 License: GPL (>= 2)
 Depends:
     stats,
-    methods,
-    ArgumentCheck
+    methods
 LazyData: TRUE
