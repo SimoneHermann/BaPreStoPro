@@ -11,7 +11,6 @@
 #' @param priorMeans logical(1), if TRUE (default), prior means are marked with a line 
 #' @param col.priorMean color of the prior mean line, default 2
 #' @param lty.priorMean linetype of the prior mean line, default 1
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' model <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
@@ -26,16 +25,14 @@
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' @export
+#' @import stats
+#' @import graphics
+#' @import methods
+#' 
 setMethod(f = "plot", signature = "est.jumpDiffusion", 
           definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
-  if (newwindow) {
-    x11(width = 10)
-  }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, ...) {
   old.settings <- par(no.readonly = TRUE)
   style <- match.arg(style) 
   if(reduced){
@@ -138,7 +135,6 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
 #' @param priorMeans logical(1), if TRUE (default), prior means are marked with a line 
 #' @param col.priorMean color of the prior mean line, default 2
 #' @param lty.priorMean linetype of the prior mean line, default 1
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' model <- set.to.class("Merton", Lambda = function(t, xi) (t/xi[2])^xi[1],
@@ -153,16 +149,10 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' @export
 setMethod(f = "plot", signature = "est.Merton", 
           definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
-    if (newwindow) {
-      x11(width = 10)
-    }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, ...) {
     old.settings <- par(no.readonly = TRUE)
     style <- match.arg(style) 
     if(reduced){
@@ -265,7 +255,6 @@ setMethod(f = "plot", signature = "est.Merton",
 #' @param priorMeans logical(1), if TRUE (default), prior means are marked with a line 
 #' @param col.priorMean color of the prior mean line, default 2
 #' @param lty.priorMean linetype of the prior mean line, default 1
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' model <- set.to.class("Diffusion", b.fun = function(phi, t, y) phi[1]-phi[2]*y,
@@ -279,16 +268,10 @@ setMethod(f = "plot", signature = "est.Merton",
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(FALSE, FALSE, TRUE))
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' @export
 setMethod(f = "plot", signature = "est.Diffusion", 
           definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
-  if (newwindow) {
-    x11(width = 10)
-  }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1,...) {
   old.settings <- par(no.readonly = TRUE)
   
   style <- match.arg(style) 
@@ -361,7 +344,6 @@ setMethod(f = "plot", signature = "est.Diffusion",
 #' @param lty.priorMean linetype of the prior mean line, default 1
 #' @param level level for style = "int.phi"
 #' @param phi in the case of simulation study: known values for phi
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' mu <- c(10, 3, 1); Omega = c(1, 0.4, 0.01)
@@ -371,26 +353,17 @@ setMethod(f = "plot", signature = "est.Diffusion",
 #'     y0 = function(phi, t) phi[3], sT.fun = function(t, x) sqrt(abs(x)))
 #' data <- simulate(model, t = seq(0, 1, by = 0.02), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.02), data, 100)  # nMCMC small for example
-#' \dontrun{
-#' plot(est, newwindow = TRUE)
-#' }
 #' plot(est, burnIn = 10, thinning = 2, reduced = TRUE)
 #' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "")
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(rep(FALSE, 6), TRUE))
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' plot(est, style = "int.phi", phi = phi, par2plot = c(TRUE, FALSE, FALSE))
 #' @export
 setMethod(f = "plot", signature = "est.mixedDiffusion", 
           definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, newwindow = FALSE, ...) {
-  if (newwindow) {
-    x11(width = 10)
-  }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, ...) {
   old.settings <- par(no.readonly = TRUE)
 
   style <- match.arg(style) 
@@ -492,7 +465,6 @@ setMethod(f = "plot", signature = "est.mixedDiffusion",
 #' @param priorMeans logical(1), if TRUE (default), prior means are marked with a line 
 #' @param col.priorMean color of the prior mean line, default 2
 #' @param lty.priorMean linetype of the prior mean line, default 1
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' model <- set.to.class("hiddenDiffusion", b.fun = function(phi, t, y) phi[1]-phi[2]*y,
@@ -508,16 +480,10 @@ setMethod(f = "plot", signature = "est.mixedDiffusion",
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(FALSE, FALSE, TRUE, TRUE))
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' @export
 setMethod(f = "plot", signature = "est.hiddenDiffusion", 
           definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
-  if (newwindow) {
-    x11(width = 10)
-  }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, ...) {
   old.settings <- par(no.readonly = TRUE)
   
   style <- match.arg(style) 
@@ -608,7 +574,6 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
 #' @param lty.priorMean linetype of the prior mean line, default 1
 #' @param level level for style = "int.phi"
 #' @param phi in the case of simulation study: known values for phi
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' \dontrun{
@@ -619,9 +584,6 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
 #'     y0 = function(phi, t) phi[3])
 #' data <- simulate(model, t = seq(0, 1, by = 0.02), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.02), data$Z, 1000) 
-#' \dontrun{
-#' plot(est, newwindow = TRUE)
-#' }
 #' plot(est, burnIn = 10, thinning = 2, reduced = TRUE)
 #' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "", par2plot = c(TRUE, TRUE, rep(FALSE, 7)))
@@ -629,18 +591,12 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
 #'    par2plot = c(rep(FALSE, 6), TRUE, TRUE, FALSE))
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(rep(FALSE, 6), TRUE, TRUE))
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' plot(est, style = "int.phi", phi = phi, par2plot = c(TRUE, FALSE, FALSE))
 #' }
 #' @export
 setMethod(f = "plot", signature = "est.hiddenmixedDiffusion", 
           definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, newwindow = FALSE, ...) {
-  if (newwindow) {
-    x11(width = 10)
-  }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, ...) {
   old.settings <- par(no.readonly = TRUE)
 
   style <- match.arg(style) 
@@ -763,7 +719,6 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
 #' @param priorMeans logical(1), if TRUE (default), prior means are marked with a line 
 #' @param col.priorMean color of the prior mean line, default 2
 #' @param lty.priorMean linetype of the prior mean line, default 1
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' model <- set.to.class("jumpRegression", fun = function(t, N, theta) exp(theta[1]*t) + theta[2]*N,
@@ -778,16 +733,10 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(TRUE, rep(FALSE, 4)), main = "")
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' @export
 setMethod(f = "plot", signature = "est.jumpRegression", 
           definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
-  if (newwindow) {
-    x11(width = 10)
-  }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, ...) {
   old.settings <- par(no.readonly = TRUE)
   
   
@@ -889,7 +838,6 @@ setMethod(f = "plot", signature = "est.jumpRegression",
 #' @param priorMeans logical(1), if TRUE (default), prior means are marked with a line 
 #' @param col.priorMean color of the prior mean line, default 2
 #' @param lty.priorMean linetype of the prior mean line, default 1
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)),
@@ -903,16 +851,10 @@ setMethod(f = "plot", signature = "est.jumpRegression",
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), par2plot = c(FALSE, TRUE), main = "")
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' @export
 setMethod(f = "plot", signature = "est.NHPP", 
           definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
-  if (newwindow) {
-    x11(width = 10)
-  }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, ...) {
   old.settings <- par(no.readonly = TRUE)
   
   
@@ -977,7 +919,6 @@ setMethod(f = "plot", signature = "est.NHPP",
 #' @param priorMeans logical(1), if TRUE (default), prior means are marked with a line 
 #' @param col.priorMean color of the prior mean line, default 2
 #' @param lty.priorMean linetype of the prior mean line, default 1
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' model <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2],
@@ -991,16 +932,10 @@ setMethod(f = "plot", signature = "est.NHPP",
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(FALSE, FALSE, TRUE))
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' @export
 setMethod(f = "plot", signature = "est.Regression", 
           definition = function(x, par.options, style = c("chains", "acf", "density"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, newwindow = FALSE, ...) {
-    if (newwindow) {
-      x11(width = 10)
-    }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, ...) {
     old.settings <- par(no.readonly = TRUE)
     
     style <- match.arg(style) 
@@ -1075,7 +1010,6 @@ setMethod(f = "plot", signature = "est.Regression",
 #' @param lty.priorMean linetype of the prior mean line, default 1
 #' @param level level for style = "int.phi"
 #' @param phi in the case of simulation study: known values for phi
-#' @param newwindow logical(1), if TRUE, a new window is opened for the plot
 #' @param ... optional plot parameters
 #' @examples 
 #' mu <- c(1, 3); Omega = c(0.4, 0.01)
@@ -1084,26 +1018,17 @@ setMethod(f = "plot", signature = "est.Regression",
 #'     parameter = list(mu = mu, Omega = Omega, phi = phi, gamma2 = 0.1))
 #' data <- simulate(model, t = seq(0, 1, by = 0.02), plot.series = TRUE)
 #' est <- estimate(model, t = seq(0, 1, by = 0.02), data, 100)  # nMCMC small for example
-#' \dontrun{
-#' plot(est, newwindow = TRUE)
-#' }
 #' plot(est, burnIn = 10, thinning = 2, reduced = TRUE)
 #' plot(est, par.options = list(mar = c(5, 4.5, 4, 2) + 0.1, mfrow = c(2,1)), xlab = "iteration")
 #' plot(est, style = "acf", main = "")
 #' plot(est, style = "density", lwd = 2, priorMean = FALSE)
 #' plot(est, style = "density", col.priorMean = 1, lty.priorMean = 2, main = "posterior")
 #' plot(est, style = "acf", par.options = list(), main = "", par2plot = c(rep(FALSE, 4), TRUE))
-#' \dontrun{
-#' plot(est, priorMeans = FALSE, newwindow = TRUE)
-#' }
 #' plot(est, style = "int.phi", phi = phi, par2plot = c(TRUE, FALSE))
 #' @export
 setMethod(f = "plot", signature = "est.mixedRegression", 
           definition = function(x, par.options, style = c("chains", "acf", "density", "int.phi"), par2plot, reduced = FALSE, 
-                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, newwindow = FALSE, ...) {
-    if (newwindow) {
-      x11(width = 10)
-    }
+                                thinning, burnIn, priorMeans = TRUE, col.priorMean = 2, lty.priorMean = 1, level = 0.05, phi, ...) {
     old.settings <- par(no.readonly = TRUE)
     
     style <- match.arg(style) 

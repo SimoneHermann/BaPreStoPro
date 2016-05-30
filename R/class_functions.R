@@ -46,27 +46,19 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
     message(paste("parameter has to be list of", toString(df)))
     return(invisible(df))
   }
-  
-  Check <- createCeck()
-  
+
   if (!is.list(parameter)) 
-    addErr(
-      msg = paste("parameter has to be list of", toString(df)),
-      argcheck = Check
+    stop(
+      paste("parameter has to be list of", toString(df)) 
     )
   if (!missing(prior) && !all(getPriorNames(class.name) %in% names(prior)) && !(class.name %in% c("jumpDiffusion", "NHPP"))) 
-    addErr(
-      msg = paste("prior has to be list of", toString(getPriorNames(class.name))),
-      argcheck = Check
+    stop(
+      paste("prior has to be list of", toString(getPriorNames(class.name)))
     )
   if (!missing(start) && !all(df %in% names(start))) 
-    addErr(
-      msg = paste("start has to be a list of", toString(df)),
-      argcheck = Check
+    stop(
+      paste("start has to be a list of", toString(df))
     )
-  
-  
-  printChecks(Check)
   
 
   if(missing(prior)) prior <- getPrior(parameter, class.name)

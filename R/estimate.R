@@ -41,42 +41,32 @@ setMethod(f = "estimate", signature = "Diffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")){
             proposal <- match.arg(proposal)
             
-            Check <- createCeck()
             
             if (!is.vector(t, mode = "numeric")) 
-              addErr(
-                msg = "t has to be a vector",
-                argcheck = Check
+              stop(
+                "t has to be a vector"
               )
             if (!is.vector(data, mode = "numeric"))
-              addErr(
-                msg = "data has to be a vector",
-                argcheck = Check
+              stop(
+                "data has to be a vector"
               )
             if (length(t) != length(data))
-              addErr(
-                msg = "t and data must have the same length",
-                argcheck = Check
+              stop(
+                "t and data must have the same length"
               )
             if(!missing(propSd) && length(model.class@start$phi) != length(propSd))
-              addErr(
-                msg = "propSd must have length of phi",
-                argcheck = Check
+              stop(
+                "propSd must have length of phi"
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              addErr(
-                msg = "nMCMC has to be a natural number",
-                argcheck = Check
+              stop(
+                "nMCMC has to be a natural number"
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              addErr(
-                msg = "lognormal proposal density has positive support and starting value is negative",
-                argcheck = Check
+              stop(
+                "lognormal proposal density has positive support and starting value is negative"
               )
-            
-            printChecks(Check)
-            
-            
+
             
             
             
@@ -214,46 +204,35 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
             
-            Check <- createCeck()
-            
             if (!(is.vector(t))) 
-              addErr(
-                msg = "t has to be a vector or a list",
-                argcheck = Check
+              stop(
+                "t has to be a vector or a list"
               )
             if (!(is.matrix(data) || is.list(data)))
-              addErr(
-                msg = "data has to be a matrix or a list",
-                argcheck = Check
+              stop(
+                "data has to be a matrix or a list"
               )
             if (is.vector(t, mode = "numeric") && (length(t) != nrow(data) && length(t) != ncol(data)))
-              addErr(
-                msg = "length of t has to be equal to the columns/rows of data",
-                argcheck = Check
+              stop(
+                "length of t has to be equal to the columns/rows of data"
               )
             if (is.list(t) && ( length(t) != length(data) || !all(sapply(t, length) == sapply(data, length))))
-              addErr(
-                msg = "data must match with t",
-                argcheck = Check
+              stop(
+                "data must match with t"
               )
             if(!missing(propSd) && ncol(model.class@start$phi) != length(propSd))
-              addErr(
-                msg = "propSd must have length of phi_j",
-                argcheck = Check
+              stop(
+                "propSd must have length of phi_j"
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              addErr(
-                msg = "nMCMC has to be a natural number",
-                argcheck = Check
+              stop(
+                "nMCMC has to be a natural number"
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              addErr(
-                msg = "lognormal proposal density has positive support and starting value is negative",
-                argcheck = Check
+              stop(
+                "lognormal proposal density has positive support and starting value is negative"
               )
-            
-            printChecks(Check)
-            
+
     prior <- model.class@prior
     start <- model.class@start
     y0.fun <- model.class@y0.fun
@@ -442,41 +421,31 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 setMethod(f = "estimate", signature = "hiddenDiffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
-            Check <- createCeck()
-            
+
             if (!is.vector(t, mode = "numeric")) 
-              addErr(
-                msg = "t has to be a vector",
-                argcheck = Check
+              stop(
+                "t has to be a vector"
               )
             if (!is.vector(data, mode = "numeric"))
-              addErr(
-                msg = "data has to be a vector",
-                argcheck = Check
+              stop(
+                "data has to be a vector"
               )
             if (length(t) != length(data))
-              addErr(
-                msg = "t and data must have the same length",
-                argcheck = Check
+              stop(
+                "t and data must have the same length"
               )
             if(!missing(propSd) && length(model.class@start$phi) != length(propSd))
-              addErr(
-                msg = "propSd must have length of phi",
-                argcheck = Check
+              stop(
+                "propSd must have length of phi"
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              addErr(
-                msg = "nMCMC has to be a natural number",
-                argcheck = Check
+              stop(
+                "nMCMC has to be a natural number"
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              addErr(
-                msg = "lognormal proposal density has positive support and starting value is negative",
-                argcheck = Check
+              stop(
+                "lognormal proposal density has positive support and starting value is negative"
               )
-            
-            printChecks(Check)
-            
             
             
     y <- data
@@ -644,46 +613,37 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
-            Check <- createCeck()
-            
+
             if (!(is.vector(t))) 
-              addErr(
-                msg = "t has to be a vector or a list",
-                argcheck = Check
+              stop(
+                "t has to be a vector or a list"
               )
             if (!(is.matrix(data) || is.list(data)))
-              addErr(
-                msg = "data has to be a matrix or a list",
-                argcheck = Check
+              stop(
+                "data has to be a matrix or a list"
               )
             if (is.vector(t, mode = "numeric") && (length(t) != nrow(data) && length(t) != ncol(data)))
-              addErr(
-                msg = "length of t has to be equal to the columns/rows of data",
-                argcheck = Check
+              stop(
+                "length of t has to be equal to the columns/rows of data"
               )
             if (is.list(t) && ( length(t) != length(data) || !all(sapply(t, length) == sapply(data, length))))
-              addErr(
-                msg = "data must match with t",
-                argcheck = Check
+              stop(
+                "data must match with t"
               )
             if(!missing(propSd) && ncol(model.class@start$phi) != length(propSd))
-              addErr(
-                msg = "propSd must have length of phi_j",
-                argcheck = Check
+              stop(
+                "propSd must have length of phi_j"
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              addErr(
-                msg = "nMCMC has to be a natural number",
-                argcheck = Check
+              stop(
+                "nMCMC has to be a natural number"
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              addErr(
-                msg = "lognormal proposal density has positive support and starting value is negative",
-                argcheck = Check
+              stop(
+                "lognormal proposal density has positive support and starting value is negative"
               )
             
-            printChecks(Check)
-            
+
     if(is.matrix(data)){
       if(nrow(data) == length(t)){
         y <- t(data)
@@ -906,36 +866,28 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 setMethod(f = "estimate", signature = "NHPP",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("lognormal", "normal")) {
             proposal <- match.arg(proposal)
-            
-            Check <- createCeck()
-            
+
             if (!is.vector(t, mode = "numeric"))
-              addErr(
-                msg = "t has to be a vector",
-                argcheck = Check
+              stop(
+                "t has to be a vector"
               )
             if (!is.vector(data, mode = "numeric"))
-              addErr(
-                msg = "data has to be a vector",
-                argcheck = Check
+              stop(
+                "data has to be a vector"
               )
             if(!missing(propSd) && ncol(model.class@start) != length(propSd))
-              addErr(
-                msg = "propSd must have length of xi",
-                argcheck = Check
+              stop(
+                "propSd must have length of xi"
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              addErr(
-                msg = "nMCMC has to be a natural number",
-                argcheck = Check
+              stop(
+                "nMCMC has to be a natural number"
               )
             if(any(model.class@start < 0) && proposal == "lognormal")
-              addErr(
-                msg = "lognormal proposal density has positive support and starting value is negative",
-                argcheck = Check
+              stop(
+                "lognormal proposal density has positive support and starting value is negative"
               )
-            printChecks(Check)
-            
+
     if(length(t) != length(data)){
       jumpTimes <- data
     }else{
@@ -1066,46 +1018,36 @@ setMethod(f = "estimate", signature = "NHPP",
 setMethod(f = "estimate", signature = "jumpDiffusion",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 5) {
     proposal <- match.arg(proposal)
-    Check <- createCeck()
-    
+
     if (!is.vector(t, mode = "numeric")) 
-      addErr(
-        msg = "t has to be a vector",
-        argcheck = Check
+      stop(
+        "t has to be a vector"
       )
     if (!is.vector(data))
-      addErr(
-        msg = "data has to be a vector or a list with entries N and Y",
-        argcheck = Check
+      stop(
+        "data has to be a vector or a list with entries N and Y"
       )
     if (is.vector(data, mode = "numeric") && length(t) != length(data))
-      addErr(
-        msg = "t and data must have the same length",
-        argcheck = Check
+      stop(
+        "t and data must have the same length"
       )
     if (is.list(data) &&  !(length(t) == length(data$Y) && length(t) == length(data$N)) ) 
-      addErr(
-        msg = "t, data$N and data$Y must have the same length",
-        argcheck = Check
+      stop(
+        "t, data$N and data$Y must have the same length"
       )
     if(!missing(propSd) && length(model.class@start$xi) + 3 != length(propSd))
-      addErr(
-        msg = "propSd must have length of xi + 3",
-        argcheck = Check
+      stop(
+        "propSd must have length of xi + 3"
       )
     if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-      addErr(
-        msg = "nMCMC has to be a natural number",
-        argcheck = Check
+      stop(
+        "nMCMC has to be a natural number"
       )
     if(any(c(model.class@start$theta, model.class@start$phi) < 0) && proposal == "lognormal")
-      addErr(
-        msg = "lognormal proposal density has positive support and starting value is negative",
-        argcheck = Check
+      stop(
+        "lognormal proposal density has positive support and starting value is negative"
       )
-    
-    printChecks(Check)
-    
+
     
     if(is.list(data)){  
       X <- data$Y
@@ -1335,40 +1277,32 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' @export
 setMethod(f = "estimate", signature = "Merton",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, it.xi = 10) {
-            Check <- createCeck()
-            
+
             if (!is.vector(t, mode = "numeric")) 
-              addErr(
-                msg = "t has to be a vector",
-                argcheck = Check
+              stop(
+                "t has to be a vector"
               )
             if (!is.vector(data))
-              addErr(
-                msg = "data has to be a vector or a list with entries N and Y",
-                argcheck = Check
+              stop(
+                "data has to be a vector or a list with entries N and Y"
               )
             if (is.vector(data, mode = "numeric") && length(t) != length(data))
-              addErr(
-                msg = "t and data must have the same length",
-                argcheck = Check
+              stop(
+                "t and data must have the same length"
               )
             if (is.list(data) &&  !(length(t) == length(data$Y) && length(t) == length(data$N)) ) 
-              addErr(
-                msg = "t, data$N and data$Y must have the same length",
-                argcheck = Check
+              stop(
+                "t, data$N and data$Y must have the same length"
               )
             if(!missing(propSd) && length(model.class@start$xi) != length(propSd))
-              addErr(
-                msg = "propSd must have length of phi",
-                argcheck = Check
+              stop(
+                "propSd must have length of phi"
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              addErr(
-                msg = "nMCMC has to be a natural number",
-                argcheck = Check
+              stop(
+                "nMCMC has to be a natural number"
               )
-            printChecks(Check)
-            
+
     if(is.list(data)){  
       X <- data$Y
       N <- data$N
@@ -1609,46 +1543,36 @@ setMethod(f = "estimate", signature = "jumpRegression",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 10) {
 
     proposal <- match.arg(proposal)
-    Check <- createCeck()
-    
+
     if (!is.vector(t, mode = "numeric")) 
-      addErr(
-        msg = "t has to be a vector",
-        argcheck = Check
+      stop(
+        "t has to be a vector"
       )
     if (!is.vector(data))
-      addErr(
-        msg = "data has to be a vector or a list with entries N and Y",
-        argcheck = Check
+      stop(
+        "data has to be a vector or a list with entries N and Y"
       )
     if (is.vector(data, mode = "numeric") && length(t) != length(data))
-      addErr(
-        msg = "t and data must have the same length",
-        argcheck = Check
+      stop(
+        "t and data must have the same length"
       )
     if (is.list(data) &&  !(length(t) == length(data$Y) && length(t) == length(data$N)) ) 
-      addErr(
-        msg = "t, data$N and data$Y must have the same length",
-        argcheck = Check
+      stop(
+        "t, data$N and data$Y must have the same length"
       )
     if(!missing(propSd) && length(model.class@start$theta) != length(propSd))
-      addErr(
-        msg = "propSd must have length of phi",
-        argcheck = Check
+      stop(
+        "propSd must have length of phi"
       )
     if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-      addErr(
-        msg = "nMCMC has to be a natural number",
-        argcheck = Check
+      stop(
+        "nMCMC has to be a natural number"
       )
     if(any(model.class@start$theta < 0) && proposal == "lognormal")
-      addErr(
-        msg = "lognormal proposal density has positive support and starting value is negative",
-        argcheck = Check
+      stop(
+        "lognormal proposal density has positive support and starting value is negative"
       )
-    
-    printChecks(Check)
-    
+
     
     if(is.list(data)){
       Y <- data$Y
@@ -1926,42 +1850,33 @@ setMethod(f = "estimate", signature = "jumpRegression",
 setMethod(f = "estimate", signature = "Regression",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
-            Check <- createCeck()
-            
+
             if (!is.vector(t, mode = "numeric")) 
-              addErr(
-                msg = "t has to be a vector",
-                argcheck = Check
+              stop(
+                "t has to be a vector"
               )
             if (!is.vector(data, mode = "numeric"))
-              addErr(
-                msg = "data has to be a vector",
-                argcheck = Check
+              stop(
+                "data has to be a vector"
               )
             if (length(t) != length(data))
-              addErr(
-                msg = "t and data must have the same length",
-                argcheck = Check
+              stop(
+                "t and data must have the same length"
               )
             if(!missing(propSd) && length(model.class@start$phi) != length(propSd))
-              addErr(
-                msg = "propSd must have length of phi",
-                argcheck = Check
+              stop(
+                "propSd must have length of phi"
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              addErr(
-                msg = "nMCMC has to be a natural number",
-                argcheck = Check
+              stop(
+                "nMCMC has to be a natural number"
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              addErr(
-                msg = "lognormal proposal density has positive support and starting value is negative",
-                argcheck = Check
+              stop(
+                "lognormal proposal density has positive support and starting value is negative"
               )
             
-            printChecks(Check)
-            
-            
+
     y <- data
     prior <- model.class@prior
     start <- model.class@start
@@ -2077,46 +1992,36 @@ setMethod(f = "estimate", signature = "Regression",
 setMethod(f = "estimate", signature = "mixedRegression",
           definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
-            Check <- createCeck()
-            
+
             if (!(is.vector(t))) 
-              addErr(
-                msg = "t has to be a vector or a list",
-                argcheck = Check
+              stop(
+                "t has to be a vector or a list"
               )
             if (!(is.matrix(data) || is.list(data)))
-              addErr(
-                msg = "data has to be a matrix or a list",
-                argcheck = Check
+              stop(
+                "data has to be a matrix or a list"
               )
             if (is.vector(t, mode = "numeric") && (length(t) != nrow(data) && length(t) != ncol(data)))
-              addErr(
-                msg = "length of t has to be equal to the columns/rows of data",
-                argcheck = Check
+              stop(
+                "length of t has to be equal to the columns/rows of data"
               )
             if (is.list(t) && ( length(t) != length(data) || !all(sapply(t, length) == sapply(data, length))))
-              addErr(
-                msg = "data must match with t",
-                argcheck = Check
+              stop(
+                "data must match with t"
               )
             if(!missing(propSd) && ncol(model.class@start$phi) != length(propSd))
-              addErr(
-                msg = "propSd must have length of phi_j",
-                argcheck = Check
+              stop(
+                "propSd must have length of phi_j"
               )
             if(!is.numeric(nMCMC) || length(nMCMC) > 1 || nMCMC < 1)
-              addErr(
-                msg = "nMCMC has to be a natural number",
-                argcheck = Check
+              stop(
+                "nMCMC has to be a natural number"
               )
             if(any(model.class@start$phi < 0) && proposal == "lognormal")
-              addErr(
-                msg = "lognormal proposal density has positive support and starting value is negative",
-                argcheck = Check
+              stop(
+                "lognormal proposal density has positive support and starting value is negative"
               )
-            
-            printChecks(Check)
-            
+
     prior <- model.class@prior
     start <- model.class@start
     fODE <- model.class@fun

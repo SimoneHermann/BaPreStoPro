@@ -2,9 +2,9 @@ Package: BaPreStoPro
 Type: Package
 Title: Bayesian Prediction of Stochastic Processes
 Version: 0.1
-Date: 2016-04-25
+Date: 2016-05-30
 Author: Simone Hermann
-Maintainer: <hermann@statistik.tu-dortmund.de>
+Maintainer: Simone Hermann <hermann@statistik.tu-dortmund.de>
 Description: Bayesian estimation and prediction for stochastic processes based
     on the Euler approximation. Considered processes are: jump diffusion,
     (mixed) diffusion models, hidden (mixed) diffusion models, non-homogeneous
@@ -13,5 +13,6 @@ Description: Bayesian estimation and prediction for stochastic processes based
 License: GPL (>= 2)
 Depends:
     stats,
-    methods
+    methods,
+    graphics
 LazyData: TRUE
