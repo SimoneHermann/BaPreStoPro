@@ -5,14 +5,14 @@
 \title{Estimation for jump diffusion process}
 \usage{
 \S4method{estimate}{Merton}(model.class, t, data, nMCMC, propSd, adapt = TRUE,
-  it.xi = 10)
+  proposal = c("normal", "lognormal"), it.xi = 10)
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the jump diffusion model including all required information, see \code{\link{Merton-class}}}
 
 \item{t}{vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{vector of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,11 +20,13 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{it.xi}{number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})}
+\item{proposal}{proposal density for xi: "normal" (default) or "lognormal"}
+
+\item{it.xi}{number of iterations for MH step for \eqn{\xi} inside the Gibbs sampler}
 }
 \description{
 Bayesian estimation of a stochastic process
-  \eqn{Y_t = y_0 \exp( \phi t - \gamma2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
+  \eqn{Y_t = y_0 \exp( \phi t - \gamma^2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
 }
 \examples{
 model <- set.to.class("Merton", parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = 10))
@@ -41,7 +43,7 @@ plot(est_hidden)
 Hermann, S. and F. Ruggeri (2016). Modelling Wear Degradation in Cylinder Liners.
 SFB 823 discussion paper 06/16.
 
-Hermann, S., K. Ickstadt and C. H. Mueller (2016).
+Hermann, S., K. Ickstadt and C. H. Mueller (2015).
 Bayesian Prediction for a Jump Diffusion Process with Application to Crack Growth in Fatigue Experiments.
 SFB 823 discussion paper 30/15.
 }

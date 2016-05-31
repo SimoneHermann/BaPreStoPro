@@ -2,10 +2,10 @@
 \docType{class}
 \name{mixedDiffusion-class}
 \alias{mixedDiffusion-class}
-\title{S4 class for mixed diffusion process}
+\title{S4 class of model informations for hierarchical (mixed) diffusion process model}
 \description{
 Informations of model
-\eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega), Y_{t_0}=y_0(\phi, t_0)}.
+\eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), Y_{t_0}=y_0(\phi, t_0)}.
 }
 \section{Slots}{
 

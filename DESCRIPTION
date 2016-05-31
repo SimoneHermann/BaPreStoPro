@@ -2,7 +2,7 @@ Package: BaPreStoPro
 Type: Package
 Title: Bayesian Prediction of Stochastic Processes
 Version: 0.1
-Date: 2016-05-30
+Date: 2016-06-01
 Author: Simone Hermann
 Maintainer: Simone Hermann <hermann@statistik.tu-dortmund.de>
 Description: Bayesian estimation and prediction for stochastic processes based

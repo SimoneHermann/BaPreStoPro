@@ -22,7 +22,7 @@
 }
 \description{
 Simulation of a stochastic process
-  \eqn{dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
+  \eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
 }
 \examples{
 mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))

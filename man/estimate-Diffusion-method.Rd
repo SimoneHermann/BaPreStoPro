@@ -8,11 +8,11 @@
   adapt = TRUE, proposal = c("normal", "lognormal"))
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the diffusion process model including all required information, see \code{\link{Diffusion-class}}}
 
 \item{t}{vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{vector of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,11 +20,11 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{proposal}{proposal density "normal" (default) or "lognormal" (for positive parameters)}
+\item{proposal}{proposal density: "normal" (default) or "lognormal" (for positive parameters)}
 }
 \description{
-Bayesian estimation of the parameters of the stochastic process
-  \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
+Bayesian estimation of the parameters \eqn{\phi} and \eqn{\gamma^2} of the stochastic process
+  \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
 }
 \examples{
 model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))

@@ -1,12 +1,21 @@
-#' Estimation
+#' Bayesian estimation
 #'
-#' @description Method for the S4 classes
-#' @param model.class class
+#' @description Estimation method for the S4 classes
+#' @param model.class class object with model informations, see \code{\link{set.to.class}}
 #' @param t vector or list of time points
 #' @param data vector or list or matrix of observation variables
+#' @param nMCMC length of Markov chain
+#' @param propSd vector of proposal variances
+#' @param adapt if TRUE (default), proposal variance is adapted
+#' @param proposal proposal density: "normal" (default) or "lognormal" (for positive parameters)
 #' @param ... parameters dependent on the model class
+#' @return class object \code{est.}\code{model.class} containing Markov chains, data input and model informations
+#' @references 
+#' Robert, C. P. and G. Casella (2004). Monte Carlo Statistical Methods. Springer, New York.
+#' 
+#' Rosenthal, J. S. (2011). Optimal Proposal Distributions and Adaptive MCMC. In: Handbook of Markov Chain Monte Carlo, pp. 93-112.
 #'
-setGeneric("estimate", function(model.class, t, data, ...) {
+setGeneric("estimate", function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), ...) {
   standardGeneric("estimate")
 })
 
@@ -14,15 +23,15 @@ setGeneric("estimate", function(model.class, t, data, ...) {
 ########
 #' Estimation for diffusion process
 #'
-#' @description Bayesian estimation of the parameters of the stochastic process
-#'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
+#' @description Bayesian estimation of the parameters \eqn{\phi} and \eqn{\gamma^2} of the stochastic process
+#'   \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
+#' @param model.class class of the diffusion process model including all required information, see \code{\link{Diffusion-class}}
 #' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @param data vector of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
+#' @param proposal proposal density: "normal" (default) or "lognormal" (for positive parameters)
 #'
 #' @examples
 #' model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))
@@ -77,6 +86,8 @@ setMethod(f = "estimate", signature = "Diffusion",
     sVar <- model.class@sT.fun
     len <- nMCMC
     
+    priorDensity <- function(phi) dnorm(phi, prior$m.phi, sqrt(prior$v.phi))
+    
     if(missing(propSd)) propSd <- abs(prior$m.phi)/5
     lt <- length(t)
     dt <- t[-1] - t[-lt]
@@ -100,7 +111,7 @@ setMethod(f = "estimate", signature = "Diffusion",
     postPhi <- function(lastPhi, gamma2, propSd){
       phi_old <- lastPhi
       phi_drawn <- proposals$draw(phi_old, propSd)
-      ratio <- prod(dnorm(phi_drawn, prior$m.phi, sqrt(prior$v.phi)) / dnorm(phi_old, prior$m.phi, sqrt(prior$v.phi)))
+      ratio <- prod(priorDensity(phi_drawn) / priorDensity(phi_old))
       ratio <- ratio* prod( dnorm(X[-1], X[-lt] + bSDE(phi_drawn, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt))/dnorm(X[-1], X[-lt] + bSDE(phi_old, t[-lt], X[-lt])*dt, sqrt(gamma2*sVar(t[-lt], X[-lt])^2*dt)))
       ratio <- ratio* proposals$ratio(phi_drawn, phi_old, propSd)
       if(is.na(ratio)){ratio <- 0}
@@ -138,12 +149,16 @@ setMethod(f = "estimate", signature = "Diffusion",
     }
     result <- list(phi = phi_out, gamma2 = gamma2_out)
     
-    
-    he <- matrix(0, ncol(result$phi) + 1, 2)
-    he[1, ] <- diagnostic(result$gamma2)
-    for(i in 2:(ncol(result$phi)+1)) he[i, ] <- diagnostic(result$phi[,i-1])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    if(nMCMC > 100){
+      he <- matrix(0, ncol(result$phi) + 1, 2)
+      he[1, ] <- diagnostic(result$gamma2)
+      for(i in 2:(ncol(result$phi)+1)) he[i, ] <- diagnostic(result$phi[,i-1])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+      
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
 
     result <- new(Class = "est.Diffusion", phi = result$phi, gamma2 = result$gamma2,
                   model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
@@ -154,17 +169,17 @@ setMethod(f = "estimate", signature = "Diffusion",
 
 
 ########
-#' Estimation for mixed diffusion process
+#' Estimation for hierarchical (mixed) diffusion model
 #'
-#' @description Bayesian estimation of a stochastic process
-#'   \eqn{dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
-#' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @description Bayesian estimation of a model
+#' \eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), Y_{t_0}=y_0(\phi, t_0)}.
+#' @param model.class class of the hierarchical diffusion model including all required information, see \code{\link{mixedDiffusion-class}}
+#' @param t list or vector of time points
+#' @param data list or matrix of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
+#' @param proposal proposal density: "normal" (default) or "lognormal" (for positive parameters)
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
 #' model <- set.to.class("mixedDiffusion", 
@@ -174,6 +189,7 @@ setMethod(f = "estimate", signature = "Diffusion",
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' est <- estimate(model, t, data[1:20,], 100)  # nMCMC should be much larger
 #' plot(est)
+#' 
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
 #' mu <- c(10, 5, 0.5); Omega <- c(0.9, 0.01, 0.01)
@@ -185,6 +201,7 @@ setMethod(f = "estimate", signature = "Diffusion",
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' est <- estimate(model, t, data[1:20,], 100)  # nMCMC should be much larger
 #' plot(est)
+#' 
 #' ##
 #' t.list <- list()
 #' for(i in 1:20) t.list[[i]] <- t
@@ -361,12 +378,15 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
     }
     result <- list(phi = phi_out, mu = mu_out, Omega = Omega_out, gamma2 = gamma2_out)
     
-
-    he <- matrix(0, ncol(result$mu) + 1, 2)
-    he[1, ] <- diagnostic(result$gamma2)
-    for(i in 2:(ncol(result$mu)+1)) he[i, ] <- diagnostic(result$mu[,i-1])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    if(nMCMC > 100){
+      he <- matrix(0, ncol(result$mu) + 1, 2)
+      he[1, ] <- diagnostic(result$gamma2)
+      for(i in 2:(ncol(result$mu)+1)) he[i, ] <- diagnostic(result$mu[,i-1])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
     
     if(is.matrix(data)){
       result <- new(Class = "est.mixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
@@ -385,16 +405,17 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 ########
 #' Estimation for hidden diffusion process
 #'
-#' @description Bayesian estimation of the model,
-#'   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
+#' @description Bayesian estimation of the model
+#'   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, 
+#'   \epsilon_i\sim N(0,\sigma^2), Y_{t_0}=y_0(\phi, t_0)} with a particle Gibbs sampler.
+#' @param model.class class of the hidden diffusion model including all required information, see \code{\link{hiddenDiffusion-class}}
 #' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @param data vector of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
+#' @param proposal proposal density: "normal" (default) or "lognormal" (for positive parameters)
 #' @param Npart number of particles in the particle Gibbs sampler
-#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
 #'
 #' @references 
 #' Andrieu, C., A. Doucet and R. Holenstein (2010). Particle Markov Chain Monte Carlo Methods. 
@@ -406,6 +427,7 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' data <- simulate(model, t = t, plot.series = TRUE)
 #' est <- estimate(model, t, data$Z, 100)  # nMCMC should be much larger!
 #' plot(est)
+#' 
 #' \dontrun{
 #' # OU
 #' b.fun <- function(phi, t, y) phi[1]-phi[2]*y
@@ -419,7 +441,7 @@ setMethod(f = "estimate", signature = "mixedDiffusion",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "hiddenDiffusion",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal")) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), Npart = 100) {
             proposal <- match.arg(proposal)
 
             if (!is.vector(t, mode = "numeric")) 
@@ -483,10 +505,8 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
       betaPost <-  prior$beta.gamma + help/2
       1/rgamma(1, alphaPost, betaPost)
     }
+    priorDensity <- function(phi) dnorm(phi, prior$m.phi, sqrt(prior$v.phi))
     
-    prior_phi <- function(phi, k){
-      dnorm(phi[k], prior$m.phi[k], sqrt(prior$v.phi[k]))
-    }
     if(proposal == "lognormal"){
       if(any(start$phi < 0)) warning("Attention: proposal density has positive support")
       proposals <- list()
@@ -504,7 +524,7 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
       proposals$ratio <- function(drawn, old, propSd) 1
     }
     
-    estPhi_and_X <- function(X, lastPhi, gamma2, sigma2, B_fixed, propSd){
+    estPhi_and_X <- function(X, lastPhi, gamma2, sigma2, B.fixed, propSd){
       likeli <- function(phi,X){
         prod(dnorm(X[-1],X[-lt]+b.fun(phi, t[-lt], X[-lt])*diff(t), sqrt(gamma2*diff(t))*sigmaTilde(t[-lt],X[-lt])))
       }
@@ -514,7 +534,7 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
       for(k in 1:lphi){
         for(count in 1:maxIt){
           phi[k] <- proposals$draw(phi_out[k], propSd[k])
-          ratio <- prior_phi(phi, k)/prior_phi(phi_out, k)
+          ratio <- priorDensity(phi)[k]/priorDensity(phi_out)[k]
           ratio <- ratio * proposals$ratio(phi[k], phi_out[k], propSd[k])
           ratio <- ratio*likeli(phi, X)/likeli(phi_out, X)
           ratio <- ratio*dnorm(y[1], y0.fun(phi, t[1]), sqrt(sigma2))/dnorm(y[1], y0.fun(phi_out,t[1]), sqrt(sigma2))
@@ -526,26 +546,26 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
           }
         }
       }
-      res_SMC <- SMC(phi_out, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, X.cond = X, B_fixed = B_fixed)
+      res_SMC <- SMC(phi_out, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, Y.fixed = X, B.fixed = B.fixed)
       lign.B <- A.to.B(res_SMC$parents)
       indice <- sample(1:Npart, 1, prob = res_SMC$W[,lt])
-      X <- res_SMC$x[indice,]
+      X <- res_SMC$y[indice,]
       
-      list(phi = phi_out, X = X, B_fixed = lign.B[indice,])
+      list(phi = phi_out, X = X, B.fixed = lign.B[indice,])
     }
     res_SMC <- SMC(phi, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, conditional = FALSE)
     lign.B <- A.to.B(res_SMC$parents)
     indice <- sample(1:Npart, 1, prob =  res_SMC$W[,lt])
-    X <- res_SMC$x[indice,]
-    B_fixed <- lign.B[indice,]
+    X <- res_SMC$y[indice,]
+    B.fixed <- lign.B[indice,]
     
     for(count in 1:len){
       
       # Particle Gibbs
-      result <- estPhi_and_X(X, phi, gamma2, sigma2, B_fixed, propSd)
+      result <- estPhi_and_X(X, phi, gamma2, sigma2, B.fixed, propSd)
       phi <- result$phi
       X <- result$X
-      B_fixed <- result$B_fixed
+      B.fixed <- result$B.fixed
       
       gamma2 <- postGamma2(phi, X)
       sigma2 <- postSigma2(X)
@@ -565,12 +585,16 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
     }
     result <- list(phi = phi_out, sigma2 = sigma2_out, gamma2 = gamma2_out, X = X_out)
 
+    if(nMCMC > 100){
+      he <- matrix(0, ncol(result$phi) + 2, 2)
+      he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$sigma2)
+      for(i in 3:(ncol(result$phi)+2)) he[i, ] <- diagnostic(result$phi[,i-2])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
     
-    he <- matrix(0, ncol(result$phi) + 2, 2)
-    he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$sigma2)
-    for(i in 3:(ncol(result$phi)+2)) he[i, ] <- diagnostic(result$phi[,i-2])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
 
     result <- new(Class = "est.hiddenDiffusion", phi = result$phi, gamma2 = result$gamma2, sigma2 = result$sigma2, Y.est = result$X,
                   model = class.to.list(model.class), t = t, Z = data, burnIn = burnIn, thinning = thinning)
@@ -581,18 +605,19 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 
 
 ########
-#' Estimation for noisy/hidden mixed diffusion process
+#' Estimation for hierarchical (mixed) hidden diffusion process
 #'
-#' @description Bayesian estimation of a stochastic process
-#'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
-#' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @description Bayesian estimation of the parameters in the hierarchical model: 
+#'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), 
+#'   Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)} with the particel Gibbs sampler.
+#' @param model.class class of the hierarchical hidden diffusion model including all required information, see \code{\link{hiddenmixedDiffusion-class}}
+#' @param t list or vector of time points
+#' @param data list or matrix of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
+#' @param proposal proposal density: "normal" (default) or "lognormal" (for positive parameters)
 #' @param Npart number of particles in the particle Gibbs sampler
-#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
 #' @references 
 #' Andrieu, C., A. Doucet and R. Holenstein (2010). Particle Markov Chain Monte Carlo Methods. 
 #' Journal of the Royal Statistical Society B 72, pp. 269-342.
@@ -605,13 +630,14 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 #'                  parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
+#' 
 #' \dontrun{
 #' est <- estimate(model, t, data$Z[1:20,], 2000)
 #' plot(est)
 #' }
 #' @export
 setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal")) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), Npart = 100) {
             proposal <- match.arg(proposal)
 
             if (!(is.vector(t))) 
@@ -713,7 +739,7 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
       1/rgamma(1, alphaPost, betaPost)
     }
     
-    postPhii_Xi <- function(y, t, X, lastPhi, mu, Omega, gamma2, sigma2, B_fixed, propSd){
+    postPhii_Xi <- function(y, t, X, lastPhi, mu, Omega, gamma2, sigma2, B.fixed, propSd){
       lt <- length(t)
       likeli <- function(phi,X){
         prod(dnorm(X[-1], X[-lt]+b.fun(phi, t[-lt], X[-lt])*diff(t), sqrt(gamma2*diff(t))*sigmaTilde(t[-lt],X[-lt])))  # true transition density???
@@ -736,12 +762,12 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
           }
         }
       }
-      res_SMC <- SMC(phi_out, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, X.cond = X, B_fixed = B_fixed)
+      res_SMC <- SMC(phi_out, gamma2, sigma2, Npart, t, y, b.fun, y0.fun, sigmaTilde, Y.fixed = X, B.fixed = B.fixed)
       lign.B <- A.to.B(res_SMC$parents)
       indice <- sample(1:Npart, 1, prob = res_SMC$W[,lt])
-      X <- res_SMC$x[indice,]
+      X <- res_SMC$y[indice,]
       
-      list(phi = phi_out, X = X, B_fixed = lign.B[indice,])
+      list(phi = phi_out, X = X, B.fixed = lign.B[indice,])
       
     }
     
@@ -760,7 +786,7 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
     mu <- start$mu
     Omega <- postOmega(prior$alpha.omega, prior$beta.omega, phi, mu)
     X <- list()
-    B_fixed <- list()
+    B.fixed <- list()
     
     for(i in 1:n){
       
@@ -771,17 +797,17 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
       result <- SMC(phi[i,], gamma2, sigma2, Npart, times[[i]], y[[i]], b.fun, y0.fun, sigmaTilde, conditional = FALSE)
       lign.B <- A.to.B(result$parents)
       indice <- sample(1:Npart, 1, prob = result$W[,length(times[[i]])])
-      X[[i]] <- result$x[indice,]
-      B_fixed[[i]] <- lign.B[indice,]
+      X[[i]] <- result$y[indice,]
+      B.fixed[[i]] <- lign.B[indice,]
     }
     
     for(count in 1:len){
       
       for(i in 1:n){
-        help <- postPhii_Xi(y[[i]], times[[i]], X[[i]], phi[i,], mu, Omega, gamma2, sigma2, B_fixed[[i]], propSd)
+        help <- postPhii_Xi(y[[i]], times[[i]], X[[i]], phi[i,], mu, Omega, gamma2, sigma2, B.fixed[[i]], propSd)
         X[[i]] <- help$X
         phi[i,] <- help$phi
-        B_fixed[[i]] <- help$B_fixed
+        B.fixed[[i]] <- help$B.fixed
       }
       
       mu <- postmu(phi, prior$m.mu, prior$v.mu, Omega)
@@ -807,12 +833,16 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
     result <- list(phi = phi_out, mu = mu_out, Omega = Omega_out, sigma2 = sigma2_out, gamma2 = gamma2_out, X = X_out)
     
     
+    if(nMCMC > 100){
+      he <- matrix(0, ncol(result$mu) + 2, 2)
+      he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$sigma2)
+      for(i in 3:(ncol(result$mu)+2)) he[i, ] <- diagnostic(result$mu[,i-2])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
     
-    he <- matrix(0, ncol(result$mu) + 2, 2)
-    he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$sigma2)
-    for(i in 3:(ncol(result$mu)+2)) he[i, ] <- diagnostic(result$mu[,i-2])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
 
     if(is.matrix(data)){
       result <- new(Class = "est.hiddenmixedDiffusion", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,
@@ -836,16 +866,16 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 ########
 #' Estimation for Poisson process
 #'
-#' @description Bayesian estimation of a nonhomogeneous Poisson process.
-#' @param model.class class of the respective model including all required information, see function set.to.class
+#' @description Bayesian estimation of a non-homogeneous Poisson process (NHPP) with cumulative intensity function \eqn{\Lambda(t, \xi)}.
+#' @param model.class class of the NHPP model including all required information, see \code{\link{NHPP-class}}
 #' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @param data vector of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\xi}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#' @param proposal "lognormal" (for positive parameters, default) or "normal"
+#' @param proposal proposal density: "normal" (default) or "lognormal" (for positive parameters)
 #' @references 
-#' Hermann, S., K. Ickstadt and C. H. Mueller (2016). 
+#' Hermann, S., K. Ickstadt and C. H. Mueller (2015). 
 #' Bayesian Prediction for a Jump Diffusion Process with Application to Crack Growth in Fatigue Experiments.
 #' SFB 823 discussion paper 30/15.
 #' @examples
@@ -853,18 +883,19 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 #'                    Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est <- estimate(model, t, data$Times, 10000)
+#' est <- estimate(model, t, data$Times, 10000, proposal = "lognormal")
 #' plot(est)
+#' 
 #' ##
 #' model <- set.to.class("NHPP", parameter = list(xi = 5), 
 #'                    Lambda = function(t, xi) t*xi)
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, plot.series = TRUE)
-#' est <- estimate(model, t, data$N, 10000, proposal = "normal")
+#' est <- estimate(model, t, data$N, 10000)
 #' plot(est, par.options = list(mfrow = c(1,1)))
 #' @export
 setMethod(f = "estimate", signature = "NHPP",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("lognormal", "normal")) {
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal")) {
             proposal <- match.arg(proposal)
 
             if (!is.vector(t, mode = "numeric"))
@@ -897,7 +928,7 @@ setMethod(f = "estimate", signature = "NHPP",
     start <- model.class@start
     n <- nMCMC
     Lambda <- model.class@Lambda
-    priorRatio <- model.class@priorRatio 
+    priorDensity <- model.class@priorDensity 
     
     lambda <- function(t, xi){
       h <- 1e-05
@@ -933,7 +964,7 @@ setMethod(f = "estimate", signature = "NHPP",
       
       LikNew <- Lik(xi_drawn)
       ratio <- proposals$ratio(xi_drawn, xi_old, propSd)
-      ratio <- ratio*priorRatio(xi_drawn, xi_old)
+      ratio <- ratio*prod(priorDensity(xi_drawn)/priorDensity(xi_old))
       ratio <- ratio*LikNew/LikOld
       if(is.na(ratio)) ratio <- 0
       
@@ -951,14 +982,19 @@ setMethod(f = "estimate", signature = "NHPP",
     }
     res <- xi_out
           
-    if(is.vector(res)){
-      he <- diagnostic(res); burnIn <- he[1]; thinning <- min( he[2], ceiling((nMCMC-burnIn)/100) )
-    }else{
-      he <- matrix(0, ncol(res), 2)
-      for(i in 1:nrow(res)) he[i,] <- diagnostic(res[i,])
-      burnIn <- max(he[, 1])
-      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    if(nMCMC > 100){
+      if(is.vector(res)){
+        he <- diagnostic(res); burnIn <- he[1]; thinning <- min( he[2], ceiling((nMCMC-burnIn)/100) )
+      }else{
+        he <- matrix(0, ncol(res), 2)
+        for(i in 1:nrow(res)) he[i,] <- diagnostic(res[i,])
+        burnIn <- max(he[, 1])
+        thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+      }
+    } else {
+      burnIn <- 0; thinning <- 1
     }
+    
     
             
   if(length(t) != length(data)){
@@ -978,16 +1014,16 @@ setMethod(f = "estimate", signature = "NHPP",
 #' Estimation for jump diffusion process
 #'
 #' @description Bayesian estimation of a stochastic process
-#'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
+#'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t}.
+#' @param model.class class of the jump diffusion model including all required information, see \code{\link{jumpDiffusion-class}}
 #' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @param data vector of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{(\phi, \theta, \gamma^2, \xi)}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#' @param proposal proposal density for phi, theta "normal" (default) or "lognormal" (for positive parameters)
-#' @param it.xi number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})
-#' @section Description:
+#' @param proposal proposal density for phi, theta: "normal" (default) or "lognormal" (for positive parameters), see description below
+#' @param it.xi number of iterations for MH step for \eqn{\xi} inside the Gibbs sampler
+#' @section Proposal densities:
 #' There are several possibilities to choose the proposal densities. For \eqn{\gamma^2}, always the lognormal density is taken, since the parameter is always positive.
 #' For \eqn{\theta} and \eqn{\phi}, there is the possibility to choose "normal" or "lognormal" (for both together). 
 #' The proposal density for \eqn{\xi} depends on the starting value of \eqn{\xi}. If all components are positive, the proposal density is lognormal, and normal otherwise.
@@ -999,17 +1035,19 @@ setMethod(f = "estimate", signature = "NHPP",
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(model, t, data, 1000)
 #' plot(est)
+#' 
 #' # informative
 #' model <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
 #'    parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)),
-#'    priorRatio = list(phi = function(new, old) dnorm(new, 0.05, 0.01)/dnorm(old, 0.05, 0.01),
-#'                theta = function(new, old) dgamma(1/new, 10, 0.1*9)/dgamma(1/old, 10, 0.1*9),
-#'              gamma2 = function(new, old) dgamma(1/new, 10, 0.1*9)/dgamma(1/old, 10, 0.1*9),
-#' xi = function(new, old) prod(dnorm(new, c(3, 1/4), c(1,1))/dnorm(new, c(3, 1/4), c(1,1)))))
+#'    priorDensity = list(phi = function(phi) dnorm(phi, 0.05, 0.01),
+#'                theta = function(theta) dgamma(1/theta, 10, 0.1*9),
+#'              gamma2 = function(gamma2) dgamma(1/gamma2, 10, 0.1*9),
+#'          xi = function(xi) dnorm(xi, c(3, 1/4), c(1,1))))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(model, t, data, 1000)
 #' plot(est)
+#' 
 #' \dontrun{
 #' est_hidden <- estimate(model, t, data$Y, 1000)
 #' plot(est_hidden)
@@ -1069,7 +1107,7 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
     b <- model.class@b.fun  
     s <- model.class@s.fun  
     h <- model.class@h.fun  
-    priorRatio <- model.class@priorRatio
+    priorDensity <- model.class@priorDensity
 
     dX <- diff(X)
     dt <- diff(t)
@@ -1179,7 +1217,7 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
         xi_drawn <- proposals_xi$draw(xi, propSd_xi)
         ratio <- proposals_xi$ratio(xi_drawn, xi, propSd_xi)
         ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
-        ratio <- ratio*priorRatio$xi(xi_drawn, xi)
+        ratio <- ratio*prod(priorDensity$xi(xi_drawn)/priorDensity$xi(xi))
         if(is.na(ratio)) ratio <- 0
         
         if(runif(1) <= ratio){
@@ -1189,20 +1227,20 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 
       phi_drawn <- proposals$draw(phi, propSd_phi)
       ratio <- prod(likeli(phi_drawn, gamma2, theta, dN)/likeli(phi, gamma2, theta, dN))
-      ratio <- ratio*priorRatio$phi(phi_drawn, phi)
+      ratio <- ratio*priorDensity$phi(phi_drawn)/priorDensity$phi(phi)
       ratio <- ratio*proposals$ratio(phi_drawn, phi, propSd_phi)
       phi[runif(1) <= ratio] <- phi_drawn
       
       theta_drawn <- proposals$draw(theta, propSd_theta)
       ratio <- prod(likeli(phi, gamma2, theta_drawn, dN)/likeli(phi, gamma2, theta, dN))
-      ratio <- ratio*priorRatio$theta(theta_drawn, theta)
+      ratio <- ratio*priorDensity$theta(theta_drawn)/priorDensity$theta(theta)
       ratio <- ratio*proposals$ratio(theta_drawn, theta, propSd_theta)
       theta[runif(1) <= ratio] <- theta_drawn
       
       gamma2_drawn <- proposal(gamma2, propSd_gamma2)
       ratio <- prod(likeli(phi, gamma2_drawn, theta, dN)/likeli(phi, gamma2, theta, dN))
       ratio <- ratio*proposalRatio(gamma2, gamma2_drawn, propSd_gamma2)
-      ratio <- ratio*priorRatio$gamma2(gamma2_drawn, gamma2)
+      ratio <- ratio*priorDensity$gamma2(gamma2_drawn)/priorDensity$gamma2(gamma2)
       gamma2[runif(1) <= ratio] <- gamma2_drawn
       
       # storage
@@ -1227,11 +1265,16 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 
     result <- list(phi = phi_out, gamma2 = gamma2_out, theta = theta_out, xi = xi_out)
     
-    he <- matrix(0, 3 + ncol(result$xi), 2)
-    he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$theta)
-    for(i in 4:(3+ncol(result$xi))) he[i,] <- diagnostic(result$xi[, i-3])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    if(nMCMC > 100){
+      he <- matrix(0, 3 + ncol(result$xi), 2)
+      he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$theta)
+      for(i in 4:(3+ncol(result$xi))) he[i,] <- diagnostic(result$xi[, i-3])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
+    
 
     if(is.list(data)){
       result <- new(Class = "est.jumpDiffusion", theta = result$theta, phi = result$phi, gamma2 = result$gamma2, xi = result$xi,
@@ -1249,19 +1292,20 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' Estimation for jump diffusion process
 #'
 #' @description Bayesian estimation of a stochastic process
-#'   \eqn{Y_t = y_0 \exp( \phi t - \gamma2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
+#'   \eqn{Y_t = y_0 \exp( \phi t - \gamma^2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
+#' @param model.class class of the jump diffusion model including all required information, see \code{\link{Merton-class}}
 #' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @param data vector of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\xi}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#' @param it.xi number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})
+#' @param proposal proposal density for xi: "normal" (default) or "lognormal"
+#' @param it.xi number of iterations for MH step for \eqn{\xi} inside the Gibbs sampler
 #' @references 
 #' Hermann, S. and F. Ruggeri (2016). Modelling Wear Degradation in Cylinder Liners. 
 #' SFB 823 discussion paper 06/16.
 #' 
-#' Hermann, S., K. Ickstadt and C. H. Mueller (2016). 
+#' Hermann, S., K. Ickstadt and C. H. Mueller (2015). 
 #' Bayesian Prediction for a Jump Diffusion Process with Application to Crack Growth in Fatigue Experiments.
 #' SFB 823 discussion paper 30/15.
 #' @examples
@@ -1276,8 +1320,9 @@ setMethod(f = "estimate", signature = "jumpDiffusion",
 #' }
 #' @export
 setMethod(f = "estimate", signature = "Merton",
-          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, it.xi = 10) {
-
+          definition = function(model.class, t, data, nMCMC, propSd, adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 10) {
+            proposal <- match.arg(proposal)
+            
             if (!is.vector(t, mode = "numeric")) 
               stop(
                 "t has to be a vector"
@@ -1321,7 +1366,7 @@ setMethod(f = "estimate", signature = "Merton",
       lambda_vec <- lambda(jumpTimes, xi)
       prod(lambda_vec)*exp(-Lambda(Tend, xi))
     }
-    priorRatio <- model.class@priorRatio        
+    priorDensity <- model.class@priorDensity        
 
     Delta <- diff(t)
     t.l <- t
@@ -1384,7 +1429,7 @@ setMethod(f = "estimate", signature = "Merton",
     xi <- start$xi
     if(missing(propSd)) propSd <- (abs(start$xi)+0.1)/10
     
-    if(all(xi > 0)){
+    if(proposal == "lognormal"){
       proposals <- list()
       proposals$draw <- function(xi_old, propSd){
         proposal(xi_old, propSd)
@@ -1455,7 +1500,7 @@ setMethod(f = "estimate", signature = "Merton",
         xi_drawn <- proposals$draw(xi, propSd)
         ratio <- proposals$ratio(xi_drawn, xi, propSd)
         ratio <- ratio*Lik.N(xi_drawn, jumpTimes)/Lik.N(xi, jumpTimes)
-        ratio <- ratio*priorRatio(xi_drawn, xi)
+        ratio <- ratio*prod(priorDensity(xi_drawn)/priorDensity(xi))
         if(is.na(ratio)) ratio <- 0
         
         if(runif(1) <= ratio){
@@ -1487,11 +1532,16 @@ setMethod(f = "estimate", signature = "Merton",
 
     result <- list(phi = phi_out, gamma2 = gamma2_out, thetaT = thetaT_out, xi = xi_out)
     
-    he <- matrix(0, 3 + ncol(result$xi), 2)
-    he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$thetaT)
-    for(i in 4:(3+ncol(result$xi))) he[i,] <- diagnostic(result$xi[, i-3])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    if(nMCMC > 100){
+      he <- matrix(0, 3 + ncol(result$xi), 2)
+      he[1, ] <- diagnostic(result$gamma2); he[2,] <- diagnostic(result$phi); he[3,] <- diagnostic(result$thetaT)
+      for(i in 4:(3+ncol(result$xi))) he[i,] <- diagnostic(result$xi[, i-3])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
+    
             
             
     if(is.list(data)){
@@ -1512,14 +1562,17 @@ setMethod(f = "estimate", signature = "Merton",
 #'
 #' @description Bayesian estimation of the parameter of the regression model
 #'   \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
+#' @param model.class class of the regression model based on the NHPP including all required information, see \code{\link{jumpRegression-class}}
 #' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @param data vector of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{(\theta, \xi)}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
-#' @param it.xi number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})
+#' @param proposal proposal density for \eqn{\theta}: "normal" (default) or "lognormal" (for positive parameters)
+#' @param it.xi number of iterations for MH step for \eqn{\xi} inside the Gibbs sampler
+#' @section Proposal densities:
+#' For \eqn{\theta}, there is the possibility to choose "normal" or "lognormal". 
+#' The proposal density for \eqn{\xi} depends on the starting value of \eqn{\xi}. If all components are positive, the proposal density is lognormal, and normal otherwise.
 #'
 #' @references 
 #' Heeke, G., S. Hermann, R. Maurer, K. Ickstadt, and C. H. Mueller (2015). 
@@ -1644,7 +1697,7 @@ setMethod(f = "estimate", signature = "jumpRegression",
         return(B)
       }
       
-      CSMC = function(theta, gamma2, xi, N.cond, B_fixed, conditional = TRUE){# conditional SMC
+      CSMC = function(theta, gamma2, xi, N.cond, B.fixed, conditional = TRUE){# conditional SMC
         # N.cond = the old samples
         
         x <- matrix(0, Npart, lt)
@@ -1655,7 +1708,7 @@ setMethod(f = "estimate", signature = "jumpRegression",
         # initialisation
         x[,1] <- 0  # poisson always starts in 0
         if(conditional){
-          x[B_fixed[1], 1] <- N.cond[1]
+          x[B.fixed[1], 1] <- N.cond[1]
         }else{
           N.cond <- numeric(lt)
         }
@@ -1664,15 +1717,15 @@ setMethod(f = "estimate", signature = "jumpRegression",
         
         for (n in 2:lt){
           if(conditional){
-            set.parents  <- (1:Npart)[-B_fixed[n]]
+            set.parents  <- (1:Npart)[-B.fixed[n]]
             
             On_1 <- rmultinom(1, Npart-1, W[,n-1])
-            O <- On_1[B_fixed[n-1]] + 1
+            O <- On_1[B.fixed[n-1]] + 1
             he <- sample(set.parents, O-1)
             
-            parents[B_fixed[n], n-1] <- B_fixed[n-1]
-            parents[he, n-1] <- B_fixed[n-1]
-            parents[-c(B_fixed[n],he), n-1] <- sample(set.parents, Npart-O, replace = TRUE, prob =  W[-B_fixed[n], n-1])
+            parents[B.fixed[n], n-1] <- B.fixed[n-1]
+            parents[he, n-1] <- B.fixed[n-1]
+            parents[-c(B.fixed[n],he), n-1] <- sample(set.parents, Npart-O, replace = TRUE, prob =  W[-B.fixed[n], n-1])
             
           }else{
             set.parents <- 1:Npart
@@ -1708,15 +1761,15 @@ setMethod(f = "estimate", signature = "jumpRegression",
         lign.B <- A.to.B(parents)
         indice <- sample(1:Npart, 1, prob = W[, lt])
         X <- x[indice, ]
-        B_fixed <- lign.B[indice,]
-        return(list(N = X, B_fixed = B_fixed) )
+        B.fixed <- lign.B[indice,]
+        return(list(N = X, B.fixed = B.fixed) )
       }
       
       if(is.null(start$N)){
         #      N <- simN(t, xi, 1, start = c(t[1], 0), Lambda = Lambda)$N
         he <- CSMC(theta, gamma2, xi, conditional = FALSE)
         N <- he$N
-        B_fixed <- he$B_fixed
+        B.fixed <- he$B.fixed
       }else{
         N <- start$N
       }
@@ -1761,10 +1814,10 @@ setMethod(f = "estimate", signature = "jumpRegression",
     
     for(count in 1:n){
       if(sample.N){
-        he <- CSMC(theta, gamma2, xi, N, B_fixed)
+        he <- CSMC(theta, gamma2, xi, N, B.fixed)
         N <- he$N
         jumpTimes <- dNtoTimes(diff(N), t[-1])
-        B_fixed <- he$B_fixed
+        B.fixed <- he$B.fixed
       }
       for(count2 in 1:it.xi){
         xi_drawn <- proposals_xi$draw(xi, propSd_xi)
@@ -1800,13 +1853,18 @@ setMethod(f = "estimate", signature = "jumpRegression",
     
     result <- list(gamma2 = gamma2_out, theta = theta_out, xi = xi_out)
     
-
-    he <- matrix(0, ncol(result$theta) + ncol(result$xi) + 1, 2)
-    he[1, ] <- diagnostic(result$gamma2)
-    for(i in 2:(ncol(result$theta)+1)) he[i, ] <- diagnostic(result$theta[,i-1])
-    for(i in (ncol(result$theta)+2):(ncol(result$theta) + ncol(result$xi) + 1)) he[i, ] <- diagnostic(result$xi[,i - ncol(result$theta) - 1])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    if(nMCMC > 100){
+      he <- matrix(0, ncol(result$theta) + ncol(result$xi) + 1, 2)
+      he[1, ] <- diagnostic(result$gamma2)
+      for(i in 2:(ncol(result$theta)+1)) he[i, ] <- diagnostic(result$theta[,i-1])
+      for(i in (ncol(result$theta)+2):(ncol(result$theta) + ncol(result$xi) + 1)) he[i, ] <- diagnostic(result$xi[,i - ncol(result$theta) - 1])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
+    
+    
 
     
     if(is.list(data)){
@@ -1826,14 +1884,14 @@ setMethod(f = "estimate", signature = "jumpRegression",
 #' Estimation for regression model
 #'
 #' @description Bayesian estimation of the parameter of the regression model
-#'   \eqn{y_i = f(\phi, t_i) + \epsilon_i}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
+#'   \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.
+#' @param model.class class of the regression model including all required information, see \code{\link{Regression-class}}
 #' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @param data vector of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
+#' @param proposal proposal density: "normal" (default) or "lognormal" (for positive parameters)
 #'
 #' @references 
 #' Hermann, S., K. Ickstadt, and C. H. Mueller (2016). 
@@ -1946,12 +2004,16 @@ setMethod(f = "estimate", signature = "Regression",
     }
     result <- list(phi = phi_out, gamma2 = gamma2_out)
     
+    if(nMCMC > 100){
+      he <- matrix(0, ncol(result$phi) + 1, 2)
+      he[1, ] <- diagnostic(result$gamma2)
+      for(i in 2:(ncol(result$phi)+1)) he[i, ] <- diagnostic(result$phi[,i-1])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
     
-    he <- matrix(0, ncol(result$phi) + 1, 2)
-    he[1, ] <- diagnostic(result$gamma2)
-    for(i in 2:(ncol(result$phi)+1)) he[i, ] <- diagnostic(result$phi[,i-1])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
 
     result <- new(Class = "est.Regression", phi = result$phi, gamma2 = result$gamma2,
                   model = class.to.list(model.class), t = t, Y = data, burnIn = burnIn, thinning = thinning)
@@ -1961,18 +2023,18 @@ setMethod(f = "estimate", signature = "Regression",
 
 
 ########
-#' Estimation for mixed regression model
+#' Estimation for the hierarchical (mixed) regression model
 #'
-#' @description Bayesian estimation of the parameter of the regression model
-#'   \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j~N(\mu, \Omega),
+#' @description Bayesian estimation of the parameter of the hierarchical regression model
+#'   \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j\sim N(\mu, \Omega),
 #'   \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
-#' @param model.class class of the respective model including all required information, see function set.to.class
-#' @param t vector of time points
-#' @param data vector or list or matrix of observation variables
+#' @param model.class class of the hierarchical regression model including all required information, see \code{\link{mixedRegression-class}}
+#' @param t list or vector of time points
+#' @param data list or matrix of observation variables
 #' @param nMCMC length of Markov chain
 #' @param propSd vector of proposal variances for \eqn{\phi}
 #' @param adapt if TRUE (default), proposal variance is adapted
-#' @param proposal proposal density "normal" (default) or "lognormal" (for positive parameters)
+#' @param proposal proposal density: "normal" (default) or "lognormal" (for positive parameters)
 #' @references 
 #' Hermann, S., K. Ickstadt, and C. H. Mueller (2016). 
 #' Bayesian Prediction of Crack Growth Based on a Hierarchical Diffusion Model. 
@@ -2124,11 +2186,16 @@ setMethod(f = "estimate", signature = "mixedRegression",
     }
     result <- list(phi = phi_out, mu = mu_out, Omega = Omega_out, gamma2 = gamma2_out)
 
-    he <- matrix(0, ncol(result$mu) + 1, 2)
-    he[1, ] <- diagnostic(result$gamma2)
-    for(i in 2:(ncol(result$mu)+1)) he[i, ] <- diagnostic(result$mu[,i-1])
-    burnIn <- max(he[, 1])
-    thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    if(nMCMC > 100){
+      he <- matrix(0, ncol(result$mu) + 1, 2)
+      he[1, ] <- diagnostic(result$gamma2)
+      for(i in 2:(ncol(result$mu)+1)) he[i, ] <- diagnostic(result$mu[,i-1])
+      burnIn <- max(he[, 1])
+      thinning <- min( max(he[, 2]), ceiling((nMCMC-burnIn)/100) )
+    } else {
+      burnIn <- 0; thinning <- 1
+    }
+    
 
     if(is.matrix(data)){
       result <- new(Class = "est.mixedRegression", phi = result$phi, mu = result$mu, Omega = result$Omega, gamma2 = result$gamma2,

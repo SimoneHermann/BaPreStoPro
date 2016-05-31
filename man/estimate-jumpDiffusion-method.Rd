@@ -8,11 +8,11 @@
   adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 5)
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the jump diffusion model including all required information, see \code{\link{jumpDiffusion-class}}}
 
 \item{t}{vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{vector of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,15 +20,15 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{proposal}{proposal density for phi, theta "normal" (default) or "lognormal" (for positive parameters)}
+\item{proposal}{proposal density for phi, theta: "normal" (default) or "lognormal" (for positive parameters), see description below}
 
-\item{it.xi}{number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})}
+\item{it.xi}{number of iterations for MH step for \eqn{\xi} inside the Gibbs sampler}
 }
 \description{
 Bayesian estimation of a stochastic process
-  \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t}.
+  \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t}.
 }
-\section{Description}{
+\section{Proposal densities}{
 
 There are several possibilities to choose the proposal densities. For \eqn{\gamma^2}, always the lognormal density is taken, since the parameter is always positive.
 For \eqn{\theta} and \eqn{\phi}, there is the possibility to choose "normal" or "lognormal" (for both together).
@@ -42,17 +42,19 @@ t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 est <- estimate(model, t, data, 1000)
 plot(est)
+
 # informative
 model <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
    parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)),
-   priorRatio = list(phi = function(new, old) dnorm(new, 0.05, 0.01)/dnorm(old, 0.05, 0.01),
-               theta = function(new, old) dgamma(1/new, 10, 0.1*9)/dgamma(1/old, 10, 0.1*9),
-             gamma2 = function(new, old) dgamma(1/new, 10, 0.1*9)/dgamma(1/old, 10, 0.1*9),
-xi = function(new, old) prod(dnorm(new, c(3, 1/4), c(1,1))/dnorm(new, c(3, 1/4), c(1,1)))))
+   priorDensity = list(phi = function(phi) dnorm(phi, 0.05, 0.01),
+               theta = function(theta) dgamma(1/theta, 10, 0.1*9),
+             gamma2 = function(gamma2) dgamma(1/gamma2, 10, 0.1*9),
+         xi = function(xi) dnorm(xi, c(3, 1/4), c(1,1))))
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 est <- estimate(model, t, data, 1000)
 plot(est)
+
 \dontrun{
 est_hidden <- estimate(model, t, data$Y, 1000)
 plot(est_hidden)

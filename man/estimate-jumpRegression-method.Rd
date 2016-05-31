@@ -8,11 +8,11 @@
   adapt = TRUE, proposal = c("normal", "lognormal"), it.xi = 10)
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the regression model based on the NHPP including all required information, see \code{\link{jumpRegression-class}}}
 
 \item{t}{vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{vector of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,13 +20,18 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{proposal}{proposal density "normal" (default) or "lognormal" (for positive parameters)}
+\item{proposal}{proposal density for \eqn{\theta}: "normal" (default) or "lognormal" (for positive parameters)}
 
-\item{it.xi}{number of iterations for MH step inside the Gibbs sampler (for \eqn{\xi})}
+\item{it.xi}{number of iterations for MH step for \eqn{\xi} inside the Gibbs sampler}
 }
 \description{
 Bayesian estimation of the parameter of the regression model
   \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
+}
+\section{Proposal densities}{
+
+For \eqn{\theta}, there is the possibility to choose "normal" or "lognormal".
+The proposal density for \eqn{\xi} depends on the starting value of \eqn{\xi}. If all components are positive, the proposal density is lognormal, and normal otherwise.
 }
 \examples{
 t <- seq(0,1, by = 0.01)

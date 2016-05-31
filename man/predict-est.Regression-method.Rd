@@ -27,7 +27,7 @@
 
 \item{which.series}{which series to be predicted, new one ("new") or further development of current one ("current")}
 
-\item{M2pred}{optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points}
+\item{M2pred}{optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points}
 
 \item{cand.length}{length of candidate samples (if method = "vector")}
 
@@ -35,7 +35,7 @@
 
 \item{sampling.alg}{sampling algorithm, inversion method ("InvMethod") or rejection sampling ("RejSamp")}
 
-\item{sample.length}{length of samples to be drawn}
+\item{sample.length}{number of samples to be drawn}
 
 \item{grid}{fineness degree of approximation}
 
@@ -43,7 +43,7 @@
 }
 \description{
 Bayesian prediction of regression model
-  \eqn{y_i = f(\phi, t_i) + \epsilon_i}.
+  \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.
 }
 \examples{
 t <- seq(0,1, by = 0.01)

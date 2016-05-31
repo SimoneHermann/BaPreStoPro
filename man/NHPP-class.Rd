@@ -2,10 +2,10 @@
 \docType{class}
 \name{NHPP-class}
 \alias{NHPP-class}
-\title{S4 class for non-homogeneous Poisson process}
+\title{S4 class of model informations for non-homogeneous Poisson process}
 \description{
-Informations of model
-\eqn{N_t\sim Pois(\Lambda(t, \xi))}.
+Informations of NHPP with cumulative intensity function
+\eqn{\Lambda(t, \xi)}.
 }
 \section{Slots}{
 
@@ -14,15 +14,15 @@ Informations of model
 
 \item{\code{Lambda}}{function \eqn{\Lambda(t,\xi)}}
 
-\item{\code{priorRatio}}{list of prior ratio function for \eqn{\xi}}
+\item{\code{priorDensity}}{prior density function for \eqn{\xi}}
 
 \item{\code{start}}{list of starting values for the Metropolis within Gibbs sampler}
 }}
 \examples{
 parameter <- list(xi = c(2, 0.2))
 Lambda <- function(t, xi) (t / xi[2])^xi[1]
-priorRatio <- function(new, old) prod(dgamma(new, c(2, 0.2), 1)/dgamma(old, c(2, 0.2), 1))
+priorDensity <- function(xi) dgamma(xi, c(2, 0.2), 1)
 start <- parameter
-model <- set.to.class("NHPP", parameter, start = start, Lambda = Lambda, priorRatio = priorRatio)
+model <- set.to.class("NHPP", parameter, start = start, Lambda = Lambda, priorDensity = priorDensity)
 }
 

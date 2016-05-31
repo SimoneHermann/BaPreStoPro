@@ -5,14 +5,14 @@
 \title{Estimation for hidden diffusion process}
 \usage{
 \S4method{estimate}{hiddenDiffusion}(model.class, t, data, nMCMC, propSd,
-  adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal"))
+  adapt = TRUE, proposal = c("normal", "lognormal"), Npart = 100)
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the hidden diffusion model including all required information, see \code{\link{hiddenDiffusion-class}}}
 
 \item{t}{vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{vector of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,13 +20,14 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{Npart}{number of particles in the particle Gibbs sampler}
+\item{proposal}{proposal density: "normal" (default) or "lognormal" (for positive parameters)}
 
-\item{proposal}{proposal density "normal" (default) or "lognormal" (for positive parameters)}
+\item{Npart}{number of particles in the particle Gibbs sampler}
 }
 \description{
-Bayesian estimation of the model,
-  \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
+Bayesian estimation of the model
+  \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t,
+  \epsilon_i\sim N(0,\sigma^2), Y_{t_0}=y_0(\phi, t_0)} with a particle Gibbs sampler.
 }
 \examples{
 model <- set.to.class("hiddenDiffusion", y0.fun = function(phi, t) 0.5,
@@ -35,6 +36,7 @@ t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
 est <- estimate(model, t, data$Z, 100)  # nMCMC should be much larger!
 plot(est)
+
 \dontrun{
 # OU
 b.fun <- function(phi, t, y) phi[1]-phi[2]*y

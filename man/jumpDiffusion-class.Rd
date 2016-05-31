@@ -2,7 +2,7 @@
 \docType{class}
 \name{jumpDiffusion-class}
 \alias{jumpDiffusion-class}
-\title{S4 class for the jump diffusion process}
+\title{S4 class of model informations for the jump diffusion process}
 \description{
 Informations of model
 \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t} with
@@ -27,7 +27,7 @@ Informations of model
 
 \item{\code{Lambda}}{function \eqn{\Lambda(t,\xi)}}
 
-\item{\code{priorRatio}}{list of prior ratio functions}
+\item{\code{priorDensity}}{list of prior density functions, default is a non-informative approach}
 
 \item{\code{start}}{list of starting values for the Metropolis within Gibbs sampler}
 }}
@@ -37,15 +37,15 @@ b.fun <- function(phi, t, y) phi * y
 s.fun <- function(gamma2, t, y) sqrt(gamma2) * y
 h.fun <- function(theta, t, y) theta * y
 Lambda <- function(t, xi) (t / xi[2])^xi[1]
-priorRatio <- list(
-phi = function(new, old) 1,
-theta = function(new, old) dnorm(new, 0.1, 0.001)/dnorm(old, 0.1, 0.001),
-gamma2 = function(new, old) dgamma(1/new, 3, 0.01*2)/dgamma(1/old, 3, 0.01*2),
-xi = function(new, old) prod(dgamma(new, c(2, 0.2), 1)/dgamma(old, c(2, 0.2), 1))
+priorDensity <- list(
+  phi = function(phi) 1,
+  theta = function(theta) dnorm(theta, 0.1, 0.001),
+  gamma2 = function(gamma2) dgamma(1/gamma2, 3, 0.01*2),
+  xi = function(xi) dgamma(xi, c(2, 0.2), 1)
 )
 start <- parameter
 model <- set.to.class("jumpDiffusion", parameter, start = start,
   b.fun = b.fun, s.fun = s.fun, h.fun = h.fun, Lambda = Lambda,
-  priorRatio = priorRatio)
+  priorDensity = priorDensity)
 }
 

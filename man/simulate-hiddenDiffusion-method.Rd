@@ -2,7 +2,7 @@
 \docType{methods}
 \name{simulate,hiddenDiffusion-method}
 \alias{simulate,hiddenDiffusion-method}
-\title{Simulation of diffusion process}
+\title{Simulation of hidden diffusion process}
 \usage{
 \S4method{simulate}{hiddenDiffusion}(object, nsim = 1, seed = NULL, t,
   mw = 10, plot.series = TRUE)
@@ -21,8 +21,9 @@
 \item{plot.series}{logical(1), if TRUE, simulated series are depicted grafically}
 }
 \description{
-Simulation of a hidden stochastic process
-  \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
+Simulation of a hidden stochastic process model
+  \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t,
+  \epsilon_i\sim N(0,\sigma^2), Y_{t_0}=y_0(\phi, t_0)}.
 }
 \examples{
 model <- set.to.class("hiddenDiffusion", parameter = list(phi = 0.5, gamma2 = 0.01, sigma2 = 0.1))

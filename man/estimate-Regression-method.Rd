@@ -8,11 +8,11 @@
   adapt = TRUE, proposal = c("normal", "lognormal"))
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the regression model including all required information, see \code{\link{Regression-class}}}
 
 \item{t}{vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{vector of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,11 +20,11 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{proposal}{proposal density "normal" (default) or "lognormal" (for positive parameters)}
+\item{proposal}{proposal density: "normal" (default) or "lognormal" (for positive parameters)}
 }
 \description{
 Bayesian estimation of the parameter of the regression model
-  \eqn{y_i = f(\phi, t_i) + \epsilon_i}.
+  \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.
 }
 \examples{
 t <- seq(0,1, by = 0.01)

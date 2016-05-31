@@ -1,16 +1,11 @@
 #'
 #'
-#' Transformation of vector of event times to counting process
+#' Transformation of event times to NHPP
 #'
 #' @description Transformation of vector of event times to counting process.
 #' @param times vector of event times
 #' @param t times of counting process
 #'
-#' @return vector of counting process observations in t
-#' @examples
-#' t <- seq(0, 1, by = 0.01)
-#' times <- simN(t, c(5, 0.5), len = 1)$Times
-#' process <- TimestoN(times, t)
 #' @export
 TimestoN <- function(times, t){
   lt <- length(t)
@@ -21,17 +16,11 @@ TimestoN <- function(times, t){
 }
 
 
-#' Transformation of counting process to vector of event times
+#' Transformation of NHPP variables to event times
 #'
-#' @description Transformation of vector of counting process to event times.
+#' @description Vector of Poisson process differences are translated to a vector of event times.
 #' @param dN vector of differences of counting process
 #' @param t times of counting process
-#'
-#' @return vector of event times
-#' @examples
-#' t <- seq(0, 1, by = 0.01)
-#' process <- simN(t, c(5, 0.5), len = 1)$N
-#' times <- dNtoTimes(diff(process), t)
 #' @export
 dNtoTimes <- function(dN, t){
   if(any(dN > 1)){
@@ -50,13 +39,12 @@ dNtoTimes <- function(dN, t){
 
 
 
-#' Sampling from proposal density for strictly positive parameters
+#' Sampling from lognormal proposal density
 #'
-#' @description Used in Metropolis Hastings algorithms.
+#' @description Drawing of one sample from the lognormal distribution with mean \code{parOld} and standard deviation \code{propSd}. Used in Metropolis Hastings algorithms.
 #' @param parOld the parameter from the last iteration step
 #' @param propSd proposal standard deviation
 #'
-#' @return candidate for MH ratio
 #' @examples
 #' plot(replicate(100, proposal(1, 0.1)), type = "l")
 #' @export
@@ -67,14 +55,13 @@ proposal <- function(parOld, propSd){
   rlnorm(length(parOld), mu, sqrt(sigma2))
 }
 
-#' Sampling from proposal density for strictly positive parameters
+#' Proposal ratio of lognormal proposal density
 #'
-#' @description Used in Metropolis Hastings algorithms.
+#' @description Calculation of proposal ratio, see also \code{\link{proposal}}.
 #' @param parOld the parameter from the last iteration step
 #' @param parNew drawn candidate
 #' @param propSd proposal standard deviation
 #'
-#' @return MH ratio
 #' @examples
 #' cand <- proposal(1, 0.01)
 #' proposalRatio(1, cand, 0.01)
@@ -88,35 +75,21 @@ proposalRatio <- function(parOld, parNew, propSd){
   prod(dlnorm(parOld, muNew, sqrt(sigma2New))/dlnorm(parNew, muOld, sqrt(sigma2Old)))
 }
 
-#' Calculation of interval score
-#'
-#' @description Scoring rule of Raftery and Gneiting (??).
-#' @param l lower bound
-#' @param u upper bound
-#' @param x true value
-#' @param alpha level
-#'
-#' @return interval score
-#' @export
-scoreRule <- function(l, u, x, alpha = 0.05){
-  u-l + 2/alpha*(l-x)*(x < l) + 2/alpha*(x-u)*(x > u)
-}
 
-
-#' Binary Search Algorithm
+#' Inversion Method
 #'
-#' @description Binary Search Algorithm
+#' @description Algorithm to sample from cumulative distribution function, if no inverse function is analytically available
 #' @param Fun cumulative distribution function
 #' @param len number of samples
 #' @param candArea candidate area
 #' @param grid fineness degree
 #' @param method vectorial ("vector") or not ("free")
-#'
-#' @return vector of samples
 #' @examples
 #' test <- InvMethod(function(x) pnorm(x, 5, 1), 1000, candArea = c(0, 10), method = "free")
 #' plot(density(test))
 #' curve(dnorm(x, 5, 1), col = 2, add = TRUE)
+#' @references 
+#' Devroye, L. (1986). Non-Uniform Random Variate Generation. New York: Springer.
 #' @export
 InvMethod <- function(Fun, len, candArea, grid = 1e-05, method = c("vector", "free")){
   method <- match.arg(method)
@@ -164,12 +137,12 @@ InvMethod <- function(Fun, len, candArea, grid = 1e-05, method = c("vector", "fr
 #' @param cand candidate area
 #' @param grid fineness degree
 #' @param method vectorial ("vector") or not ("free")
-#'
-#' @return vector of samples
+#' @references 
+#' Devroye, L. (1986). Non-Uniform Random Variate Generation. New York: Springer.
 #' @examples
-#' plot(density(RejSampling(Fun = function(x) pnorm(x, 5, 1), dens = function(x) dnorm(x, 5, 1), 
+#' plot(density(RejSampling(dens = function(x) dnorm(x, 5, 1), 
 #'    len = 500, cand = seq(2, 9, by = 0.001), method = "free")))
-#' lines(density(RejSampling(function(x) pnorm(x, 5, 1), function(x) dnorm(x, 5, 1), 500, 
+#' lines(density(RejSampling(dens = function(x) dnorm(x, 5, 1), len = 500, 
 #'       cand = seq(2, 9, by = 0.001), method = "vector")), col=2)
 #' curve(dnorm(x, 5, 1), from = 2, to = 8, add = TRUE, col = 3)
 #' @export
@@ -220,38 +193,29 @@ RejSampling <- function(Fun, dens, len, cand, grid = 1e-03, method = c("vector",
 }
 
 
-#' Helping function
+#' Adaptation of proposal standard deviation
 #'
-#' @description Adaptive MCMC
+#' @description Adaptive MCMC: if acceptance rate of the chain is smaller than \code{lower} or larger than \code{upper}, 
+#' the proposal standard deviation is adapted with respect to function \code{delta.n}.
+#'  
 #' @param chain Markov chain
 #' @param propSd current proposal standard deviation
-#' @param iteration current iteration (batch)
+#' @param batch number of batch (of chain)
 #' @param lower lower bound
 #' @param upper upper bound
 #' @param delta.n function of batch number
 #'
-#' @return adjusted proposal standard deviation
+#' @return adapted proposal standard deviation
+#' @references Rosenthal, J. S. (2011). Optimal Proposal Distributions and Adaptive MCMC. In: Handbook of Markov Chain Monte Carlo, pp. 93-112.
 #' @export
-ad.propSd <- function(chain, propSd, iteration, lower = 0.3, upper = 0.6, delta.n = function(n) min(0.05, 1/sqrt(n))){
+ad.propSd <- function(chain, propSd, batch, lower = 0.3, upper = 0.6, delta.n = function(n) min(0.05, 1/sqrt(n))){
   ar <- length(unique(chain))/length(chain)
   lsi <- log(propSd)
 
-  lsi[ar < lower] <- lsi - delta.n(iteration)
-  lsi[ar > upper] <- lsi + delta.n(iteration)
+  lsi[ar < lower] <- lsi - delta.n(batch)
+  lsi[ar > upper] <- lsi + delta.n(batch)
   exp(lsi)
 }
-
-
-#' Helping function
-#'
-#' @description Finding suitable candidate area
-#' @param VFun cumulative distribution function
-#' @param start starting point for search
-#' @param pos.support if TRUE: only positive support
-#' @param quasi.null size of values to be defined as zero, default: 10^{-5}
-#'
-#' @return adjusted proposal standard deviation
-#' @export
 
 findCandidateArea <- function(VFun, start = 1, pos.support = TRUE, quasi.null = 1e-05){
   if(pos.support){
@@ -284,12 +248,16 @@ findCandidateArea <- function(VFun, start = 1, pos.support = TRUE, quasi.null = 
 }
 
 
-#' Calcucation of burn-in phase and thin rate
+#' Calcucation of a proposal for burn-in phase and thin rate
 #'
-#' @description Proposal for burn-in and thin rate
+#' @description The proposed burn-in is calculated by dividing the Markov chains into \code{m} blocks and calculate the 95\% credibility intervals and the respective mean. 
+#' Starting in the first one, the block is taken as burn-in as long as the mean of the current block is not in the credibility interval of the following block or vice versa. 
+#' The thinning rate is proposed by the first lag which leads to a chain autocorrelation of less than \code{dependence}. 
+#' It is not easy to automate these choices, so it is highly recommended to verify the chains manually.
 #' @param chain vector of Markov chain samples
 #' @param dependence allowed dependence for the chain
 #' @param m number of blocks
+#' @return vector of burn-in and thinning
 #' @export
 diagnostic <- function(chain, dependence = 0.8, m = 10) {
   lc <- length(chain)

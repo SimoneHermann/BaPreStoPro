@@ -2,10 +2,10 @@
 \docType{class}
 \name{mixedRegression-class}
 \alias{mixedRegression-class}
-\title{S4 class for the mixed regression model}
+\title{S4 class of model informations for the hierarchical (mixed) regression model}
 \description{
 Informations of model
-  \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j~N(\mu, \Omega),
+  \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j\sim N(\mu, \Omega),
   \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
 }
 \section{Slots}{

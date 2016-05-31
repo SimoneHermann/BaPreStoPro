@@ -20,7 +20,7 @@
 }
 \description{
 Simulation of the regression model
-  \eqn{y_i = f(\phi, t_i) + \epsilon_i}.
+  \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.
 }
 \examples{
 model <- set.to.class("Regression", parameter = list(phi = 5, gamma2 = 0.1),

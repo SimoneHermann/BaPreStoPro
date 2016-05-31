@@ -2,17 +2,17 @@
 \docType{methods}
 \name{estimate,hiddenmixedDiffusion-method}
 \alias{estimate,hiddenmixedDiffusion-method}
-\title{Estimation for noisy/hidden mixed diffusion process}
+\title{Estimation for hierarchical (mixed) hidden diffusion process}
 \usage{
 \S4method{estimate}{hiddenmixedDiffusion}(model.class, t, data, nMCMC, propSd,
-  adapt = TRUE, Npart = 100, proposal = c("normal", "lognormal"))
+  adapt = TRUE, proposal = c("normal", "lognormal"), Npart = 100)
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the hierarchical hidden diffusion model including all required information, see \code{\link{hiddenmixedDiffusion-class}}}
 
-\item{t}{vector of time points}
+\item{t}{list or vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{list or matrix of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,13 +20,14 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{Npart}{number of particles in the particle Gibbs sampler}
+\item{proposal}{proposal density: "normal" (default) or "lognormal" (for positive parameters)}
 
-\item{proposal}{proposal density "normal" (default) or "lognormal" (for positive parameters)}
+\item{Npart}{number of particles in the particle Gibbs sampler}
 }
 \description{
-Bayesian estimation of a stochastic process
-  \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
+Bayesian estimation of the parameters in the hierarchical model:
+  \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega),
+  Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)} with the particel Gibbs sampler.
 }
 \examples{
 mu <- c(5, 1); Omega <- c(0.9, 0.04)
@@ -37,6 +38,7 @@ model <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun,
                  parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
+
 \dontrun{
 est <- estimate(model, t, data$Z[1:20,], 2000)
 plot(est)

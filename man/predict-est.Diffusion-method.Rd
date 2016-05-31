@@ -31,7 +31,7 @@
 
 \item{y.start}{optional, if missing, first (which.series = "new") or last observation variable ("current") is taken}
 
-\item{M2pred}{optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points}
+\item{M2pred}{optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points}
 
 \item{cand.length}{length of candidate samples (if method = "vector")}
 
@@ -41,7 +41,7 @@
 
 \item{sampling.alg}{sampling algorithm, inversion method ("InvMethod") or rejection sampling ("RejSamp")}
 
-\item{sample.length}{length of samples to be drawn}
+\item{sample.length}{number of samples to be drawn}
 
 \item{grid}{fineness degree of approximation}
 
@@ -49,7 +49,7 @@
 }
 \description{
 Bayesian prediction of a stochastic process
-  \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
+  \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
 }
 \examples{
 model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))

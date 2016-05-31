@@ -4,7 +4,7 @@
 #' Simulation of diffusion process
 #'
 #' @description Simulation of a stochastic process
-#'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
+#'   \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
 #' @param object class object of parameters: "Diffusion"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
@@ -23,16 +23,16 @@ setMethod(f = "simulate", signature = "Diffusion",
             if(nsim > 1){
               result <- matrix(0, nsim, length(t))
               for(i in 1:nsim){
-                result[i,] <- drawSDE(object@phi, object@gamma2, t, object@b.fun, fODE = function(phi, t) y0,
-                                  sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
+                result[i,] <- drawSDE(object@phi, object@gamma2, t, object@b.fun, y0.fun = function(phi, t) y0,
+                                  sT = object@sT.fun, mw = mw, strictly.positive = FALSE)
               }
               if(plot.series){
                 plot(t, result[1,], type = "l", ylab = "Y", ylim = range(result))
                 for(i in 2:nsim) lines(t, result[i,], col = i)
               }
             }else{
-              result <- drawSDE(object@phi, object@gamma2, t, object@b.fun, fODE = function(phi, t) y0,
-                                sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
+              result <- drawSDE(object@phi, object@gamma2, t, object@b.fun, y0.fun = function(phi, t) y0,
+                                sT = object@sT.fun, mw = mw, strictly.positive = FALSE)
               if(plot.series){
                 plot(t, result, type = "l", ylab = "Y")
               }
@@ -46,7 +46,7 @@ setMethod(f = "simulate", signature = "Diffusion",
 #' Simulation of diffusion process
 #'
 #' @description Simulation of a stochastic process
-#'   \eqn{dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
+#'   \eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
 #' @param object class object of parameters: "mixedDiffusion"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
@@ -69,8 +69,8 @@ setMethod(f = "simulate", signature = "mixedDiffusion",
         for(j in 1:nsim){
           Y <- matrix(0, nrow(object@phi), length(t))
           for(i in 1:nrow(object@phi)){
-            Y[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, fODE = object@y0.fun,
-                                  sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
+            Y[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, y0.fun = object@y0.fun,
+                                  sT = object@sT.fun, mw = mw, strictly.positive = FALSE)
           }
           result[[j]] <- Y
         }
@@ -81,8 +81,8 @@ setMethod(f = "simulate", signature = "mixedDiffusion",
       }else{
         result <- matrix(0, nrow(object@phi), length(t))
         for(i in 1:nrow(object@phi)){
-          result[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, fODE = object@y0.fun,
-                                sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
+          result[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, y0.fun = object@y0.fun,
+                                sT = object@sT.fun, mw = mw, strictly.positive = FALSE)
         }
         if(plot.series){
           plot(t, result[1,], ylim = range(result), type = "l", ylab="Y")
@@ -99,7 +99,7 @@ setMethod(f = "simulate", signature = "mixedDiffusion",
 #' Simulation of regression model
 #'
 #' @description Simulation of the regression model
-#'   \eqn{y_i = f(\phi, t_i) + \epsilon_i}.
+#'   \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.
 #' @param object class object of parameters: "Diffusion"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
@@ -136,10 +136,11 @@ setMethod(f = "simulate", signature = "Regression",
 
 
 ########
-#' Simulation of mixed regression model
+#' Simulation of hierarchical (mixed) regression model
 #'
 #' @description Simulation of regression model
-#'   \eqn{y_i = f(\phi_j, t_i) + \epsilon_i, \phi_j\sim N(\mu, \Omega)}.
+#'   \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j\sim N(\mu, \Omega),
+#'   \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
 #' @param object class object of parameters: "mixedRegression"
 #' @param nsim number of response vectors to simulate. Defaults = 1.
 #' @param seed optional: seed number for random number generator
@@ -187,10 +188,11 @@ setMethod(f = "simulate", signature = "mixedRegression",
 
 
 ########
-#' Simulation of diffusion process
+#' Simulation of hidden diffusion process
 #'
-#' @description Simulation of a hidden stochastic process
-#'   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
+#' @description Simulation of a hidden stochastic process model
+#'   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, 
+#'   \epsilon_i\sim N(0,\sigma^2), Y_{t_0}=y_0(\phi, t_0)}.
 #' @param object class object of parameters: "hiddenDiffusion"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
@@ -208,8 +210,8 @@ setMethod(f = "simulate", signature = "hiddenDiffusion",
             if(nsim > 1){
               result <- matrix(0, nsim, length(t))
               for(i in 1:nsim){
-                result[i,] <- drawSDE(object@phi, object@gamma2, t, object@b.fun, fODE = object@y0.fun,
-                                      sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
+                result[i,] <- drawSDE(object@phi, object@gamma2, t, object@b.fun, y0.fun = object@y0.fun,
+                                      sT = object@sT.fun, mw = mw, strictly.positive = FALSE)
               }
               obs <- apply(result, 2, function(vec) rnorm(length(vec), vec, sqrt(object@sigma2)))
               if(plot.series){
@@ -218,8 +220,8 @@ setMethod(f = "simulate", signature = "hiddenDiffusion",
                 for(i in 1:nsim) points(t, obs[i,], col = i)
               }
             }else{
-              result <- drawSDE(object@phi, object@gamma2, t, object@b.fun, fODE = object@y0.fun,
-                                sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
+              result <- drawSDE(object@phi, object@gamma2, t, object@b.fun, y0.fun = object@y0.fun,
+                                sT = object@sT.fun, mw = mw, strictly.positive = FALSE)
 
               obs <- rnorm(length(t), result, sqrt(object@sigma2))
               if(plot.series){
@@ -235,10 +237,11 @@ setMethod(f = "simulate", signature = "hiddenDiffusion",
 
 
 ########
-#' Simulation of hidden mixed diffusion process
+#' Simulation of hierarchical (mixed) hidden diffusion model
 #'
 #' @description Simulation of a stochastic process
-#'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
+#'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), 
+#'   Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)}.
 #' @param object class object of parameters: "hiddenmixedDiffusion"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
@@ -263,8 +266,8 @@ setMethod(f = "simulate", signature = "hiddenmixedDiffusion",
               for(j in 1:nsim){
                 Y <- matrix(0, nrow(object@phi), length(t))
                 for(i in 1:nrow(object@phi)){
-                  Y[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, fODE = object@y0.fun,
-                                   sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
+                  Y[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, y0.fun = object@y0.fun,
+                                   sT = object@sT.fun, mw = mw, strictly.positive = FALSE)
                 }
                 result1[[j]] <- Y
               }
@@ -283,8 +286,8 @@ setMethod(f = "simulate", signature = "hiddenmixedDiffusion",
             }else{
               result1 <- matrix(0, nrow(object@phi), length(t))
               for(i in 1:nrow(object@phi)){
-                result1[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, fODE = object@y0.fun,
-                                      sigmaTilde = object@sT.fun, mw = mw, strictly.positive = FALSE)
+                result1[i,] <- drawSDE(object@phi[i,], object@gamma2, t, object@b.fun, y0.fun = object@y0.fun,
+                                      sT = object@sT.fun, mw = mw, strictly.positive = FALSE)
               }
 
               result2 <- apply(result1, 2, function(vec) rnorm(length(vec), vec, sqrt(object@sigma2)))
@@ -312,7 +315,7 @@ setMethod(f = "simulate", signature = "hiddenmixedDiffusion",
 ########
 #' Simulation of Poisson process
 #'
-#' @description Simulation of Poisson process.
+#' @description Simulation of non-homoegenous Poisson process.
 #' @param object class object of parameters: "NHPP"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
@@ -439,7 +442,7 @@ setMethod(f = "simulate", signature = "jumpDiffusion",
 #' Simulation of jump diffusion process
 #'
 #' @description Simulation of jump diffusion process
-#'   \eqn{Y_t = y_0 \exp( \phi t - \gamma2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
+#'   \eqn{Y_t = y_0 \exp( \phi t - \gamma^2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
 #' @param object class object of parameters: "Merton"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
@@ -501,7 +504,8 @@ setMethod(f = "simulate", signature = "Merton",
 #' Simulation of regression model dependent on Poisson process
 #'
 #' @description Simulation of of the regression model
-#'   \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
+#'   \eqn{y_i = f(t_i, N_{t_i}, \theta) + \epsilon_i} with
+#'   \eqn{N_t\sim Pois(\Lambda(t, \xi)), \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t))}.
 #' @param object class object of parameters: "jumpRegression"
 #' @param nsim number of response vectors to simulate. Defaults to 1
 #' @param seed optional: seed number for random number generator
@@ -547,22 +551,7 @@ setMethod(f = "simulate", signature = "jumpRegression",
 })
 
 
-
-#' Function for simulating diffusion process
-#'
-#' @description Simulation of process defined by \eqn{dYt = b(\phi, t, Y_t)dt + \gamma sigmaTilde(t, Y_t)dW_t}.
-#' @param phi parameter \eqn{\phi}
-#' @param gamma2 parameter \eqn{\gamma^2}
-#' @param t vector of time points
-#' @param b drift function
-#' @param fODE function for the starting point dependent on phi, for fixed y0: fODE = function(phi, t) y0
-#' @param sigmaTilde variance function \eqn{s(\gamma, t, y) = \gamma sigmaTilde(t, y)}
-#' @param mw mesh width to simulate the time-continuity
-#' @param strictly.positive if TRUE, only positive values for process \eqn{Y_t}
-#' @return data series in t
-
-
-drawSDE <- function(phi, gamma2, t, b, fODE, sigmaTilde, mw = 10, strictly.positive = TRUE){
+drawSDE <- function(phi, gamma2, t, b, y0.fun, sT, mw = 10, strictly.positive = TRUE){
   lt <- length(t)
   lt2 <- (lt-1)*mw+1
   t2 <- seq(min(t), max(t), length = lt2)
@@ -573,38 +562,22 @@ drawSDE <- function(phi, gamma2, t, b, fODE, sigmaTilde, mw = 10, strictly.posit
   if(strictly.positive){
     while(any(X < 0)){
       err <- rnorm(lt2-1, 0, sqrt(dt2))
-      X[1] <- fODE(phi, t2[1])
+      X[1] <- y0.fun(phi, t2[1])
       for(j in 2:lt2){
-        X[j] <- X[j-1] + b(phi, t2[j-1], X[j-1])*dt2 + sqrt(gamma2)*sigmaTilde(t2[j-1], X[j-1])*err[j-1]
+        X[j] <- X[j-1] + b(phi, t2[j-1], X[j-1])*dt2 + sqrt(gamma2)*sT(t2[j-1], X[j-1])*err[j-1]
       }
     }
   } else {
     err <- rnorm(lt2-1, 0, sqrt(dt2))
-    X[1] <- fODE(phi, t2[1])
+    X[1] <- y0.fun(phi, t2[1])
     for(j in 2:lt2){
-      X[j] <- X[j-1] + b(phi, t2[j-1], X[j-1])*dt2 + sqrt(gamma2)*sigmaTilde(t2[j-1], X[j-1])*err[j-1]
+      X[j] <- X[j-1] + b(phi, t2[j-1], X[j-1])*dt2 + sqrt(gamma2)*sT(t2[j-1], X[j-1])*err[j-1]
     }
   }
 
   X[seq(1, lt2, by = mw)]
 }
 
-
-
-#' Simulation of counting process
-#'
-#' @description Simulation of counting process and event times.
-#' @param t vector of times
-#' @param xi parameter vector \eqn{\xi}
-#' @param len number of samples to be drawn
-#' @param start vector: start[1] starting point time, start[2] starting point for Poisson process
-#' @param Lambda intensity rate function
-#' @param int if no Lambda: one out of "Weibull" or "Exp" for intensity function
-#'
-#' @return
-#' \item{N}{Poisson process}
-#' \item{Times}{event times}
-#' @export
 simN <- function(t, xi, len, start = c(0,0), Lambda, int = c("Weibull","Exp")){  # start=(T_n,n)
   if(missing(Lambda)){
     int <- match.arg(int)

@@ -29,13 +29,13 @@
 
 \item{which.series}{which series to be predicted, new one ("new") or further development of current one ("current")}
 
-\item{M2pred}{default 10, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points}
+\item{M2pred}{optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points}
 
 \item{cand.length}{length of candidate samples (if method = "vector"), for jump diffusion}
 
 \item{pred.alg}{prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleTrajectory"}
 
-\item{sample.length}{length of samples to be drawn}
+\item{sample.length}{number of samples to be drawn}
 
 \item{grid}{fineness degress of approximation, for Poisson process}
 

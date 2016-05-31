@@ -1,13 +1,3 @@
-#' Posterior for mu
-#'
-#' @description Posterior for parameters \eqn{\mu}
-#' @param phi matrix of random effects
-#' @param m prior mean
-#' @param v prior variance
-#' @param Omega variance of the random effects
-#' @return one sample of posterior
-#' @export
-
 
 
 # postmu <- function(phi, m, v, Omega){  # phi matrix
@@ -27,3 +17,18 @@ postmu <- function(phi, m, v, Omega){  # phi nxp-matrix, m mean of mu, v diagona
 
   rnorm(length(mpost), mpost, sqrt(Vpost))
 }
+
+postOmega <- function(alpha, beta, phi, mu){  # length(alpha)=length(beta)=length(mu)
+  p <- length(mu)
+  Dia <- numeric(p)
+  for(i in 1:p){
+    Dia[i] <- 1/rgamma(1, alpha[i] + nrow(phi)/2, beta[i] + sum((phi[,i]-mu[i])^2)/2)
+  }
+  Dia
+}
+
+
+# postOmega_matrix <- function(R, phi, mu){
+#   Rpost <- solve(R + (t(phi)-as.vector(mu))%*%t((t(phi)-as.vector(mu))))
+#   solve( rWishart(1,nrow(phi)+length(mu)+1,Rpost)[,,1])
+# }

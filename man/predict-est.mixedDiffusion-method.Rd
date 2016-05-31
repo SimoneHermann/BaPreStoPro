@@ -2,7 +2,7 @@
 \docType{methods}
 \name{predict,est.mixedDiffusion-method}
 \alias{predict,est.mixedDiffusion-method}
-\title{Prediction for mixed diffusion process}
+\title{Prediction for hierarchical (mixed) diffusion process}
 \usage{
 \S4method{predict}{est.mixedDiffusion}(object, t, Euler.interval = FALSE,
   level = 0.05, burnIn, thinning, b.fun.mat, which.series = c("new",
@@ -31,13 +31,13 @@
 
 \item{ind.pred}{index of series to be predicted, optional, if which.series = "current" and ind.pred missing, the last series is taken}
 
-\item{M2pred}{optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points}
+\item{M2pred}{optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points}
 
 \item{cand.length}{length of candidate samples (if method = "vector")}
 
 \item{pred.alg}{prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"}
 
-\item{sample.length}{length of samples to be drawn}
+\item{sample.length}{number of samples to be drawn}
 
 \item{grid}{fineness degree of approximation}
 
@@ -45,7 +45,7 @@
 }
 \description{
 Bayesian prediction of a stochastic process
-  \eqn{dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
+  \eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
 }
 \examples{
 mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))

@@ -2,7 +2,7 @@
 \docType{methods}
 \name{predict,est.hiddenDiffusion-method}
 \alias{predict,est.hiddenDiffusion-method}
-\title{Prediction for noisy / hidden diffusion process}
+\title{Prediction for hidden diffusion process}
 \usage{
 \S4method{predict}{est.hiddenDiffusion}(object, t, burnIn, thinning, b.fun.mat,
   which.series = c("new", "current"), M2pred = 10, cand.length = 1000,
@@ -22,13 +22,13 @@
 
 \item{which.series}{which series to be predicted, new one ("new") or further development of current one ("current")}
 
-\item{M2pred}{optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points}
+\item{M2pred}{optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points}
 
 \item{cand.length}{length of candidate samples (if method = "vector")}
 
 \item{pred.alg}{prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"}
 
-\item{sample.length}{length of samples to be drawn}
+\item{sample.length}{number of samples to be drawn}
 
 \item{grid}{fineness degree of approximation}
 
@@ -36,7 +36,7 @@
 }
 \description{
 Bayesian prediction of the model,
-  \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
+  \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
 }
 \examples{
 model <- set.to.class("hiddenDiffusion", parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
@@ -44,6 +44,7 @@ t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
 est_hiddiff <- estimate(model, t, data$Z, 100)  # nMCMC should be much larger!
 plot(est_hiddiff)
+
 \dontrun{
 pred_hiddiff <- predict(est_hiddiff, t = seq(0, 1, by = 0.1))
 pred_hiddiff2 <- predict(est_hiddiff, which.series = "current")

@@ -1,6 +1,6 @@
 
 
-#' S4 class for the jump diffusion process
+#' S4 class of model informations for the jump diffusion process
 #' @description Informations of model 
 #' \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t} with 
 #' \eqn{N_t\sim Pois(\Lambda(t, \xi))}.
@@ -12,7 +12,7 @@
 #' @slot s.fun function \eqn{s(\gamma^2,t,y)}
 #' @slot h.fun function \eqn{b(\theta,t,y)}
 #' @slot Lambda function \eqn{\Lambda(t,\xi)}
-#' @slot priorRatio list of prior ratio functions
+#' @slot priorDensity list of prior density functions, default is a non-informative approach
 #' @slot start list of starting values for the Metropolis within Gibbs sampler
 #' @examples 
 #' parameter <- list(phi = 0.01, theta = 0.1, gamma2 = 0.01, xi = c(2, 0.2))
@@ -20,50 +20,52 @@
 #' s.fun <- function(gamma2, t, y) sqrt(gamma2) * y
 #' h.fun <- function(theta, t, y) theta * y
 #' Lambda <- function(t, xi) (t / xi[2])^xi[1]
-#' priorRatio <- list(
-#' phi = function(new, old) 1,
-#' theta = function(new, old) dnorm(new, 0.1, 0.001)/dnorm(old, 0.1, 0.001),
-#' gamma2 = function(new, old) dgamma(1/new, 3, 0.01*2)/dgamma(1/old, 3, 0.01*2),
-#' xi = function(new, old) prod(dgamma(new, c(2, 0.2), 1)/dgamma(old, c(2, 0.2), 1))
+#' priorDensity <- list(
+#'   phi = function(phi) 1,
+#'   theta = function(theta) dnorm(theta, 0.1, 0.001),
+#'   gamma2 = function(gamma2) dgamma(1/gamma2, 3, 0.01*2),
+#'   xi = function(xi) dgamma(xi, c(2, 0.2), 1)
 #' )
 #' start <- parameter
 #' model <- set.to.class("jumpDiffusion", parameter, start = start, 
 #'   b.fun = b.fun, s.fun = s.fun, h.fun = h.fun, Lambda = Lambda, 
-#'   priorRatio = priorRatio)
+#'   priorDensity = priorDensity)
 
 setClass(Class = "jumpDiffusion", representation = representation(theta = "numeric", phi = "numeric", gamma2 = "numeric", xi = "numeric",
                                                                   b.fun = "function", s.fun = "function", h.fun = "function",
-                                                                  Lambda = "function", priorRatio = "list", start = "list"))
+                                                                  Lambda = "function", priorDensity = "list", start = "list"))
 
 
-#' S4 class for a special jump diffusion process, called Merton model
+#' S4 class of model informations for a special jump diffusion process, called Merton model
 #' @description Informations of model 
 #' \eqn{dY_t = \phi Y_t dt + \gamma^2 Y_t dW_t + \theta Y_tdN_t} with 
 #' \eqn{N_t\sim Pois(\Lambda(t, \xi))}. The explicit solution of the SDE is given by 
-#'   \eqn{Y_t = y_0 \exp( \phi t - \gamma2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
+#'   \eqn{Y_t = y_0 \exp( \phi t - \gamma^2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
 #' @slot thetaT parameter \eqn{\widetilde{\theta}=\log(1+\theta)}
 #' @slot phi parameter \eqn{\phi}
 #' @slot gamma2 parameter \eqn{\gamma^2}
 #' @slot xi parameter \eqn{\xi}
 #' @slot Lambda function \eqn{\Lambda(t,\xi)}
 #' @slot prior list of prior parameters for \eqn{\phi, \widetilde{\theta}, \gamma^2}
-#' @slot priorRatio list of prior ratio function for \eqn{\xi}
+#' @slot priorDensity list of prior density function for \eqn{\xi}
 #' @slot start list of starting values for the Metropolis within Gibbs sampler
 #' @examples 
 #' parameter <- list(phi = 0.01, thetaT = 0.1, gamma2 = 0.01, xi = c(2, 0.2))
 #' Lambda <- function(t, xi) (t / xi[2])^xi[1]
-#' priorRatio <- function(new, old) prod(dgamma(new, c(2, 0.2), 1)/dgamma(old, c(2, 0.2), 1))
+#' # prior density for xi:
+#' priorDensity <- function(xi) dgamma(xi, c(2, 0.2), 1)
+#' # prior parameter for phi (normal), thetaT (normal) and gamma2 (inverse gamma):
 #' prior <- list(m.phi = parameter$phi, v.phi = parameter$phi, m.thetaT = parameter$thetaT, 
 #'    v.thetaT = parameter$thetaT, alpha.gamma = 3, beta.gamma = parameter$gamma2*2)
 #' start <- parameter
-#' model <- set.to.class("Merton", parameter, prior, start, Lambda = Lambda, priorRatio = priorRatio)
+#' model <- set.to.class("Merton", parameter, prior, start, Lambda = Lambda, priorDensity = priorDensity)
 #' summary(class.to.list(model))
 #' # default:
 #' model <- set.to.class("Merton", parameter, Lambda = Lambda)
 #' 
 setClass(Class = "Merton", representation = representation(thetaT = "numeric", phi = "numeric", gamma2 = "numeric", xi = "numeric",
-                                                           Lambda = "function", prior = "list", start = "list", priorRatio = "function"))
-#' S4 class for diffusion process
+                                                           Lambda = "function", prior = "list", start = "list", priorDensity = "function"))
+#' S4 class of model informations for diffusion process
 #' @description Informations of model 
 #' \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
 #' @slot phi parameter \eqn{\phi}
@@ -84,9 +86,9 @@ setClass(Class = "Merton", representation = representation(thetaT = "numeric", p
 
 setClass(Class = "Diffusion", representation = representation(phi = "numeric", gamma2 = "numeric",
                                                               b.fun = "function", sT.fun = "function", prior = "list", start = "list"))
-#' S4 class for mixed diffusion process
+#' S4 class of model informations for hierarchical (mixed) diffusion process model
 #' @description Informations of model 
-#' \eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega), Y_{t_0}=y_0(\phi, t_0)}.
+#' \eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), Y_{t_0}=y_0(\phi, t_0)}.
 #' @slot phi parameter \eqn{\phi}
 #' @slot mu parameter \eqn{\mu}
 #' @slot Omega parameter \eqn{\Omega}
@@ -113,7 +115,7 @@ setClass(Class = "Diffusion", representation = representation(phi = "numeric", g
 setClass(Class = "mixedDiffusion", representation = representation(phi = "matrix", mu = "numeric", Omega = "numeric", gamma2 = "numeric",
                                                                    y0.fun = "function", b.fun = "function", sT.fun = "function", prior = "list", start = "list"))
 
-#' S4 class for hidden diffusion process
+#' S4 class of model informations for hidden diffusion process
 #' @description Informations of model 
 #'   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, 
 #'   \epsilon_i\sim N(0,\sigma^2), Y_{t_0}=y_0(\phi, t_0)}.
@@ -140,9 +142,9 @@ setClass(Class = "hiddenDiffusion", representation = representation(phi = "numer
                                                                     sigma2 = "numeric",
                                                                     b.fun = "function", sT.fun = "function", y0.fun = "function",
                                                                     prior = "list", start = "list"))
-#' S4 class for mixed hidden diffusion process
+#' S4 class of model informations for hierarchical (mixed) hidden diffusion process
 #' @description Informations of model 
-#'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega), 
+#'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), 
 #'   Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)}.
 #' @slot phi parameter \eqn{\phi}
 #' @slot mu parameter \eqn{\mu}
@@ -173,7 +175,7 @@ setClass(Class = "hiddenmixedDiffusion", representation = representation(phi = "
                                                                     sigma2 = "numeric",
                                                                     b.fun = "function", sT.fun = "function", y0.fun = "function",
                                                                     prior = "list", start = "list"))
-#' S4 class for the jump regression process
+#' S4 class of model informations for the jump regression model
 #' @description Informations of model 
 #'   \eqn{y_i = f(t_i, N_{t_i}, \theta) + \epsilon_i} with
 #'   \eqn{N_t\sim Pois(\Lambda(t, \xi)), \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t))}.
@@ -199,23 +201,23 @@ setClass(Class = "hiddenmixedDiffusion", representation = representation(phi = "
 setClass(Class = "jumpRegression", representation = representation(theta = "numeric", gamma2 = "numeric", xi = "numeric", fun = "function",
                                                                    Lambda = "function", sT.fun = "function", prior = "list", start = "list"))
 
-#' S4 class for non-homogeneous Poisson process
-#' @description Informations of model 
-#' \eqn{N_t\sim Pois(\Lambda(t, \xi))}. 
+#' S4 class of model informations for non-homogeneous Poisson process
+#' @description Informations of NHPP with cumulative intensity function 
+#' \eqn{\Lambda(t, \xi)}. 
 #' @slot xi parameter \eqn{\xi}
 #' @slot Lambda function \eqn{\Lambda(t,\xi)}
-#' @slot priorRatio list of prior ratio function for \eqn{\xi}
+#' @slot priorDensity prior density function for \eqn{\xi}
 #' @slot start list of starting values for the Metropolis within Gibbs sampler
 #' @examples 
 #' parameter <- list(xi = c(2, 0.2))
 #' Lambda <- function(t, xi) (t / xi[2])^xi[1]
-#' priorRatio <- function(new, old) prod(dgamma(new, c(2, 0.2), 1)/dgamma(old, c(2, 0.2), 1))
+#' priorDensity <- function(xi) dgamma(xi, c(2, 0.2), 1)
 #' start <- parameter
-#' model <- set.to.class("NHPP", parameter, start = start, Lambda = Lambda, priorRatio = priorRatio)
+#' model <- set.to.class("NHPP", parameter, start = start, Lambda = Lambda, priorDensity = priorDensity)
 
-setClass(Class = "NHPP", representation = representation(xi = "numeric", Lambda = "function", priorRatio = "function", start = "numeric"))
+setClass(Class = "NHPP", representation = representation(xi = "numeric", Lambda = "function", priorDensity = "function", start = "numeric"))
 
-#' S4 class for the regression model
+#' S4 class of model informations for the regression model
 #' @description Informations of model 
 #'   \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.
 #' @slot phi parameter \eqn{\phi}
@@ -235,9 +237,9 @@ setClass(Class = "NHPP", representation = representation(xi = "numeric", Lambda 
 
 setClass(Class = "Regression", representation = representation(phi = "numeric", gamma2 = "numeric",
                                                               fun = "function", sT.fun = "function", prior = "list", start = "list"))
-#' S4 class for the mixed regression model
+#' S4 class of model informations for the hierarchical (mixed) regression model
 #' @description Informations of model 
-#'   \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j~N(\mu, \Omega),
+#'   \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j\sim N(\mu, \Omega),
 #'   \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
 #' @slot phi parameter \eqn{\phi}
 #' @slot mu parameter \eqn{\mu}

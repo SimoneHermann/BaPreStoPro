@@ -2,7 +2,7 @@
 \docType{methods}
 \name{simulate,hiddenmixedDiffusion-method}
 \alias{simulate,hiddenmixedDiffusion-method}
-\title{Simulation of hidden mixed diffusion process}
+\title{Simulation of hierarchical (mixed) hidden diffusion model}
 \usage{
 \S4method{simulate}{hiddenmixedDiffusion}(object, nsim = 1, seed = NULL, t,
   mw = 10, plot.series = TRUE)
@@ -22,7 +22,8 @@
 }
 \description{
 Simulation of a stochastic process
-  \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
+  \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega),
+  Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)}.
 }
 \examples{
 mu <- c(5, 1); Omega <- c(0.9, 0.04)

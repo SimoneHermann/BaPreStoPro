@@ -5,7 +5,7 @@
 Crack Growth
 }
 \description{
-  68 measurement for 164 times
+  68 measurement series in 164 time points
 }
 \usage{
 Virkler

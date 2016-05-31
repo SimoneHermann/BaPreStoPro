@@ -2,7 +2,7 @@
 \docType{methods}
 \name{predict,est.hiddenmixedDiffusion-method}
 \alias{predict,est.hiddenmixedDiffusion-method}
-\title{Prediction for noisy/hidden mixed diffusion process}
+\title{Prediction for hierarchical (mixed) hidden diffusion process}
 \usage{
 \S4method{predict}{est.hiddenmixedDiffusion}(object, t, burnIn, thinning,
   b.fun.mat, which.series = c("new", "current"), ind.pred, M2pred = 10,
@@ -25,13 +25,13 @@
 
 \item{ind.pred}{index of series to be predicted, optional, if which.series = "current" and ind.pred missing, the last series is taken}
 
-\item{M2pred}{optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points}
+\item{M2pred}{optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points}
 
 \item{cand.length}{length of candidate samples (if method = "vector")}
 
 \item{pred.alg}{prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"}
 
-\item{sample.length}{length of samples to be drawn}
+\item{sample.length}{number of samples to be drawn}
 
 \item{grid}{fineness degree of approximation}
 
@@ -39,7 +39,7 @@
 }
 \description{
 Bayesian prediction of a stochastic process
-  \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
+  \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
 }
 \examples{
 mu <- c(5, 1); Omega <- c(0.9, 0.04)
@@ -50,6 +50,7 @@ model <- set.to.class("hiddenmixedDiffusion", y0.fun = y0.fun,
      parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
+
 \dontrun{
 est_hidmixdiff <- estimate(model, t, data$Z[1:20,], 2000)
 plot(est_hidmixdiff)

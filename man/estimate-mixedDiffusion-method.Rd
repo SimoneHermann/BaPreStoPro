@@ -2,17 +2,17 @@
 \docType{methods}
 \name{estimate,mixedDiffusion-method}
 \alias{estimate,mixedDiffusion-method}
-\title{Estimation for mixed diffusion process}
+\title{Estimation for hierarchical (mixed) diffusion model}
 \usage{
 \S4method{estimate}{mixedDiffusion}(model.class, t, data, nMCMC, propSd,
   adapt = TRUE, proposal = c("normal", "lognormal"))
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the hierarchical diffusion model including all required information, see \code{\link{mixedDiffusion-class}}}
 
-\item{t}{vector of time points}
+\item{t}{list or vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{list or matrix of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,11 +20,11 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{proposal}{proposal density "normal" (default) or "lognormal" (for positive parameters)}
+\item{proposal}{proposal density: "normal" (default) or "lognormal" (for positive parameters)}
 }
 \description{
-Bayesian estimation of a stochastic process
-  \eqn{dY_t = b(\phi_j,t,Y_t)dt + s(\gamma,t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
+Bayesian estimation of a model
+\eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), Y_{t_0}=y_0(\phi, t_0)}.
 }
 \examples{
 mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
@@ -35,6 +35,7 @@ t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
 est <- estimate(model, t, data[1:20,], 100)  # nMCMC should be much larger
 plot(est)
+
 # OU
 b.fun <- function(phi, t, y) phi[1]-phi[2]*y; y0.fun <- function(phi, t) phi[3]
 mu <- c(10, 5, 0.5); Omega <- c(0.9, 0.01, 0.01)
@@ -46,6 +47,7 @@ t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
 est <- estimate(model, t, data[1:20,], 100)  # nMCMC should be much larger
 plot(est)
+
 ##
 t.list <- list()
 for(i in 1:20) t.list[[i]] <- t

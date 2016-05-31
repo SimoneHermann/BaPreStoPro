@@ -2,7 +2,7 @@
 \docType{class}
 \name{hiddenDiffusion-class}
 \alias{hiddenDiffusion-class}
-\title{S4 class for hidden diffusion process}
+\title{S4 class of model informations for hidden diffusion process}
 \description{
 Informations of model
   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t,

@@ -2,7 +2,7 @@
 \docType{class}
 \name{Regression-class}
 \alias{Regression-class}
-\title{S4 class for the regression model}
+\title{S4 class of model informations for the regression model}
 \description{
 Informations of model
   \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.

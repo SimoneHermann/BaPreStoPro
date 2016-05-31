@@ -5,14 +5,14 @@
 \title{Estimation for Poisson process}
 \usage{
 \S4method{estimate}{NHPP}(model.class, t, data, nMCMC, propSd, adapt = TRUE,
-  proposal = c("lognormal", "normal"))
+  proposal = c("normal", "lognormal"))
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the NHPP model including all required information, see \code{\link{NHPP-class}}}
 
 \item{t}{vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{vector of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,28 +20,29 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{proposal}{"lognormal" (for positive parameters, default) or "normal"}
+\item{proposal}{proposal density: "normal" (default) or "lognormal" (for positive parameters)}
 }
 \description{
-Bayesian estimation of a nonhomogeneous Poisson process.
+Bayesian estimation of a non-homogeneous Poisson process (NHPP) with cumulative intensity function \eqn{\Lambda(t, \xi)}.
 }
 \examples{
 model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)),
                    Lambda = function(t, xi) (t/xi[2])^xi[1])
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
-est <- estimate(model, t, data$Times, 10000)
+est <- estimate(model, t, data$Times, 10000, proposal = "lognormal")
 plot(est)
+
 ##
 model <- set.to.class("NHPP", parameter = list(xi = 5),
                    Lambda = function(t, xi) t*xi)
 t <- seq(0, 1, by = 0.01)
 data <- simulate(model, t = t, plot.series = TRUE)
-est <- estimate(model, t, data$N, 10000, proposal = "normal")
+est <- estimate(model, t, data$N, 10000)
 plot(est, par.options = list(mfrow = c(1,1)))
 }
 \references{
-Hermann, S., K. Ickstadt and C. H. Mueller (2016).
+Hermann, S., K. Ickstadt and C. H. Mueller (2015).
 Bayesian Prediction for a Jump Diffusion Process with Application to Crack Growth in Fatigue Experiments.
 SFB 823 discussion paper 30/15.
 }

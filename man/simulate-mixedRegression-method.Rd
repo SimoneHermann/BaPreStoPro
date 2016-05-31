@@ -2,7 +2,7 @@
 \docType{methods}
 \name{simulate,mixedRegression-method}
 \alias{simulate,mixedRegression-method}
-\title{Simulation of mixed regression model}
+\title{Simulation of hierarchical (mixed) regression model}
 \usage{
 \S4method{simulate}{mixedRegression}(object, nsim = 1, seed = NULL, t,
   plot.series = TRUE)
@@ -20,7 +20,8 @@
 }
 \description{
 Simulation of regression model
-  \eqn{y_i = f(\phi_j, t_i) + \epsilon_i, \phi_j\sim N(\mu, \Omega)}.
+  \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j\sim N(\mu, \Omega),
+  \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
 }
 \examples{
 mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))

@@ -19,7 +19,7 @@
 \item{plot.series}{logical(1), if TRUE, simulated series are depicted grafically}
 }
 \description{
-Simulation of Poisson process.
+Simulation of non-homoegenous Poisson process.
 }
 \examples{
 model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)),

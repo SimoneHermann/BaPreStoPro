@@ -12,8 +12,8 @@
 #' @param y0.fun function for the starting point, if dependent on parameter
 #' @param fun regression function
 #' @param Lambda intensity rate of Poisson process
-#' @param priorRatio list of functions for prior ratios, only for jumpDiffusion, is missing: non-informative estimation
-#' @section Description:
+#' @param priorDensity list of functions for prior ratios, only for jumpDiffusion, is missing: non-informative estimation
+#' @section Details:
 #' \code{set.to.class} is the central function to define a model, which is a S4 class, where the \code{simulate} and the \code{estimate} methods build up.
 #' Main input parameter is \code{class.name}, which is one out of "jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion", "jumpRegression", "NHPP", "Regression" and "mixedRegression", which is the name of the class containing all information of the model.
 #' If you write \code{set.to.class(class.name)} without any further input parameter, the function tells you which entries the list \code{parameter} has to contain.
@@ -26,7 +26,7 @@
 #' \code{y0.fun} is for the models, where the starting value depends on the parameter phi, "mixedDiffusion", "hiddenDiffusion" or "hiddenmixedDiffusion". Default value is a constant function in 1.
 #' \code{fun} is the regression function for the models "Regression", "mixedRegression" and "jumpRegression". In the first two cases, this is \eqn{f(\phi, t)} and in the third \eqn{f(t, N, \theta)}.
 #' Function \code{Lambda} is the cumulative intensity function in the models including the non-homogeneous Poisson process.
-#' Input parameter \code{priorRatio} is for the model class "jumpDiffusion", where a list of functions for the prior specification can be included. Default is a non-informative approach.
+#' Input parameter \code{priorDensity} is for the model class "jumpDiffusion", where a list of functions for the prior specification can be included. Default is a non-informative approach.
 #' 
 #' @return model class
 #' @examples
@@ -39,7 +39,7 @@
 
 #' @export
 set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion", "jumpRegression", "NHPP", "Regression", "mixedRegression"),
-                         parameter, prior, start, b.fun, s.fun, h.fun, sT.fun, y0.fun, fun, Lambda, priorRatio){
+                         parameter, prior, start, b.fun, s.fun, h.fun, sT.fun, y0.fun, fun, Lambda, priorDensity){
   class.name <- match.arg(class.name)
   df <- defaults(class.name)
   if(missing(parameter)){
@@ -82,21 +82,21 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
 
 
   if(class.name == "jumpDiffusion"){
-    if(missing(priorRatio)){
-      priorRatio <- list(
-        phi = function(phi_drawn, phi_old) 1,
-        theta = function(theta_drawn, theta_old) 1,
-        gamma2 = function(gamma2_drawn, gamma2_old) 1,
-        xi = function(xi_drawn, xi_old) 1)
+    if(missing(priorDensity)){
+      priorDensity <- list(
+        phi = function(phi) 1,
+        theta = function(theta) 1,
+        gamma2 = function(gamma2) 1,
+        xi = function(xi_drawn) 1)
     }
     return(new(Class = class.name, theta = parameter$theta, phi = parameter$phi, gamma2 = parameter$gamma2, xi = parameter$xi,
-               b.fun = b.fun, s.fun = s.fun, h.fun = h.fun, Lambda = Lambda, priorRatio = priorRatio,
+               b.fun = b.fun, s.fun = s.fun, h.fun = h.fun, Lambda = Lambda, priorDensity = priorDensity,
                start = start))
   }
   if(class.name == "Merton"){
-    if(missing(priorRatio)) priorRatio <- function(xi_drawn, xi_old) 1
+    if(missing(priorDensity)) priorDensity <- function(xi) 1
     return(new(Class = class.name, thetaT = parameter$thetaT, phi = parameter$phi, gamma2 = parameter$gamma2, xi = parameter$xi,
-               Lambda = Lambda, prior = prior, start = start, priorRatio = priorRatio))
+               Lambda = Lambda, prior = prior, start = start, priorDensity = priorDensity))
   }
   if(class.name == "Diffusion"){
     return(new(Class = class.name, phi = parameter$phi, gamma2 = parameter$gamma2,
@@ -123,8 +123,8 @@ set.to.class <- function(class.name = c("jumpDiffusion", "Merton", "Diffusion", 
                sT.fun = sT.fun, prior = prior, start = start))
   }
   if(class.name == "NHPP"){
-    if(missing(priorRatio)) priorRatio <- function(xi_drawn, xi_old) 1
-    return(new(Class = class.name, xi = parameter$xi, Lambda = Lambda, start = parameter$xi, priorRatio = priorRatio))
+    if(missing(priorDensity)) priorDensity <- function(xi) 1
+    return(new(Class = class.name, xi = parameter$xi, Lambda = Lambda, start = parameter$xi, priorDensity = priorDensity))
   }
   if(class.name == "Regression"){
     return(new(Class = class.name, phi = parameter$phi, gamma2 = parameter$gamma2,
@@ -208,11 +208,14 @@ getPriorNames <- function(model = c("jumpDiffusion", "Merton", "Diffusion", "mix
   names
 }
 
-#' Builds a list from class
+#' Builds a list from class object
 #'
-#' @description Class to list
-#' @param cl class
-#' @return list
+#' @description Class slots are tranfered to list entries
+#' @param cl class object
+#' @examples
+#' model <- set.to.class("jumpDiffusion", 
+#'              parameter = list(theta = 0.1, phi = 0.01, gamma2 = 0.1, xi = 3))
+#' summary(class.to.list(model))
 #' @export
 
 class.to.list <- function(cl){
@@ -222,3 +225,46 @@ class.to.list <- function(cl){
   names(res) <- sN
   res
 }
+
+getPrior <- function(parameter, model = c("jumpDiffusion", "Merton", "Diffusion", "mixedDiffusion", "hiddenDiffusion", "hiddenmixedDiffusion",
+                                          "jumpRegression", "NHPP", "Regression", "mixedRegression")){
+  model <- match.arg(model)
+  
+  if(model=="jumpDiffusion"){
+    prior <- list()
+  }
+  if(model == "Merton"){
+    prior <- list(m.phi = parameter$phi, v.phi = parameter$phi, m.thetaT = parameter$thetaT, v.thetaT = parameter$thetaT,
+                  alpha.gamma = 3, beta.gamma = parameter$gamma2*2)
+  }
+  if(model=="Diffusion"){
+    prior <- list(m.phi = parameter$phi, v.phi = parameter$phi^2, alpha.gamma = 3, beta.gamma = 2*parameter$gamma2)
+  }
+  if(model=="mixedDiffusion"){
+    prior <- list(m.mu = parameter$mu, v.mu = parameter$mu^2, alpha.omega = rep(3, length(parameter$mu)),
+                  beta.omega = parameter$Omega*2, alpha.gamma = 3, beta.gamma = parameter$gamma2*2)
+  }
+  if(model=="hiddenDiffusion"){
+    prior <- list(m.phi = parameter$phi, v.phi = parameter$phi^2, alpha.gamma = 3, beta.gamma = parameter$gamma2*2, alpha.sigma=3, beta.sigma=parameter$sigma2*2)
+  }
+  if(model=="hiddenmixedDiffusion"){
+    prior <- list(m.mu = parameter$mu, v.mu = parameter$mu^2, alpha.omega = rep(3, length(parameter$mu)),
+                  beta.omega = parameter$Omega*2, alpha.gamma = 3, beta.gamma = parameter$gamma2*2, alpha.sigma = 3, beta.sigma = parameter$sigma2*2)
+    
+  }
+  if(model =="jumpRegression"){
+    prior <- list(m.theta = parameter$theta, v.theta = parameter$theta^2, alpha.gamma = 3, beta.gamma = parameter$gamma2*2)
+  }
+  if(model=="NHPP"){
+    prior <- list()
+  }
+  if(model == "Regression"){
+    prior <- list(m.phi = parameter$phi, v.phi = parameter$phi^2, alpha.gamma = 3, beta.gamma = 2*parameter$gamma2)
+  }
+  if(model == "mixedRegression"){
+    prior <- list(m.mu = parameter$mu, v.mu = parameter$mu^2, alpha.omega = rep(3, length(parameter$mu)),
+                  beta.omega = parameter$Omega*2, alpha.gamma = 3, beta.gamma = parameter$gamma2*2)
+  }
+  prior
+}
+

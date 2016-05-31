@@ -28,7 +28,7 @@
 
 \item{Tstart}{optional, if missing, first (which.series = "new") or last observation variable ("current") is taken}
 
-\item{M2pred}{optional, if current series to predicted and t missing, M2pred variables will be predicted with dt of observation time points}
+\item{M2pred}{optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points}
 
 \item{rangeN}{vector of candidate area for differences of N, only if pred.alg = "Distribution" and variable = "PoissonProcess"}
 
@@ -36,7 +36,7 @@
 
 \item{pred.alg}{prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"}
 
-\item{sample.length}{length of samples to be drawn}
+\item{sample.length}{number of samples to be drawn}
 
 \item{grid}{fineness degress of approximation}
 
@@ -54,6 +54,7 @@ est <- estimate(model, t, data$Times, 1000)  # nMCMC should be much larger!
 plot(est)
 pred <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1],
    variable = "PoissonProcess", pred.alg = "Distribution")
+
 \dontrun{
 pred_NHPP <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1])
 pred_NHPP <- predict(est, variable = "PoissonProcess",

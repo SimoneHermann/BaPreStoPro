@@ -2,7 +2,7 @@
 \docType{class}
 \name{Diffusion-class}
 \alias{Diffusion-class}
-\title{S4 class for diffusion process}
+\title{S4 class of model informations for diffusion process}
 \description{
 Informations of model
 \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.

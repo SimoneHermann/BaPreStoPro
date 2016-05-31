@@ -2,17 +2,17 @@
 \docType{methods}
 \name{estimate,mixedRegression-method}
 \alias{estimate,mixedRegression-method}
-\title{Estimation for mixed regression model}
+\title{Estimation for the hierarchical (mixed) regression model}
 \usage{
 \S4method{estimate}{mixedRegression}(model.class, t, data, nMCMC, propSd,
   adapt = TRUE, proposal = c("normal", "lognormal"))
 }
 \arguments{
-\item{model.class}{class of the respective model including all required information, see function set.to.class}
+\item{model.class}{class of the hierarchical regression model including all required information, see \code{\link{mixedRegression-class}}}
 
-\item{t}{vector of time points}
+\item{t}{list or vector of time points}
 
-\item{data}{vector or list or matrix of observation variables}
+\item{data}{list or matrix of observation variables}
 
 \item{nMCMC}{length of Markov chain}
 
@@ -20,11 +20,11 @@
 
 \item{adapt}{if TRUE (default), proposal variance is adapted}
 
-\item{proposal}{proposal density "normal" (default) or "lognormal" (for positive parameters)}
+\item{proposal}{proposal density: "normal" (default) or "lognormal" (for positive parameters)}
 }
 \description{
-Bayesian estimation of the parameter of the regression model
-  \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j~N(\mu, \Omega),
+Bayesian estimation of the parameter of the hierarchical regression model
+  \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j\sim N(\mu, \Omega),
   \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
 }
 \examples{

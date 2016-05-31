@@ -19,17 +19,17 @@ RejSampling(Fun, dens, len, cand, grid = 0.001, method = c("vector",
 
 \item{method}{vectorial ("vector") or not ("free")}
 }
-\value{
-vector of samples
-}
 \description{
 Rejection Sampling
 }
 \examples{
-plot(density(RejSampling(Fun = function(x) pnorm(x, 5, 1), dens = function(x) dnorm(x, 5, 1),
+plot(density(RejSampling(dens = function(x) dnorm(x, 5, 1),
    len = 500, cand = seq(2, 9, by = 0.001), method = "free")))
-lines(density(RejSampling(function(x) pnorm(x, 5, 1), function(x) dnorm(x, 5, 1), 500,
+lines(density(RejSampling(dens = function(x) dnorm(x, 5, 1), len = 500,
       cand = seq(2, 9, by = 0.001), method = "vector")), col=2)
 curve(dnorm(x, 5, 1), from = 2, to = 8, add = TRUE, col = 3)
+}
+\references{
+Devroye, L. (1986). Non-Uniform Random Variate Generation. New York: Springer.
 }
 

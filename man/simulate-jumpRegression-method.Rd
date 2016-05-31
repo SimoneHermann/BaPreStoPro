@@ -20,7 +20,8 @@
 }
 \description{
 Simulation of of the regression model
-  \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
+  \eqn{y_i = f(t_i, N_{t_i}, \theta) + \epsilon_i} with
+  \eqn{N_t\sim Pois(\Lambda(t, \xi)), \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t))}.
 }
 \examples{
 model <- set.to.class("jumpRegression", fun = function(t, N, theta) theta[1]*t + theta[2]*N,

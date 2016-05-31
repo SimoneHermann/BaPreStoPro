@@ -24,7 +24,7 @@
 }
 \description{
 Simulation of a stochastic process
-  \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t}.
+  \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
 }
 \examples{
 model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))

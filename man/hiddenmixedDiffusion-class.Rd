@@ -2,10 +2,10 @@
 \docType{class}
 \name{hiddenmixedDiffusion-class}
 \alias{hiddenmixedDiffusion-class}
-\title{S4 class for mixed hidden diffusion process}
+\title{S4 class of model informations for hierarchical (mixed) hidden diffusion process}
 \description{
 Informations of model
-  \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega),
+  \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega),
   Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)}.
 }
 \section{Slots}{

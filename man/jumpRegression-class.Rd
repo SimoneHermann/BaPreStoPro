@@ -2,7 +2,7 @@
 \docType{class}
 \name{jumpRegression-class}
 \alias{jumpRegression-class}
-\title{S4 class for the jump regression process}
+\title{S4 class of model informations for the jump regression model}
 \description{
 Informations of model
   \eqn{y_i = f(t_i, N_{t_i}, \theta) + \epsilon_i} with
