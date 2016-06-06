@@ -1632,10 +1632,10 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
         result <- matrix(0, K, n-1)  # here: dN_t
 #         candN <- 0:5
         if(missing(Lambda.mat)){
-          dLambda <- function(cand, j, samples){
+          dLambda <- function(j, samples){
             sapply(1:K, function(i) Lambda(t[j+1], samples[i,]) - Lambda(t[j], samples[i,]) )
           }
-          Fun.N <- function(j) vapply(candN, function(c) mean(ppois(dLambda(c, j, samples))), FUN.VALUE = numeric(1))
+          Fun.N <- function(j) vapply(candN, function(c) mean(ppois(c, dLambda(j, samples))), FUN.VALUE = numeric(1))
         }else{
           Fun.N <- function(j){
             vapply(candN, function(c) mean(ppois(c, Lambda.mat(t[j+1], samples) - Lambda.mat(t[j], samples))), FUN.VALUE = numeric(1))

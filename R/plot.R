@@ -446,7 +446,8 @@ setMethod(f = "plot", signature = "est.mixedDiffusion",
         if(!missing(phi)) points(phi[, i], pch = 20, col = col.priorMean)
       }
     }
-    
+    par(old.settings[which(names(old.settings) %in% names(par.options))])
+    return(invisible(qu))
   }
   
   par(old.settings[which(names(old.settings) %in% names(par.options))])
@@ -699,7 +700,8 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
         if(!missing(phi)) points(phi[, i], pch = 20, col = col.priorMean)
       }
     }
-    
+    par(old.settings[which(names(old.settings) %in% names(par.options))])
+    return(invisible(qu))
   }
   
 
@@ -1111,7 +1113,8 @@ setMethod(f = "plot", signature = "est.mixedRegression",
           if(!missing(phi)) points(phi[, i], pch = 20, col = col.priorMean)
         }
       }
-      
+      par(old.settings[which(names(old.settings) %in% names(par.options))])
+      return(invisible(qu))
     }
     
     par(old.settings[which(names(old.settings) %in% names(par.options))])

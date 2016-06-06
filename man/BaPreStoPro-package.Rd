@@ -82,7 +82,11 @@ Simone Hermann
 <hermann@statistik.tu-dortmund.de>
 }
 \references{
-S. Hermann, K. Ickstadt and C. H.  Mueller (2016). Bayesian Prediction of Crack Growth Based on a Hierarchical Diffusion Model. \emph{Applied Stochastic Models in Business and Industry, DOI: 10.1002/asmb.2175}.
+Hermann, S. (2016). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. SFB 823 discussion paper ?/16.
+
+Hermann, S. (2016). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. SFB 823 discussion paper 27/16.
+
+Hermann, S., K. Ickstadt and C. H.  Mueller (2016). Bayesian Prediction of Crack Growth Based on a Hierarchical Diffusion Model. \emph{Applied Stochastic Models in Business and Industry, DOI: 10.1002/asmb.2175}.
 
 Hermann, S. and F. Ruggeri (2016). Modelling Wear in Cylinder Liners. Under review
 in: Quality and Reliability Engineering International.
