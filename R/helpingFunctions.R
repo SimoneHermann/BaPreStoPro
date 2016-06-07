@@ -2,7 +2,7 @@
 #'
 #' Transformation of event times to NHPP
 #'
-#' @description Transformation of vector of event times to counting process.
+#' @description Transformation of vector of event times to the corresponding counting process variables.
 #' @param times vector of event times
 #' @param t times of counting process
 #'
@@ -41,7 +41,7 @@ dNtoTimes <- function(dN, t){
 
 #' Sampling from lognormal proposal density
 #'
-#' @description Drawing of one sample from the lognormal distribution with mean \code{parOld} and standard deviation \code{propSd}. Used in Metropolis Hastings algorithms.
+#' @description Drawing one sample from the lognormal distribution with mean \code{parOld} and standard deviation \code{propSd}. Used in Metropolis Hastings algorithms.
 #' @param parOld the parameter from the last iteration step
 #' @param propSd proposal standard deviation
 #'
@@ -78,7 +78,7 @@ proposalRatio <- function(parOld, parNew, propSd){
 
 #' Inversion Method
 #'
-#' @description Algorithm to sample from cumulative distribution function, if no inverse function is analytically available
+#' @description Algorithm to sample from cumulative distribution function, if no inverse function is analytically available.
 #' @param Fun cumulative distribution function
 #' @param len number of samples
 #' @param candArea candidate area
@@ -130,7 +130,7 @@ InvMethod <- function(Fun, len, candArea, grid = 1e-05, method = c("vector", "fr
 
 #' Rejection Sampling Algorithm
 #'
-#' @description Rejection Sampling
+#' @description Algorithm to sample from an arbitrary density function.
 #' @param Fun cumulative distribution function
 #' @param dens density
 #' @param len number of samples
@@ -196,7 +196,9 @@ RejSampling <- function(Fun, dens, len, cand, grid = 1e-03, method = c("vector",
 #' Adaptation of proposal standard deviation
 #'
 #' @description Adaptive MCMC: if acceptance rate of the chain is smaller than \code{lower} or larger than \code{upper}, 
-#' the proposal standard deviation is adapted with respect to function \code{delta.n}.
+#' the proposal standard deviation \code{propSd}=exp(l) is adapted with respect to function \code{delta.n}, 
+#' that means, the new proposal standard deviation
+#' is equal to exp(l-\code{delta.n(batch)}), respectively exp(l+\code{delta.n(batch)}).
 #'  
 #' @param chain Markov chain
 #' @param propSd current proposal standard deviation
@@ -248,11 +250,11 @@ findCandidateArea <- function(VFun, start = 1, pos.support = TRUE, quasi.null = 
 }
 
 
-#' Calcucation of a proposal for burn-in phase and thin rate
+#' Calculation of a proposal for burn-in phase and thinning rate
 #'
 #' @description The proposed burn-in is calculated by dividing the Markov chains into \code{m} blocks and calculate the 95\% credibility intervals and the respective mean. 
 #' Starting in the first one, the block is taken as burn-in as long as the mean of the current block is not in the credibility interval of the following block or vice versa. 
-#' The thinning rate is proposed by the first lag which leads to a chain autocorrelation of less than \code{dependence}. 
+#' The thinning rate is proposed by the first lag which leads to a chain autocorrelation less than \code{dependence}. 
 #' It is not easy to automate these choices, so it is highly recommended to verify the chains manually.
 #' @param chain vector of Markov chain samples
 #' @param dependence allowed dependence for the chain

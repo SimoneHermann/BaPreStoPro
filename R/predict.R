@@ -1,11 +1,11 @@
 
 
 ########
-#' Prediction for diffusion process
+#' Prediction for a diffusion process
 #'
 #' @description Bayesian prediction of a stochastic process
 #'   \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
-#' @param object class object of MCMC samples: "est.Diffusion"
+#' @param object class object of MCMC samples: "est.Diffusion", created with method \code{\link{estimate,Diffusion-method}}
 #' @param t vector of time points to make predictions for
 #' @param Euler.interval if TRUE: simple prediction intervals with Euler are made (in one step each)
 #' @param level level of the prediction intervals
@@ -14,19 +14,27 @@
 #' @param b.fun.mat matrix-wise definition of drift function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param y.start optional, if missing, first (which.series = "new") or last observation variable ("current") is taken
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted
+#'  with the observation time distances
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param method vectorial ("vector") or not ("free")
 #' @param sampling.alg sampling algorithm, inversion method ("InvMethod") or rejection sampling ("RejSamp")
-#' @param sample.length number of samples to be drawn
-#' @param grid fineness degree of approximation
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param grid fineness degree of sampling approximation
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
+#' data <- simulate(model, t = t, y0 = 0.5)
 #' est_diff <- estimate(model, t, data, 1000) # better: 10000
 #' plot(est_diff)
 #' \dontrun{
@@ -326,11 +334,11 @@ setMethod(f = "predict", signature = "est.Diffusion",
 
 
 ########
-#' Prediction for hierarchical (mixed) diffusion process
+#' Prediction for a hierarchical (mixed) diffusion process model
 #'
-#' @description Bayesian prediction of a stochastic process
+#' @description Bayesian prediction of a stochastic process model
 #'   \eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
-#' @param object class object of MCMC samples: "est.mixedDiffusion"
+#' @param object class object of MCMC samples: "est.mixedDiffusion", created with method \code{\link{estimate,mixedDiffusion-method}}
 #' @param t vector of time points to make predictions for
 #' @param Euler.interval if TRUE: simple prediction intervals with Euler are made (in one step each)
 #' @param level level of the prediction intervals
@@ -340,12 +348,20 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param y.start optional, if missing, first (which.series = "new") or last observation variable ("current") is taken
 #' @param ind.pred index of series to be predicted, optional, if which.series = "current" and ind.pred missing, the last series is taken
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted with
+#'  the observation time distances
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
-#' @param sample.length number of samples to be drawn
-#' @param grid fineness degree of approximation
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param grid fineness degree of sampling approximation
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
@@ -353,7 +369,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #'          parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
 #'          b.fun = function(phi, t, x) phi*x, sT.fun = function(t, x) x)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, plot.series = TRUE)
+#' data <- simulate(model, t = t)
 #' est_mixdiff <- estimate(model, t, data[1:20,], 100) # nMCMC should be much larger
 #' plot(est_mixdiff)
 #' \dontrun{
@@ -386,7 +402,7 @@ setMethod(f = "predict", signature = "est.Diffusion",
 #'            parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
 #'            y0.fun = y0.fun, b.fun = b.fun, sT.fun = function(t, x) 1)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, plot.series = TRUE)
+#' data <- simulate(model, t = t)
 #' est <- estimate(model, t, data[1:20,], 2000) 
 #' plot(est)
 #' pred <- predict(est, t = seq(0, 1, length = 21), 
@@ -625,36 +641,45 @@ setMethod(f = "predict", signature = "est.mixedDiffusion",
 
 
 ########
-#' Prediction for hidden diffusion process
+#' Prediction for a hidden diffusion process
 #'
 #' @description Bayesian prediction of the model,
 #'   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
-#' @param object class object of MCMC samples: "est.hiddenDiffusion"
+#' @param object class object of MCMC samples: "est.hiddenDiffusion", created with method \code{\link{estimate,hiddenDiffusion-method}}
 #' @param t vector of time points to make predictions for
 #' @param burnIn burn-in period
 #' @param thinning thinning rate
 #' @param b.fun.mat matrix-wise definition of drift function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted
+#'  with the observation time distances
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
-#' @param sample.length number of samples to be drawn
-#' @param grid fineness degree of approximation
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param grid fineness degree of sampling approximation
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
+#' \dontrun{
 #' model <- set.to.class("hiddenDiffusion", parameter = list(phi = 5, gamma2 = 1, sigma2 = 0.1))
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, plot.series = TRUE)
+#' data <- simulate(model, t = t)
 #' est_hiddiff <- estimate(model, t, data$Z, 100)  # nMCMC should be much larger!
 #' plot(est_hiddiff)
 #' 
-#' \dontrun{
 #' pred_hiddiff <- predict(est_hiddiff, t = seq(0, 1, by = 0.1))
 #' pred_hiddiff2 <- predict(est_hiddiff, which.series = "current")
-#' }
+#' 
 #' pred_hiddiff <- predict(est_hiddiff, pred.alg = "simpleTrajectory", sample.length = 100)
 #' pred_hiddiff <- predict(est_hiddiff, pred.alg = "simpleBayesTrajectory")
+#' }
 #' @export
 setMethod(f = "predict", signature = "est.hiddenDiffusion",
           definition = function(object, t, burnIn, thinning,
@@ -817,23 +842,31 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
 
 
 ########
-#' Prediction for hierarchical (mixed) hidden diffusion process
+#' Prediction for a hierarchical (mixed) hidden diffusion process model
 #'
-#' @description Bayesian prediction of a stochastic process
+#' @description Bayesian prediction of the model
 #'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
-#' @param object class object of MCMC samples: "est.hiddenmixedDiffusion"
+#' @param object class object of MCMC samples: "est.hiddenmixedDiffusion", created with method \code{\link{estimate,hiddenmixedDiffusion-method}}
 #' @param t vector of time points to make predictions for
 #' @param burnIn burn-in period
 #' @param thinning thinning rate
 #' @param b.fun.mat matrix-wise definition of drift function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param ind.pred index of series to be predicted, optional, if which.series = "current" and ind.pred missing, the last series is taken
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted
+#'  with the observation time distances
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
-#' @param sample.length number of samples to be drawn
-#' @param grid fineness degree of approximation
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param grid fineness degree of sampling approximation
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' mu <- c(5, 1); Omega <- c(0.9, 0.04)
@@ -843,10 +876,10 @@ setMethod(f = "predict", signature = "est.hiddenDiffusion",
 #'      b.fun = function(phi, t, y) phi[1], 
 #'      parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 1, sigma2 = 0.01))
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, plot.series = TRUE)
+#' data <- simulate(model, t = t)
 #' 
 #' \dontrun{
-#' est_hidmixdiff <- estimate(model, t, data$Z[1:20,], 2000)
+#' est_hidmixdiff <- estimate(model, t, data$Z[1:20,], 200)
 #' plot(est_hidmixdiff)
 #' pred1 <- predict(est_hidmixdiff, b.fun.mat = function(phi, t, y) phi[,1])
 #' pred2 <- predict(est_hidmixdiff, pred.alg = "Trajectory", b.fun.mat = function(phi, t, y) phi[,1])
@@ -1078,10 +1111,10 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 
 
 ########
-#' Prediction for Poisson process
+#' Prediction for a non-homogeneous Poisson process
 #'
-#' @description Bayesian prediction of a nonhomogeneous Poisson process.
-#' @param object class object of MCMC samples: "est.NHPP"
+#' @description Bayesian prediction of a non-homogeneous Poisson process with cumulative intensity function \eqn{\Lambda(t, \xi)}.
+#' @param object class object of MCMC samples: "est.NHPP", created with method \code{\link{estimate,NHPP-method}}
 #' @param variable if prediction of event times ("eventTimes") or of Poisson process variables ("PoissonProcess")
 #' @param t vector of time points to make predictions for (only for variable = "PoissonProcess")
 #' @param burnIn burn-in period
@@ -1089,19 +1122,27 @@ setMethod(f = "predict", signature = "est.hiddenmixedDiffusion",
 #' @param Lambda.mat matrix-wise definition of drift function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param Tstart optional, if missing, first (which.series = "new") or last observation variable ("current") is taken
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted 
+#' with the observation time distances
 #' @param rangeN vector of candidate area for differences of N, only if pred.alg = "Distribution" and variable = "PoissonProcess"
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
-#' @param sample.length number of samples to be drawn
-#' @param grid fineness degress of approximation
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param grid fineness degree of sampling approximation
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), 
 #'                Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, plot.series = TRUE)
+#' data <- simulate(model, t = t)
 #' est <- estimate(model, t, data$Times, 1000)  # nMCMC should be much larger!
 #' plot(est)
 #' pred <- predict(est, Lambda.mat = function(t, xi) (t/xi[,2])^xi[,1], 
@@ -1482,30 +1523,38 @@ setMethod(f = "predict", signature = "est.NHPP",
 
 
 ########
-#' Prediction for jump diffusion process
+#' Prediction for a jump diffusion process
 #'
 #' @description Bayesian prediction of a stochastic process
 #'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\eta,t,Y_t)dN_t}.
-#' @param object class object of MCMC samples: "est.jumpDiffusion"
+#' @param object class object of MCMC samples: "est.jumpDiffusion", created with method \code{\link{estimate,jumpDiffusion-method}}
 #' @param t vector of time points to make predictions for
 #' @param burnIn burn-in period
 #' @param thinning thinning rate
 #' @param Lambda.mat matrix-wise definition of intensity rate function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted
+#'  with the observation time distances
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
 #' @param pred.alg.N prediction algorithm, "Distribution", "Trajectory"
 #' @param candN vector of candidate area for differences of N, only if pred.alg.N = "Distribution"
-#' @param sample.length number of samples to be drawn
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' model <- set.to.class("jumpDiffusion", 
 #'          parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), 
 #'          Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
+#' data <- simulate(model, t = t, y0 = 0.5)
 #' est_jd <- estimate(model, t, data, 2000)
 #' plot(est_jd)
 #' \dontrun{
@@ -1528,7 +1577,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
                                 pred.alg.N = c("Trajectory", "Distribution"), candN = 0:5, sample.length, plot.prediction = TRUE) {
 
     pred.alg <- match.arg(pred.alg)
-    pred.alg.N <- match.arg(pred.alg)
+    pred.alg.N <- match.arg(pred.alg.N)
     which.series <- match.arg(which.series)
 
     if(missing(burnIn)) burnIn <- object@burnIn
@@ -1574,9 +1623,9 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
           Lambda.diff <- function(cand, Tn_1, samples){
             sapply(1:K, function(i) Lambda(cand + Tn_1, samples[i,]) - Lambda(Tn_1, samples[i,]) )
           }
-          Fun <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
+          Fun.T <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
         }else{
-          Fun <- function(cand, Tn_1){
+          Fun.T <- function(cand, Tn_1){
             1-mean(exp(-(Lambda.mat(cand + Tn_1, samples)-Lambda.mat(Tn_1, samples))))
           }
         }
@@ -1588,7 +1637,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
           memory <- cand
           
           while(length(unique(memory)) == length(memory)){
-            if(Fun(cand, Tn_1) < u){
+            if(Fun.T(cand, Tn_1) < u){
               cand <- cand*2
               memory <- c(memory, cand)
             }else{
@@ -1600,7 +1649,7 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
           upper <- max(memory[length(memory)-1], memory[length(memory)])
           diff <- upper - lower
           while(diff >= gridN){
-            if(Fun(lower+diff/2, Tn_1) < u){
+            if(Fun.T(lower+diff/2, Tn_1) < u){
               lower <- lower+diff/2
             }else{
               upper <- lower+diff/2
@@ -1787,30 +1836,38 @@ setMethod(f = "predict", signature = "est.jumpDiffusion",
 
 
 ########
-#' Prediction for jump diffusion process
+#' Prediction for a jump diffusion process
 #'
 #' @description Bayesian prediction of a stochastic process
 #'   \eqn{Y_t = y_0 \exp( \phi t - \gamma2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
-#' @param object class object of MCMC samples: "est.Merton"
+#' @param object class object of MCMC samples: "est.Merton", created with method \code{\link{estimate,Merton-method}}
 #' @param t vector of time points to make predictions for
 #' @param burnIn burn-in period
 #' @param thinning thinning rate
 #' @param Lambda.mat matrix-wise definition of intensity rate function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted
+#'  with the observation time distances
 #' @param only.interval if TRUE: only calculation of prediction intervals (only for pred.alg = "Distribution")
 #' @param level level of the prediction intervals
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleBayesTrajectory"
-#' @param sample.length number of samples to be drawn
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' cl <- set.to.class("Merton", 
 #'                parameter = list(thetaT = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)), 
 #'                Lambda = function(t, xi) (t/xi[2])^xi[1])
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(cl, t = t, y0 = 0.5, plot.series = TRUE)
+#' data <- simulate(cl, t = t, y0 = 0.5)
 #' est <- estimate(cl, t, data, 1000)
 #' plot(est)
 #' \dontrun{
@@ -1866,9 +1923,9 @@ setMethod(f = "predict", signature = "est.Merton",
           Lambda.diff <- function(cand, Tn_1, samples){
             sapply(1:K, function(i) Lambda(cand + Tn_1, samples[i,]) - Lambda(Tn_1, samples[i,]) )
           }
-          Fun <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
+          Fun.T <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
         }else{
-          Fun <- function(cand, Tn_1){
+          Fun.T <- function(cand, Tn_1){
             1-mean(exp(-(Lambda.mat(cand + Tn_1, samples)-Lambda.mat(Tn_1, samples))))
           }
         }
@@ -1881,7 +1938,7 @@ setMethod(f = "predict", signature = "est.Merton",
           memory <- cand
           
           while(length(unique(memory)) == length(memory)){
-            if(Fun(cand, Tn_1) < u){
+            if(Fun.T(cand, Tn_1) < u){
               cand <- cand*2
               memory <- c(memory, cand)
             }else{
@@ -1893,7 +1950,7 @@ setMethod(f = "predict", signature = "est.Merton",
           upper <- max(memory[length(memory)-1], memory[length(memory)])
           diff <- upper - lower
           while(diff >= gridN){
-            if(Fun(lower+diff/2, Tn_1) < u){
+            if(Fun.T(lower+diff/2, Tn_1) < u){
               lower <- lower+diff/2
             }else{
               upper <- lower+diff/2
@@ -2078,11 +2135,12 @@ setMethod(f = "predict", signature = "est.Merton",
 
 
 ########
-#' Prediction for regression model dependent on Poisson process
+#' Prediction for a regression model dependent on a Poisson process
 #'
 #' @description Bayesian prediction of a regression model
-#'   \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
-#' @param object class object of MCMC samples: "est.jumpRegression"
+#'   \eqn{y_i = f(t_i, N_{t_i}, \theta) + \epsilon_i} with
+#'   \eqn{N_t\sim Pois(\Lambda(t, \xi)), \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t))}.
+#' @param object class object of MCMC samples: "est.jumpRegression", created with method \code{\link{estimate,jumpRegression-method}}
 #' @param t vector of time points to make predictions for
 #' @param only.interval if TRUE: only calculation of prediction intervals
 #' @param level level of the prediction intervals
@@ -2091,19 +2149,27 @@ setMethod(f = "predict", signature = "est.Merton",
 #' @param Lambda.mat matrix-wise definition of intensity rate function (makes it faster)
 #' @param fun.mat matrix-wise definition of regression function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted
+#'  with the observation time distances
 #' @param cand.length length of candidate samples (if method = "vector"), for jump diffusion
 #' @param pred.alg prediction algorithm, "Distribution", "Trajectory", "simpleTrajectory" or "simpleTrajectory"
-#' @param sample.length number of samples to be drawn
-#' @param grid fineness degress of approximation, for Poisson process
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param grid fineness degree of sampling approximation
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
 #' cl <- set.to.class("jumpRegression", fun = function(t, N, theta) theta[1]*t + theta[2]*N, 
 #'              parameter = list(theta = c(1,2), gamma2 = 0.1, xi = c(3, 1/4)), 
 #'              Lambda = function(t, xi) (t/xi[2])^xi[1])
-#' data <- simulate(cl, t = t, plot.series = TRUE)
+#' data <- simulate(cl, t = t)
 #' est <- estimate(cl, t, data, 1000)
 #' plot(est)
 #' \dontrun{
@@ -2158,9 +2224,9 @@ setMethod(f = "predict", signature = "est.jumpRegression",
         Lambda.diff <- function(cand, Tn_1, samples){
           sapply(1:K, function(i) Lambda(cand + Tn_1, samples[i,]) - Lambda(Tn_1, samples[i,]) )
         }
-        Fun <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
+        Fun.T <- function(cand, Tn_1) 1 - mean(exp(- Lambda.diff(cand, Tn_1, samples)))
       }else{
-        Fun <- function(cand, Tn_1){
+        Fun.T <- function(cand, Tn_1){
           1-mean(exp(-(Lambda.mat(cand + Tn_1, samples)-Lambda.mat(Tn_1, samples))))
         }
       }
@@ -2172,7 +2238,7 @@ setMethod(f = "predict", signature = "est.jumpRegression",
         memory <- cand
         
         while(length(unique(memory)) == length(memory)){
-          if(Fun(cand, Tn_1) < u){
+          if(Fun.T(cand, Tn_1) < u){
             cand <- cand*2
             memory <- c(memory, cand)
           }else{
@@ -2184,7 +2250,7 @@ setMethod(f = "predict", signature = "est.jumpRegression",
         upper <- max(memory[length(memory)-1], memory[length(memory)])
         diff <- upper - lower
         while(diff >= grid){
-          if(Fun(lower+diff/2, Tn_1) < u){
+          if(Fun.T(lower+diff/2, Tn_1) < u){
             lower <- lower+diff/2
           }else{
             upper <- lower+diff/2
@@ -2366,11 +2432,11 @@ setMethod(f = "predict", signature = "est.jumpRegression",
 
 
 ########
-#' Prediction for regression model
+#' Prediction for a regression model
 #'
 #' @description Bayesian prediction of regression model
 #'   \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.
-#' @param object class object of MCMC samples: "est.Regression"
+#' @param object class object of MCMC samples: "est.Regression", created with method \code{\link{estimate,Regression-method}}
 #' @param t vector of time points to make predictions for
 #' @param only.interval if TRUE: only calculation of prediction intervals
 #' @param level level of the prediction intervals
@@ -2378,19 +2444,27 @@ setMethod(f = "predict", signature = "est.jumpRegression",
 #' @param thinning thinning rate
 #' @param fun.mat matrix-wise definition of drift function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted
+#'  with the observation time distances
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param method vectorial ("vector") or not ("free")
 #' @param sampling.alg sampling algorithm, inversion method ("InvMethod") or rejection sampling ("RejSamp")
-#' @param sample.length number of samples to be drawn
-#' @param grid fineness degree of approximation
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param grid fineness degree of sampling approximation
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' t <- seq(0,1, by = 0.01)
 #' cl <- set.to.class("Regression", fun = function(phi, t) phi[1]*t + phi[2], 
 #'                    parameter = list(phi = c(1,2), gamma2 = 0.1))
-#' data <- simulate(cl, t = t, plot.series = TRUE)
+#' data <- simulate(cl, t = t)
 #' est <- estimate(cl, t, data, 1000)
 #' plot(est)
 #' pred <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2])
@@ -2494,12 +2568,12 @@ setMethod(f = "predict", signature = "est.Regression",
 
 
 ########
-#' Prediction for mixed regression model
+#' Prediction for a mixed regression model
 #'
 #' @description Bayesian prediction of the regression model
 #'   \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j\sim N(\mu, \Omega),
 #'   \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
-#' @param object class object of MCMC samples: "est.mixedRegression"
+#' @param object class object of MCMC samples: "est.mixedRegression", created with method \code{\link{estimate,mixedRegression-method}}
 #' @param t vector of time points to make predictions for
 #' @param only.interval if TRUE: only calculation of prediction intervals
 #' @param level level of the prediction intervals
@@ -2508,13 +2582,21 @@ setMethod(f = "predict", signature = "est.Regression",
 #' @param fun.mat matrix-wise definition of drift function (makes it faster)
 #' @param which.series which series to be predicted, new one ("new") or further development of current one ("current")
 #' @param ind.pred index of series to be predicted, optional, if which.series = "current" and ind.pred missing, the last series is taken
-#' @param M2pred optional, if current series to be predicted and t missing, M2pred variables will be predicted with dt of observation time points
+#' @param M2pred optional, if current series to be predicted and t missing, \code{M2pred} variables will be predicted
+#'  with the observation time distances
 #' @param cand.length length of candidate samples (if method = "vector")
 #' @param method vectorial ("vector") or not ("free")
 #' @param sampling.alg sampling algorithm, inversion method ("InvMethod") or rejection sampling ("RejSamp")
-#' @param sample.length number of samples to be drawn
-#' @param grid fineness degree of approximation
-#' @param plot.prediction if TRUE, result are plotted
+#' @param sample.length number of samples to be drawn, default is the number of posterior samples
+#' @param grid fineness degree of sampling approximation
+#' @param plot.prediction if TRUE, prediction intervals are plotted
+#'
+#' @references
+#' Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#' 
+#' Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #'
 #' @examples
 #' mu <- c(10, 5); Omega <- c(0.9, 0.01)
@@ -2523,7 +2605,7 @@ setMethod(f = "predict", signature = "est.Regression",
 #'          parameter = list(phi = phi, mu = mu, Omega = Omega, gamma2 = 0.1), 
 #'          fun = function(phi, t) phi[1]*t + phi[2], sT.fun = function(t) 1)
 #' t <- seq(0, 1, by = 0.01)
-#' data <- simulate(model, t = t, plot.series = TRUE)
+#' data <- simulate(model, t = t)
 #' est <- estimate(model, t, data[1:20,], 2000)
 #' plot(est)
 #' pred <- predict(est, fun.mat = function(phi, t) phi[,1]*t + phi[,2])
@@ -2665,19 +2747,23 @@ setMethod(f = "predict", signature = "est.mixedRegression",
 
 #' Bayesian prediction function
 #'
-#' @description Drawing from predictive distribution based on distribution function \code{Fun(x, x0, samples)} and density \code{dens(x, x0, samples)}.
+#' @description Drawing from predictive distribution based on distribution function \code{Fun(x, x0, samples)} or
+#'  density \code{dens(x, x0, samples)}.
 #' Samples should contain samples from the posterior distribution of the parameters.
 #' @param samples MCMC samples
 #' @param Fun cumulative distribution function
 #' @param dens density function
 #' @param len number of samples to be drawn
-#' @param x0 starting point
+#' @param x0 vector of starting points
 #' @param method vectorial ("vector") or not ("free")
 #' @param pred.alg prediction algorithm, "Distribution" or "Trajectory"
 #' @param sampling.alg sampling algorithm, rejection sampling ("RejSamp") or inversion method ("InvMethod")
 #' @param candArea candidate area
 #' @param grid fineness degree
 #'
+#' @references
+#' Hermann, S. (2016). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. 
+#' SFB 823 discussion paper 27/16.
 #' @return
 #' vector of samples from prediction
 #' @export
@@ -2731,13 +2817,13 @@ pred.base <- function(samples, Fun, dens, len = 100, x0, method = c("vector", "f
 #' Bayesian prediction interval function
 #'
 #' @description Calculation of quantiles \code{level}/2 and 1-\code{level}/2 from predictive distribution based on distribution function \code{Fun(x, x0, samples)}.
-#' Samples should contain samples from the posterior distribution of the parameters.
-#' @param samples MCMC samples
+#' \code{samples} should contain samples from the posterior distribution of the parameters.
+#' @param samples posterior samples 
 #' @param Fun cumulative distribution function
 #' @param x0 starting point
 #' @param level level of prediction intervals
 #' @param candArea candidate area
-#' @param grid fineness degree
+#' @param grid fineness degree for the binary search
 #'
 #' @return
 #' prediction interval

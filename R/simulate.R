@@ -6,11 +6,11 @@
 #' @description Simulation of a stochastic process
 #'   \eqn{dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t}.
 #' @param object class object of parameters: "Diffusion"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of trajectories to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
+#' @param t vector of time points
 #' @param y0 starting point of the process
-#' @param mw mesh width for finer Euler approximation
+#' @param mw mesh width for finer Euler approximation to simulate time-continuity
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' model <- set.to.class("Diffusion", parameter = list(phi = 0.5, gamma2 = 0.01))
@@ -43,15 +43,15 @@ setMethod(f = "simulate", signature = "Diffusion",
 
 
 ########
-#' Simulation of diffusion process
+#' Simulation of hierarchical (mixed) diffusion model
 #'
-#' @description Simulation of a stochastic process
+#' @description Simulation of the stochastic process model
 #'   \eqn{dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j~N(\mu, \Omega)}.
 #' @param object class object of parameters: "mixedDiffusion"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of data sets to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
-#' @param mw mesh width for finer Euler approximation
+#' @param t vector of time points
+#' @param mw mesh width for finer Euler approximation to simulate time-continuity
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
@@ -101,9 +101,9 @@ setMethod(f = "simulate", signature = "mixedDiffusion",
 #' @description Simulation of the regression model
 #'   \eqn{y_i = f(\phi, t_i) + \epsilon_i, \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t_i))}.
 #' @param object class object of parameters: "Diffusion"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of trajectories to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
+#' @param t vector of time points
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' model <- set.to.class("Regression", parameter = list(phi = 5, gamma2 = 0.1), 
@@ -142,9 +142,9 @@ setMethod(f = "simulate", signature = "Regression",
 #'   \eqn{y_{ij} = f(\phi_j, t_{ij}) + \epsilon_{ij}, \phi_j\sim N(\mu, \Omega),
 #'   \epsilon_{ij}\sim N(0,\gamma^2\widetilde{s}(t_{ij}))}.
 #' @param object class object of parameters: "mixedRegression"
-#' @param nsim number of response vectors to simulate. Defaults = 1.
+#' @param nsim number of data sets to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
+#' @param t vector of time points
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' mu <- 2; Omega <- 0.4; phi <- matrix(rnorm(21, mu, sqrt(Omega)))
@@ -194,10 +194,10 @@ setMethod(f = "simulate", signature = "mixedRegression",
 #'   \eqn{Z_i = Y_{t_i} + \epsilon_i, dY_t = b(\phi,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, 
 #'   \epsilon_i\sim N(0,\sigma^2), Y_{t_0}=y_0(\phi, t_0)}.
 #' @param object class object of parameters: "hiddenDiffusion"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of trajectories to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
-#' @param mw mesh width for finer Euler approximation
+#' @param t vector of time points
+#' @param mw mesh width for finer Euler approximation to simulate time-continuity
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' model <- set.to.class("hiddenDiffusion", parameter = list(phi = 0.5, gamma2 = 0.01, sigma2 = 0.1))
@@ -243,10 +243,10 @@ setMethod(f = "simulate", signature = "hiddenDiffusion",
 #'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), 
 #'   Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)}.
 #' @param object class object of parameters: "hiddenmixedDiffusion"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of data sets to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
-#' @param mw mesh width for finer Euler approximation
+#' @param t vector of time points
+#' @param mw mesh width for finer Euler approximation to simulate time-continuity
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' mu <- c(5, 1); Omega <- c(0.9, 0.04)
@@ -315,11 +315,11 @@ setMethod(f = "simulate", signature = "hiddenmixedDiffusion",
 ########
 #' Simulation of Poisson process
 #'
-#' @description Simulation of non-homoegenous Poisson process.
+#' @description Simulation of non-homogeneous Poisson process with cumulative intensity function \eqn{\Lambda(t, \xi)}.
 #' @param object class object of parameters: "NHPP"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of trajectories to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
+#' @param t vector of time points
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' model <- set.to.class("NHPP", parameter = list(xi = c(5, 1/2)), 
@@ -352,12 +352,12 @@ setMethod(f = "simulate", signature = "NHPP",
 #' @description Simulation of jump diffusion process
 #'   \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma,t,Y_t)dW_t + h(\eta,t,Y_t)dN_t}.
 #' @param object class object of parameters: "jumpDiffusion"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of trajectories to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
+#' @param t vector of time points
 #' @param y0 starting point of process
 #' @param start vector: start[1] starting point time, start[2] starting point for Poisson process
-#' @param mw mesh width for finer Euler approximation
+#' @param mw mesh width for finer Euler approximation to simulate time-continuity
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' model <- set.to.class("jumpDiffusion", 
@@ -444,9 +444,9 @@ setMethod(f = "simulate", signature = "jumpDiffusion",
 #' @description Simulation of jump diffusion process
 #'   \eqn{Y_t = y_0 \exp( \phi t - \gamma^2/2 t+\gamma W_t + \log(1+\theta) N_t)}.
 #' @param object class object of parameters: "Merton"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of trajectories to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
+#' @param t vector of time points
 #' @param y0 starting point of process
 #' @param start vector: start[1] starting point time, start[2] starting point for Poisson process
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
@@ -507,9 +507,9 @@ setMethod(f = "simulate", signature = "Merton",
 #'   \eqn{y_i = f(t_i, N_{t_i}, \theta) + \epsilon_i} with
 #'   \eqn{N_t\sim Pois(\Lambda(t, \xi)), \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t))}.
 #' @param object class object of parameters: "jumpRegression"
-#' @param nsim number of response vectors to simulate. Defaults to 1
+#' @param nsim number of trajectories to simulate. Default is 1.
 #' @param seed optional: seed number for random number generator
-#' @param t vector of time points to make predictions for
+#' @param t vector of time points
 #' @param plot.series logical(1), if TRUE, simulated series are depicted grafically
 #' @examples
 #' model <- set.to.class("jumpRegression", fun = function(t, N, theta) theta[1]*t + theta[2]*N, 

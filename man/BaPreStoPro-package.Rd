@@ -13,19 +13,19 @@ This package contains simulate, estimate and predict methods for non-homogeneous
 Package: \tab BaPreStoPro\cr
 Type: \tab Package\cr
 Version: \tab 1.0\cr
-Date: \tab 2016-06-01\cr
+Date: \tab 2016-06-07\cr
 License: \tab GLP-2, GLP-3\cr
 }
-Each of the models has its specific class, \code{"jumpDiffusion"}, \code{"Merton"}, \code{"Diffusion"}, \code{"mixedDiffusion"}, \code{"hiddenDiffusion"}, \code{"hiddenmixedDiffusion"}, \code{"jumpRegression"}, \code{"NHPP"}, \code{"Regression"}, \code{"mixedRegression"}, created with the function \code{set.to.class}. For each of the model classes, a method \code{simulate} and \code{estimate}. The output of method \code{estimate} is a new class object. For the estimation classes, methods \code{plot} and \code{predict} are available. 
+Each of the models has its specific class, \code{"jumpDiffusion"}, \code{"Merton"}, \code{"Diffusion"}, \code{"mixedDiffusion"}, \code{"hiddenDiffusion"}, \code{"hiddenmixedDiffusion"}, \code{"jumpRegression"}, \code{"NHPP"}, \code{"Regression"}, \code{"mixedRegression"}, created with the function \code{\link{set.to.class}}. For each of the model classes, a method \code{simulate} and \code{estimate} are provided. The output of method \code{estimate} is a new class object with the prefix "est.". For the estimation classes, methods \code{plot} and \code{predict} are available. An overview of the package can be found in Hermann (2016a) and theoretical details to the prediction procedures in Hermann (2016b).
 }
 \section{jumpDiffusion}{
 The model class  \code{"jumpDiffusion"} contains all information about model defined by the stochastic differential equation (SDE) \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)dW_t + h(\theta,t,Y_t)dN_t} with
 \eqn{N_t\sim Pois(\Lambda(t, \xi))} a non-homogeneous Poisson process and \eqn{W_t} a Brownian motion. The SDE is approximated with the Euler Maruyama approximation, which leads, dependent on the Poisson process variables, to a normal likelihood. 
 For more information how to build the class, see examples in \code{\link{jumpDiffusion-class}} and \code{\link{estimate,jumpDiffusion-method}}. 
 
-Estimation is done by a Metropolis-within-Gibbs sampler. For each of the parameters, a Metropolis-Hastings (MH) step is made, where the proposal density can be chosen between normal and lognormal. A proposal standard deviation can be chosen, which, if desired, is adapted after every 50 iterations. 
+Estimation is done by a Metropolis-within-Gibbs sampler. For each of the parameters, a Metropolis-Hastings (MH) step is made, where the proposal density can be chosen between normal and lognormal. A proposal standard deviation can be chosen, which, if desired, is adapted after every 50 iterations, see Rosenthal (2011). 
 
-In the case of no observed variables of the Poisson process, one step of the Gibbs sampler is filtering of the unobserved jump process. Details can be found in Hermann and Ruggeri (2016).
+In the case of unobserved variables of the Poisson process, one step of the Gibbs sampler is filtering of the unobserved jump process. Details can be found in Hermann and Ruggeri (2016) or Hermann (2016a).
 }
 \section{Merton}{
 Specific choices of functions \eqn{b, s} and \eqn{h} lead to an explicit solution of the process \eqn{Y_t = y_0 \exp( \phi t - \gamma^2/2 t+\gamma W_t + \log(1+\theta) N_t)}. This model is well-known in the literature as Merton model. There are conjugate prior distributions available for \eqn{\phi, \gamma^2} and \eqn{\log(1+\theta)}: \eqn{\phi} and \eqn{\log(1+\theta)} are assumed to have normal prior distribution with parameters \code{m.phi} (mean) and \code{v.phi} (variance), \code{m.thetaT} (mean) and \code{v.thetaT} (variance) respectively. \eqn{\gamma^2} is assumed to have an inverse gamma distribution with parameters \code{alpha.gamma} and \code{beta.gamma}. An example how to build the model class can be found in \code{\link{Merton-class}} and \code{\link{estimate,Merton-method}}.
@@ -33,7 +33,7 @@ Specific choices of functions \eqn{b, s} and \eqn{h} lead to an explicit solutio
 Estimation is similar to the jump diffusion process based on the Euler approximation. The difference is that for the parameters with conjugate priors, no MH step is necessary and drawing from the full conditional posterior is possible.
 }
 \section{Diffusion}{
-The special case of \eqn{h(\theta, t, y)=0} leads to a general diffusion process \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)(t,Y_t)dW_t}. We here restrict to the special case of \eqn{s(\gamma^2, t, y)=\sqrt{\gamma^2}\widetilde{s}(t, y)}, because a conjugate prior for \eqn{\gamma^2} is available (the inverse gamma with parameters \code{alpha.gamma} and \code{beta.gamma}) in this case. For \eqn{\phi}, a normal prior with parameters \code{m.phi} (mean) and \code{v.phi} (variance) is assumed. An example can be found in \code{\link{Diffusion-class}} and \code{\link{estimate,Diffusion-method}}.
+The special case of \eqn{h(\theta, t, y)=0} leads to a general diffusion process \eqn{dY_t = b(\phi,t,Y_t)dt + s(\gamma^2,t,Y_t)dW_t}. We here restrict to the special case of \eqn{s(\gamma^2, t, y)=\sqrt{\gamma^2}\widetilde{s}(t, y)}, because a conjugate prior for \eqn{\gamma^2} is available (the inverse gamma with parameters \code{alpha.gamma} and \code{beta.gamma}) in this case. For \eqn{\phi}, a normal prior with parameters \code{m.phi} (mean) and \code{v.phi} (variance) is assumed. An example can be found in \code{\link{Diffusion-class}} and \code{\link{estimate,Diffusion-method}}.
 
 A Gibbs sampler with an MH step for \eqn{\phi} and one step drawing from the full conditional of \eqn{\gamma^2} is implemented. For \eqn{\phi}, the proposal density can be chosen, \code{"normal"} or \code{"lognormal"} and the proposal standard deviation, with the option to adapt, as well.
 }
@@ -82,21 +82,19 @@ Simone Hermann
 <hermann@statistik.tu-dortmund.de>
 }
 \references{
-Hermann, S. (2016). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. SFB 823 discussion paper ?/16.
+Hermann, S. (2016a). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. SFB 823 discussion paper 28/16.
 
-Hermann, S. (2016). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. SFB 823 discussion paper 27/16.
+Hermann, S. (2016b). Bayesian Prediction for Stochastic Processes based on the Euler Approximation Scheme. SFB 823 discussion paper 27/16.
 
 Hermann, S., K. Ickstadt and C. H.  Mueller (2016). Bayesian Prediction of Crack Growth Based on a Hierarchical Diffusion Model. \emph{Applied Stochastic Models in Business and Industry, DOI: 10.1002/asmb.2175}.
 
-Hermann, S. and F. Ruggeri (2016). Modelling Wear in Cylinder Liners. Under review
-in: Quality and Reliability Engineering International.
+Hermann, S. and F. Ruggeri (2016). Modelling Wear in Cylinder Liners. SFB 823 discussion paper 06/16. 
 
 Hermann, S., K. Ickstadt, and C. H. Mueller (2015). Bayesian Prediction for a Jump Diffusion
-Process with Application to Crack Growth in Fatigue Experiments. SFB 823 discussion paper 30/15. Submitted to Reliability Engineering & System Safety.
+Process with Application to Crack Growth in Fatigue Experiments. SFB 823 discussion paper 30/15. 
 
 Heeke, G., S. Hermann, R. Maurer, K. Ickstadt, and C. H. Mueller (2015). Stochastic Modeling
 and Statistical Analysis of Fatigue Tests on Prestressed Concrete Beams under Cyclic Loadings. SFB 823 discussion paper 25/15.
-Submitted to Structural Safety.
 
 Monte Carlo methods:
 

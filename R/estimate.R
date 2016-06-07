@@ -1,6 +1,6 @@
 #' Bayesian estimation
 #'
-#' @description Estimation method for the S4 classes
+#' @description Estimation method for the S4 classes.
 #' @param model.class class object with model informations, see \code{\link{set.to.class}}
 #' @param t vector or list of time points
 #' @param data vector or list or matrix of observation variables
@@ -11,6 +11,9 @@
 #' @param ... parameters dependent on the model class
 #' @return class object \code{est.}\code{model.class} containing Markov chains, data input and model informations
 #' @references 
+#' Hermann, S. (2016). BaPreStoPro: an R Package for Bayesian Prediction of Stochastic Processes. 
+#' SFB 823 discussion paper 28/16.
+#'
 #' Robert, C. P. and G. Casella (2004). Monte Carlo Statistical Methods. Springer, New York.
 #' 
 #' Rosenthal, J. S. (2011). Optimal Proposal Distributions and Adaptive MCMC. In: Handbook of Markov Chain Monte Carlo, pp. 93-112.
@@ -609,7 +612,7 @@ setMethod(f = "estimate", signature = "hiddenDiffusion",
 #'
 #' @description Bayesian estimation of the parameters in the hierarchical model: 
 #'   \eqn{Z_{ij} = Y_{t_{ij}} + \epsilon_{ij}, dY_t = b(\phi_j,t,Y_t)dt + \gamma \widetilde{s}(t,Y_t)dW_t, \phi_j\sim N(\mu, \Omega), 
-#'   Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)} with the particel Gibbs sampler.
+#'   Y_{t_0}=y_0(\phi, t_0), \epsilon_{ij}\sim N(0,\sigma^2)} with the particle Gibbs sampler.
 #' @param model.class class of the hierarchical hidden diffusion model including all required information, see \code{\link{hiddenmixedDiffusion-class}}
 #' @param t list or vector of time points
 #' @param data list or matrix of observation variables
@@ -864,7 +867,7 @@ setMethod(f = "estimate", signature = "hiddenmixedDiffusion",
 
 
 ########
-#' Estimation for Poisson process
+#' Estimation for a non-homogeneous Poisson process
 #'
 #' @description Bayesian estimation of a non-homogeneous Poisson process (NHPP) with cumulative intensity function \eqn{\Lambda(t, \xi)}.
 #' @param model.class class of the NHPP model including all required information, see \code{\link{NHPP-class}}
@@ -1024,7 +1027,7 @@ setMethod(f = "estimate", signature = "NHPP",
 #' @param proposal proposal density for phi, theta: "normal" (default) or "lognormal" (for positive parameters), see description below
 #' @param it.xi number of iterations for MH step for \eqn{\xi} inside the Gibbs sampler
 #' @section Proposal densities:
-#' There are several possibilities to choose the proposal densities. For \eqn{\gamma^2}, always the lognormal density is taken, since the parameter is always positive.
+#' For \eqn{\gamma^2}, always the lognormal density is taken, since the parameter is always positive.
 #' For \eqn{\theta} and \eqn{\phi}, there is the possibility to choose "normal" or "lognormal" (for both together). 
 #' The proposal density for \eqn{\xi} depends on the starting value of \eqn{\xi}. If all components are positive, the proposal density is lognormal, and normal otherwise.
 #' @examples
@@ -1040,9 +1043,9 @@ setMethod(f = "estimate", signature = "NHPP",
 #' model <- set.to.class("jumpDiffusion", Lambda = function(t, xi) (t/xi[2])^xi[1],
 #'    parameter = list(theta = 0.1, phi = 0.05, gamma2 = 0.1, xi = c(3, 1/4)),
 #'    priorDensity = list(phi = function(phi) dnorm(phi, 0.05, 0.01),
-#'                theta = function(theta) dgamma(1/theta, 10, 0.1*9),
-#'              gamma2 = function(gamma2) dgamma(1/gamma2, 10, 0.1*9),
-#'          xi = function(xi) dnorm(xi, c(3, 1/4), c(1,1))))
+#'                        theta = function(theta) dgamma(1/theta, 10, 0.1*9),
+#'                        gamma2 = function(gamma2) dgamma(1/gamma2, 10, 0.1*9),
+#'                        xi = function(xi) dnorm(xi, c(3, 1/4), c(1,1))))
 #' t <- seq(0, 1, by = 0.01)
 #' data <- simulate(model, t = t, y0 = 0.5, plot.series = TRUE)
 #' est <- estimate(model, t, data, 1000)
@@ -1561,7 +1564,8 @@ setMethod(f = "estimate", signature = "Merton",
 #' Estimation for regression model dependent on Poisson process
 #'
 #' @description Bayesian estimation of the parameter of the regression model
-#'   \eqn{y_i = f(t_i, N_i, \theta) + \epsilon_i}.
+#'   \eqn{y_i = f(t_i, N_{t_i}, \theta) + \epsilon_i} with
+#'   \eqn{N_t\sim Pois(\Lambda(t, \xi)), \epsilon_i\sim N(0,\gamma^2\widetilde{s}(t))}.
 #' @param model.class class of the regression model based on the NHPP including all required information, see \code{\link{jumpRegression-class}}
 #' @param t vector of time points
 #' @param data vector of observation variables
@@ -1699,7 +1703,6 @@ setMethod(f = "estimate", signature = "jumpRegression",
       
       CSMC = function(theta, gamma2, xi, N.cond, B.fixed, conditional = TRUE){# conditional SMC
         # N.cond = the old samples
-        
         x <- matrix(0, Npart, lt)
         w <- matrix(1, Npart, lt)
         W <- matrix(1, Npart, lt)
@@ -1730,13 +1733,10 @@ setMethod(f = "estimate", signature = "jumpRegression",
           }else{
             set.parents <- 1:Npart
             parents[, n-1] <- sample(1:Npart, Npart, replace = TRUE, prob = W[,n-1])
-            
           }
-          
           
           x[,1:(n-1)] <- x[parents[,n-1], 1:(n-1)]
           x.past <- x[,n-1]
-          
           
           dr <- function(Ni, dNi_old){
             cands <- 0:(dNi_old*rangeN + 5)

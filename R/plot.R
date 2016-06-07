@@ -1,7 +1,7 @@
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.jumpDiffusion
-#' @param x est.jumpDiffusion class
+#' @description Plot method for the estimation results of the jump diffusion model.
+#' @param x est.jumpDiffusion class, created with method \code{\link{estimate,jumpDiffusion-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\phi, \theta, \gamma^2, \xi, N)}
@@ -122,10 +122,10 @@ setMethod(f = "plot", signature = "est.jumpDiffusion",
 })
 
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.Merton
-#' @param x est.Merton class
+#' @description Plot method for the estimation results of the Merton model.
+#' @param x est.Merton class, created with method \code{\link{estimate,Merton-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\phi, \widetilde{\theta}, \gamma^2, \xi, N)}
@@ -242,10 +242,10 @@ setMethod(f = "plot", signature = "est.Merton",
 })
 
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.Diffusion
-#' @param x est.Diffusion class
+#' @description Plot method for the estimation results of the diffusion model.
+#' @param x est.Diffusion class, created with method \code{\link{estimate,Diffusion-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\phi, \gamma^2)}
@@ -329,10 +329,10 @@ setMethod(f = "plot", signature = "est.Diffusion",
   par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.mixedDiffusion
-#' @param x est.mixedDiffusion class
+#' @description Plot method for the estimation results of the hierarchical (mixed) diffusion model.
+#' @param x est.mixedDiffusion class, created with method \code{\link{estimate,mixedDiffusion-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density", "int.phi"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\mu, \Omega, \gamma^2)}
@@ -453,10 +453,10 @@ setMethod(f = "plot", signature = "est.mixedDiffusion",
   par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.hiddenDiffusion
-#' @param x est.hiddenDiffusion class
+#' @description Plot method for the estimation results of the hidden diffusion model.
+#' @param x est.hiddenDiffusion class, created with method \code{\link{estimate,hiddenDiffusion-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\phi, \gamma^2, \sigma^2, Y)}
@@ -560,10 +560,10 @@ setMethod(f = "plot", signature = "est.hiddenDiffusion",
   par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.hiddenmixedDiffusion
-#' @param x est.hiddenmixedDiffusion class
+#' @description Plot method for the estimation results of the hidden hierarchical diffusion model.
+#' @param x est.hiddenmixedDiffusion class, created with method \code{\link{estimate,hiddenmixedDiffusion-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density", "int.phi"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\mu, \Omega, \gamma^2, \sigma^2, Y)}
@@ -708,10 +708,10 @@ setMethod(f = "plot", signature = "est.hiddenmixedDiffusion",
   par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.jumpRegression
-#' @param x est.jumpRegression class
+#' @description Plot method for the estimation results of the jump regression model.
+#' @param x est.jumpRegression class, created with method \code{\link{estimate,jumpRegression-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\phi, \theta, \gamma^2, \xi, N)}
@@ -827,10 +827,10 @@ setMethod(f = "plot", signature = "est.jumpRegression",
   par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.NHPP
-#' @param x est.NHPP class
+#' @description Plot method for the estimation results of the NHPP.
+#' @param x est.NHPP class, created with method \code{\link{estimate,NHPP-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\phi, \theta, \gamma^2, \xi, N)}
@@ -908,10 +908,10 @@ setMethod(f = "plot", signature = "est.NHPP",
   par(old.settings[which(names(old.settings) %in% names(par.options))])
 })
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.Regression
-#' @param x est.Regression class
+#' @description Plot method for the estimation results of the regression model.
+#' @param x est.Regression class, created with method \code{\link{estimate,Regression-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\phi, \gamma^2)}
@@ -997,10 +997,10 @@ setMethod(f = "plot", signature = "est.Regression",
 
 
 
-#' Plot method for the Bayesian estimation class object
+#' Plot method for the Bayesian estimation results
 #' 
-#' @description Plot method for the S4 class est.mixedRegression
-#' @param x est.mixedRegression class
+#' @description Plot method for the estimation results of the hierarchical (mixed) regression model.
+#' @param x est.mixedRegression class, created with method \code{\link{estimate,mixedRegression-method}}
 #' @param par.options list of options for function par()
 #' @param style one out of "chains", "acf", "density", "int.phi"
 #' @param par2plot logical vector, which parameters to be plotted, order: \eqn{(\mu, \Omega, \gamma^2)}

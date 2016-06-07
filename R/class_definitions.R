@@ -58,7 +58,8 @@ setClass(Class = "jumpDiffusion", representation = representation(theta = "numer
 #' prior <- list(m.phi = parameter$phi, v.phi = parameter$phi, m.thetaT = parameter$thetaT, 
 #'    v.thetaT = parameter$thetaT, alpha.gamma = 3, beta.gamma = parameter$gamma2*2)
 #' start <- parameter
-#' model <- set.to.class("Merton", parameter, prior, start, Lambda = Lambda, priorDensity = priorDensity)
+#' model <- set.to.class("Merton", parameter, prior, start, Lambda = Lambda, 
+#'    priorDensity = priorDensity)
 #' summary(class.to.list(model))
 #' # default:
 #' model <- set.to.class("Merton", parameter, Lambda = Lambda)
@@ -213,7 +214,8 @@ setClass(Class = "jumpRegression", representation = representation(theta = "nume
 #' Lambda <- function(t, xi) (t / xi[2])^xi[1]
 #' priorDensity <- function(xi) dgamma(xi, c(2, 0.2), 1)
 #' start <- parameter
-#' model <- set.to.class("NHPP", parameter, start = start, Lambda = Lambda, priorDensity = priorDensity)
+#' model <- set.to.class("NHPP", parameter, start = start, Lambda = Lambda, 
+#'    priorDensity = priorDensity)
 
 setClass(Class = "NHPP", representation = representation(xi = "numeric", Lambda = "function", priorDensity = "function", start = "numeric"))
 
